@@ -183,26 +183,23 @@ export function DashboardPage() {
                                     </div>
 
                                     {/* Investimento */}
-                                    {((obra.valor_terreno ?? 0) > 0 || (obra.valor_burocracia ?? 0) > 0 || (obra.valor_construcao ?? 0) > 0) && (
-                                        <div className="mt-2.5 space-y-1.5">
-                                            {[
-                                                { label: 'Terreno',    Icon: Landmark,  color: '#AF52DE', value: obra.valor_terreno    ?? 0 },
-                                                { label: 'Burocracia', Icon: FileText,  color: '#007AFF', value: obra.valor_burocracia ?? 0 },
-                                                { label: 'Construção', Icon: Building2, color: '#FF9500', value: obra.valor_construcao ?? 0 },
-                                            ].filter(({ value }) => value > 0)
-                                             .map(({ label, Icon, color, value }) => (
-                                                <div key={label} className="flex items-center gap-1.5">
-                                                    <span className="flex h-[22px] w-[22px] items-center justify-center rounded-md flex-shrink-0" style={{ backgroundColor: `${color}18` }}>
-                                                        <Icon className="h-3 w-3" style={{ color }} />
-                                                    </span>
-                                                    <span className="text-[12px] text-muted-foreground">{label}</span>
-                                                    <span className="text-[12px] font-semibold tabular-nums ml-auto" style={{ color }}>
-                                                        {formatCurrency(value)}
-                                                    </span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
+                                    <div className="mt-2.5 space-y-1.5">
+                                        {[
+                                            { label: 'Terreno',    Icon: Landmark,  color: '#AF52DE', value: obra.valor_terreno    ?? 0 },
+                                            { label: 'Burocracia', Icon: FileText,  color: '#007AFF', value: obra.valor_burocracia ?? 0 },
+                                            { label: 'Construção', Icon: Building2, color: '#FF9500', value: obra.valor_construcao ?? 0 },
+                                        ].map(({ label, Icon, color, value }) => (
+                                            <div key={label} className="flex items-center gap-1.5">
+                                                <span className="flex h-[22px] w-[22px] items-center justify-center rounded-md flex-shrink-0" style={{ backgroundColor: `${color}18` }}>
+                                                    <Icon className="h-3 w-3" style={{ color }} />
+                                                </span>
+                                                <span className="text-[12px] text-muted-foreground">{label}</span>
+                                                <span className="text-[12px] font-semibold tabular-nums ml-auto" style={{ color: value > 0 ? color : undefined }}>
+                                                    {formatCurrency(value)}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
 
                                     {/* Spacer to push footer down */}
                                     <div className="flex-1 min-h-4" />

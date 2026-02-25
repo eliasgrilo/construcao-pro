@@ -208,26 +208,24 @@ export function ObrasPage() {
                                         <span className="truncate">{obra.endereco}</span>
                                     </div>
 
-                                    {/* Investimento (Terreno / Burocracia) */}
-                                    {((obra.valor_terreno ?? 0) > 0 || (obra.valor_burocracia ?? 0) > 0) && (
-                                        <div className="mb-4 space-y-1.5">
-                                            {[
-                                                { key: 'valor_terreno',    label: 'Terreno',    Icon: Landmark, color: '#AF52DE' },
-                                                { key: 'valor_burocracia', label: 'Burocracia', Icon: FileText, color: '#007AFF' },
-                                            ].filter(({ key }) => (obra[key as keyof typeof obra] as number ?? 0) > 0)
-                                             .map(({ key, label, Icon, color }) => (
-                                                <div key={key} className="flex items-center gap-1.5">
-                                                    <span className="flex h-6 w-6 items-center justify-center rounded-md flex-shrink-0" style={{ backgroundColor: `${color}18` }}>
-                                                        <Icon className="h-3.5 w-3.5" style={{ color }} />
-                                                    </span>
-                                                    <span className="text-[13px] text-muted-foreground">{label}</span>
-                                                    <span className="text-[13px] font-semibold tabular-nums ml-auto" style={{ color }}>
-                                                        {formatCurrency(obra[key as keyof typeof obra] as number)}
-                                                    </span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
+                                    {/* Investimento */}
+                                    <div className="mb-4 space-y-1.5">
+                                        {[
+                                            { label: 'Terreno',    Icon: Landmark,  color: '#AF52DE', value: obra.valor_terreno    ?? 0 },
+                                            { label: 'Burocracia', Icon: FileText,  color: '#007AFF', value: obra.valor_burocracia ?? 0 },
+                                            { label: 'Construção', Icon: Building2, color: '#FF9500', value: obra.valor_construcao ?? 0 },
+                                        ].map(({ label, Icon, color, value }) => (
+                                            <div key={label} className="flex items-center gap-1.5">
+                                                <span className="flex h-6 w-6 items-center justify-center rounded-md flex-shrink-0" style={{ backgroundColor: `${color}18` }}>
+                                                    <Icon className="h-3.5 w-3.5" style={{ color }} />
+                                                </span>
+                                                <span className="text-[13px] text-muted-foreground">{label}</span>
+                                                <span className="text-[13px] font-semibold tabular-nums ml-auto" style={{ color: value > 0 ? color : undefined }}>
+                                                    {formatCurrency(value)}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
 
                                     {/* Stats Bar */}
                                     <div className="flex items-center gap-4 pt-3 border-t border-border/30">

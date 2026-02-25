@@ -2,7 +2,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { motion } from 'framer-motion'
 import {
     ArrowDownRight, ArrowUpRight, ArrowLeftRight,
-    AlertTriangle, Bell, FileText, ChevronRight, MapPin, Landmark,
+    AlertTriangle, ChevronRight, MapPin, Landmark, Package,
 } from 'lucide-react'
 import { useDashboardStats, useDashboardCustoPorObra, useMovimentacoesRecentes, useEstoqueAlertas, useObras } from '@/hooks/use-supabase'
 import { cn, formatDate, formatNumber, formatCurrency } from '@/lib/utils'
@@ -70,6 +70,10 @@ export function DashboardPage() {
     const obras = (custoPorObra || []).filter((o: any) => o.status === 'ATIVA')
     const alertas = alertasData || []
     const pct = s?.orcamentoTotal && s.orcamentoTotal > 0 ? Math.round((s.custoTotal / s.orcamentoTotal) * 100) : 0
+
+    /* Terrenos em Standby */
+    const terrenosStandby = (obrasData || []).filter((o: any) => o.status === 'TERRENO')
+    const totalTerrenos = terrenosStandby.reduce((sum: number, o: any) => sum + (o.valor_terreno ?? 0), 0)
 
     return (
         <div className="pb-16">
@@ -217,29 +221,125 @@ export function DashboardPage() {
                 )}
             </motion.div>
 
-            {/* ─── Insights ─── */}
+            {/* ─── Insights row ─── */}
             <motion.div
                 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.3 }}
                 className="px-4 md:px-6 mt-10 grid grid-cols-2 gap-3 md:gap-4"
             >
+                {/* Alertas de Estoque */}
                 <div className="rounded-2xl bg-card p-4 md:p-5">
                     <span className="flex h-10 w-10 items-center justify-center rounded-xl mb-3"
                         style={{ backgroundColor: alertas.length > 0 ? '#FF3B3018' : '#8E8E9318' }}>
-                        <Bell className="h-5 w-5" style={{ color: alertas.length > 0 ? clr.red : '#8E8E93' }} />
+                        <AlertTriangle className="h-5 w-5" style={{ color: alertas.length > 0 ? clr.red : '#8E8E93' }} />
                     </span>
                     <p className="text-[24px] md:text-[28px] font-bold tabular-nums leading-none">{alertas.length}</p>
-                    <p className="text-[13px] md:text-[15px] text-muted-foreground mt-1">{alertas.length === 1 ? 'Alerta' : 'Alertas'}</p>
+                    <p className="text-[13px] md:text-[15px] text-muted-foreground mt-1">
+                        {alertas.length === 1 ? 'Alerta de estoque' : 'Alertas de estoque'}
+                    </p>
                 </div>
-                <div className="rounded-2xl bg-card p-4 md:p-5">
+
+                {/* Terrenos em Standby */}
+                <motion.div
+                    className="rounded-2xl bg-card p-4 md:p-5 cursor-pointer"
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => navigate({ to: '/obras' })}
+                >
                     <span className="flex h-10 w-10 items-center justify-center rounded-xl mb-3"
-                        style={{ backgroundColor: '#007AFF18' }}>
-                        <FileText className="h-5 w-5" style={{ color: clr.blue }} />
+                        style={{ backgroundColor: '#AF52DE18' }}>
+                        <Landmark className="h-5 w-5" style={{ color: '#AF52DE' }} />
                     </span>
-                    <p className="text-[24px] md:text-[28px] font-bold tabular-nums leading-none">{s?.totalNFs ?? 0}</p>
-                    <p className="text-[13px] md:text-[15px] text-muted-foreground mt-1">Notas Fiscais</p>
-                </div>
+                    <p className="text-[18px] md:text-[20px] font-bold tabular-nums leading-none" style={{ color: terrenosStandby.length > 0 ? '#AF52DE' : undefined }}>
+                        {formatCurrency(totalTerrenos)}
+                    </p>
+                    <p className="text-[13px] md:text-[15px] text-muted-foreground mt-1">
+                        Terrenos em Standby
+                        {terrenosStandby.length > 0 && (
+                            <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 rounded-full text-[10px] font-semibold px-1"
+                                style={{ backgroundColor: '#AF52DE', color: '#fff' }}>
+                                {terrenosStandby.length}
+                            </span>
+                        )}
+                    </p>
+                </motion.div>
             </motion.div>
+
+            {/* ─── Alertas de Estoque (lista detalhada) ─── */}
+            {alertas.length > 0 && (
+                <motion.div
+                    initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: 0.35 }}
+                    className="px-4 md:px-6 mt-4"
+                >
+                    <div className="rounded-2xl bg-card overflow-hidden">
+                        {/* Header */}
+                        <div className="flex items-center gap-2.5 px-4 md:px-5 pt-4 pb-3 border-b border-border/20">
+                            <span className="flex h-7 w-7 items-center justify-center rounded-lg flex-shrink-0"
+                                style={{ backgroundColor: '#FF3B3018' }}>
+                                <AlertTriangle className="h-4 w-4" style={{ color: clr.red }} />
+                            </span>
+                            <div>
+                                <p className="text-[15px] font-semibold leading-none">Itens com Estoque Baixo</p>
+                                <p className="text-[12px] text-muted-foreground mt-0.5">
+                                    {alertas.length} {alertas.length === 1 ? 'material abaixo do mínimo' : 'materiais abaixo do mínimo'}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Items list */}
+                        {alertas.map((alerta: any, i: number) => {
+                            const qty = alerta.quantidade ?? 0
+                            const min = alerta.material?.estoqueMinimo ?? 0
+                            const isCritical = qty === 0
+                            const pctStock = min > 0 ? Math.min((qty / min) * 100, 100) : 0
+                            const accentColor = isCritical ? clr.red : clr.orange
+                            return (
+                                <div
+                                    key={alerta.id}
+                                    className={cn(
+                                        'flex items-center gap-3 md:gap-4 px-4 md:px-5 py-3.5',
+                                        i > 0 && 'border-t border-border/15',
+                                    )}
+                                >
+                                    {/* Icon */}
+                                    <span className="flex h-9 w-9 items-center justify-center rounded-xl flex-shrink-0"
+                                        style={{ backgroundColor: `${accentColor}14` }}>
+                                        <Package className="h-4 w-4" style={{ color: accentColor }} />
+                                    </span>
+
+                                    {/* Info */}
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-2 mb-0.5">
+                                            <p className="text-[15px] font-medium truncate">{alerta.material?.nome ?? '—'}</p>
+                                            {isCritical && (
+                                                <span className="flex-shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                                                    style={{ backgroundColor: '#FF3B3018', color: clr.red }}>
+                                                    Sem estoque
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-[12px] text-muted-foreground truncate">
+                                            {alerta.almoxarifado?.nome ?? '—'} · {alerta.almoxarifado?.obra?.nome ?? '—'}
+                                        </p>
+                                        {/* Mini progress bar */}
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <div className="flex-1 h-[3px] rounded-full bg-muted/60 overflow-hidden">
+                                                <div
+                                                    className="h-full rounded-full transition-all"
+                                                    style={{ width: `${pctStock}%`, backgroundColor: accentColor }}
+                                                />
+                                            </div>
+                                            <span className="text-[11px] tabular-nums text-muted-foreground flex-shrink-0">
+                                                {formatNumber(qty)} / {formatNumber(min)} un.
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </motion.div>
+            )}
 
             {/* ─── Atividade Recente ─── */}
             <motion.div

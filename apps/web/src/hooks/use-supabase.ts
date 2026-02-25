@@ -39,6 +39,7 @@ export function useDashboardCustoPorObra() {
                 status: string
                 custo: number
                 orcamento: number
+                valor_terreno: number
                 percentual: number
             }[]
         },

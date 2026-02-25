@@ -2,7 +2,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { motion } from 'framer-motion'
 import {
     ArrowDownRight, ArrowUpRight, ArrowLeftRight,
-    AlertTriangle, Bell, FileText, ChevronRight, MapPin,
+    AlertTriangle, Bell, FileText, ChevronRight, MapPin, Landmark,
 } from 'lucide-react'
 import { useDashboardStats, useDashboardCustoPorObra, useMovimentacoesRecentes, useEstoqueAlertas, useObras } from '@/hooks/use-supabase'
 import { cn, formatDate, formatNumber, formatCurrency } from '@/lib/utils'
@@ -38,6 +38,7 @@ const statusMap: Record<string, { label: string; color: string }> = {
     PAUSADA: { label: 'Pausada', color: '#FF9500' },
     FINALIZADA: { label: 'Finalizada', color: '#8E8E93' },
     VENDIDO: { label: 'Vendido', color: '#5856D6' },
+    TERRENO: { label: 'Terreno', color: '#AF52DE' },
 }
 
 const statusBreakdown = [
@@ -45,6 +46,7 @@ const statusBreakdown = [
     { key: 'PAUSADA', label: 'Pausada', color: '#FF9500' },
     { key: 'FINALIZADA', label: 'Finaliz.', color: '#8E8E93' },
     { key: 'VENDIDO', label: 'Vendido', color: '#5856D6' },
+    { key: 'TERRENO', label: 'Terreno', color: '#AF52DE' },
 ]
 
 const tipos: Record<string, { label: string; icon: typeof ArrowLeftRight; tint: string }> = {
@@ -65,7 +67,7 @@ export function DashboardPage() {
 
     const s = stats
     const movs = recentMovs || []
-    const obras = custoPorObra || []
+    const obras = (custoPorObra || []).filter((o: any) => o.status === 'ATIVA')
     const alertas = alertasData || []
     const pct = s?.orcamentoTotal && s.orcamentoTotal > 0 ? Math.round((s.custoTotal / s.orcamentoTotal) * 100) : 0
 
@@ -134,14 +136,14 @@ export function DashboardPage() {
                 className="mt-10 px-4 md:px-6"
             >
                 <div className="flex items-baseline justify-between mb-4">
-                    <h2 className="text-[20px] md:text-[22px] font-bold tracking-tight">Suas Obras</h2>
+                    <h2 className="text-[20px] md:text-[22px] font-bold tracking-tight">Obras Ativas</h2>
                     <button onClick={() => navigate({ to: '/obras' })} className="text-[15px] md:text-[17px] text-primary font-regular flex items-center hover:text-primary/80 transition-colors">
                         Ver Todas<ChevronRight className="h-4 w-4 ml-1" />
                     </button>
                 </div>
 
                 {obras.length === 0 ? (
-                    <p className="text-[17px] text-muted-foreground text-center py-10">Nenhuma obra cadastrada.</p>
+                    <p className="text-[17px] text-muted-foreground text-center py-10">Nenhuma obra ativa no momento.</p>
                 ) : (
                     <motion.div
                         initial="hidden"
@@ -176,6 +178,17 @@ export function DashboardPage() {
                                         <MapPin className="h-3.5 w-3.5 text-muted-foreground/40 flex-shrink-0" />
                                         <span className="text-[13px] text-muted-foreground leading-snug truncate">{obra.endereco}</span>
                                     </div>
+
+                                    {/* Valor do Terreno */}
+                                    {(obra.valor_terreno ?? 0) > 0 && (
+                                        <div className="flex items-center gap-1.5 mt-2.5">
+                                            <span className="flex h-[22px] w-[22px] items-center justify-center rounded-md flex-shrink-0" style={{ backgroundColor: '#AF52DE18' }}>
+                                                <Landmark className="h-3 w-3" style={{ color: '#AF52DE' }} />
+                                            </span>
+                                            <span className="text-[12px] text-muted-foreground">Terreno</span>
+                                            <span className="text-[12px] font-semibold tabular-nums ml-auto" style={{ color: '#AF52DE' }}>{formatCurrency(obra.valor_terreno)}</span>
+                                        </div>
+                                    )}
 
                                     {/* Spacer to push footer down */}
                                     <div className="flex-1 min-h-4" />

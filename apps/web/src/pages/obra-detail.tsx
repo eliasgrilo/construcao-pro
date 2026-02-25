@@ -37,6 +37,7 @@ const statusMap: Record<string, { label: string; variant: 'success' | 'secondary
     FINALIZADA: { label: 'Finalizada', variant: 'secondary', color: '#8E8E93' },
     PAUSADA: { label: 'Pausada', variant: 'warning', color: '#FF9500' },
     VENDIDO: { label: 'Vendido', variant: 'info', color: '#5856D6' },
+    TERRENO: { label: 'Terreno', variant: 'info', color: '#AF52DE' },
 }
 const tipoConfig: Record<string, { label: string; icon: typeof ArrowLeftRight; tint: string }> = {
     ENTRADA: { label: 'Entrada', icon: ArrowDownRight, tint: '#34C759' },
@@ -430,6 +431,7 @@ export function ObraDetailPage() {
                                         {[
                                             { l: 'Orçamento', v: formatCurrency(custos.orcamento), c: 'text-foreground' },
                                             { l: 'Realizado', v: formatCurrency(custos.realizado), c: 'text-foreground' },
+                                            ...(custos.valorTerreno > 0 ? [{ l: 'Terreno', v: formatCurrency(custos.valorTerreno), c: 'text-[#AF52DE]' }] : []),
                                             { l: 'Saldo', v: formatCurrency(custos.saldo), c: custos.saldo < 0 ? 'text-destructive' : 'text-success' },
                                         ].map(r => (
                                             <div key={r.l} className="flex justify-between text-[13px]">
@@ -448,8 +450,8 @@ export function ObraDetailPage() {
                                     <ResponsiveContainer width={160} height={160}>
                                         <PieChart>
                                             <Pie data={custos.porCategoria || []} dataKey="valor" nameKey="categoria" cx="50%" cy="50%" outerRadius={68} innerRadius={44} paddingAngle={3} strokeWidth={0} cornerRadius={3}>
-                                                {(custos.porCategoria || []).map((_: any, i: number) => (
-                                                    <Cell key={i} fill={RING_COLORS[i % RING_COLORS.length]} />
+                                                {(custos.porCategoria || []).map((cat: any, i: number) => (
+                                                    <Cell key={i} fill={cat.categoria === 'Terreno' ? '#AF52DE' : RING_COLORS[i % RING_COLORS.length]} />
                                                 ))}
                                             </Pie>
                                             <Tooltip content={<ChartTip />} />
@@ -458,9 +460,10 @@ export function ObraDetailPage() {
                                     <div className="flex-1 space-y-2 ml-2">
                                         {(custos.porCategoria || []).map((cat: any, i: number) => {
                                             const pct = custos.realizado > 0 ? Math.round((cat.valor / custos.realizado) * 100) : 0
+                                            const color = cat.categoria === 'Terreno' ? '#AF52DE' : RING_COLORS[i % RING_COLORS.length]
                                             return (
                                                 <div key={cat.categoria} className="flex items-center text-[12px] gap-2">
-                                                    <span className="h-[8px] w-[8px] rounded-full flex-shrink-0" style={{ background: RING_COLORS[i % RING_COLORS.length] }} />
+                                                    <span className="h-[8px] w-[8px] rounded-full flex-shrink-0" style={{ background: color }} />
                                                     <span className="text-muted-foreground truncate flex-1">{cat.categoria}</span>
                                                     <span className="tabular-nums font-medium">{pct}%</span>
                                                 </div>

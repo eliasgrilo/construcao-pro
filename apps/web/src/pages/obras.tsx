@@ -20,6 +20,7 @@ const statusMap: Record<string, { label: string; variant: 'success' | 'secondary
     FINALIZADA: { label: 'Finalizada', variant: 'secondary', color: '#8E8E93' },
     PAUSADA: { label: 'Pausada', variant: 'warning', color: '#FF9500' },
     VENDIDO: { label: 'Vendido', variant: 'info', color: '#5856D6' },
+    TERRENO: { label: 'Terreno', variant: 'info', color: '#AF52DE' },
 }
 
 export function ObrasPage() {
@@ -28,7 +29,7 @@ export function ObrasPage() {
     const [open, setOpen] = useState(false)
     const [deleteTarget, setDeleteTarget] = useState<{ id: string; nome: string } | null>(null)
     const [search, setSearch] = useState('')
-    const [filterStatus, setFilterStatus] = useState<'ALL' | 'ATIVA' | 'PAUSADA' | 'FINALIZADA' | 'VENDIDO'>('ALL')
+    const [filterStatus, setFilterStatus] = useState<'ALL' | 'ATIVA' | 'PAUSADA' | 'FINALIZADA' | 'VENDIDO' | 'TERRENO'>('ALL')
 
     const { data: obrasData, isLoading } = useObras()
     const createMutation = useCreateObra()
@@ -44,6 +45,7 @@ export function ObrasPage() {
         PAUSADA: obrasData?.filter((o: any) => o.status === 'PAUSADA').length ?? 0,
         FINALIZADA: obrasData?.filter((o: any) => o.status === 'FINALIZADA').length ?? 0,
         VENDIDO: obrasData?.filter((o: any) => o.status === 'VENDIDO').length ?? 0,
+        TERRENO: obrasData?.filter((o: any) => o.status === 'TERRENO').length ?? 0,
     }
 
     const obras = (obrasData || []).filter((o: any) => {
@@ -58,6 +60,7 @@ export function ObrasPage() {
         { key: 'PAUSADA' as const, label: 'Pausada', color: '#FF9500' },
         { key: 'FINALIZADA' as const, label: 'Finalizada', color: '#8E8E93' },
         { key: 'VENDIDO' as const, label: 'Vendido', color: '#5856D6' },
+        { key: 'TERRENO' as const, label: 'Terreno', color: '#AF52DE' },
     ]
 
     return (

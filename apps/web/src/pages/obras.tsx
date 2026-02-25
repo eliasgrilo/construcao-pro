@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { createObraSchema, type CreateObraInput } from '@/lib/schemas'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, MapPin, Trash2, Building2, Warehouse, Landmark } from 'lucide-react'
+import { Plus, MapPin, Trash2, Building2, Warehouse, Landmark, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -208,14 +208,25 @@ export function ObrasPage() {
                                         <span className="truncate">{obra.endereco}</span>
                                     </div>
 
-                                    {/* Valor do Terreno */}
-                                    {(obra.valor_terreno ?? 0) > 0 && (
-                                        <div className="flex items-center gap-1.5 mb-4">
-                                            <span className="flex h-6 w-6 items-center justify-center rounded-md flex-shrink-0" style={{ backgroundColor: '#5856D618' }}>
-                                                <Landmark className="h-3.5 w-3.5" style={{ color: '#5856D6' }} />
-                                            </span>
-                                            <span className="text-[13px] text-muted-foreground">Terreno</span>
-                                            <span className="text-[13px] font-semibold tabular-nums ml-auto" style={{ color: '#5856D6' }}>{formatCurrency(obra.valor_terreno)}</span>
+                                    {/* Investimento (Terreno / Burocracia / Construção) */}
+                                    {((obra.valor_terreno ?? 0) > 0 || (obra.valor_burocracia ?? 0) > 0 || (obra.valor_construcao ?? 0) > 0) && (
+                                        <div className="mb-4 space-y-1.5">
+                                            {[
+                                                { key: 'valor_terreno',    label: 'Terreno',    Icon: Landmark,  color: '#AF52DE' },
+                                                { key: 'valor_burocracia', label: 'Burocracia', Icon: FileText,  color: '#007AFF' },
+                                                { key: 'valor_construcao', label: 'Construção', Icon: Building2, color: '#FF9500' },
+                                            ].filter(({ key }) => (obra[key as keyof typeof obra] as number ?? 0) > 0)
+                                             .map(({ key, label, Icon, color }) => (
+                                                <div key={key} className="flex items-center gap-1.5">
+                                                    <span className="flex h-6 w-6 items-center justify-center rounded-md flex-shrink-0" style={{ backgroundColor: `${color}18` }}>
+                                                        <Icon className="h-3.5 w-3.5" style={{ color }} />
+                                                    </span>
+                                                    <span className="text-[13px] text-muted-foreground">{label}</span>
+                                                    <span className="text-[13px] font-semibold tabular-nums ml-auto" style={{ color }}>
+                                                        {formatCurrency(obra[key as keyof typeof obra] as number)}
+                                                    </span>
+                                                </div>
+                                            ))}
                                         </div>
                                     )}
 

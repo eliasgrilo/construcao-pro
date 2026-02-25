@@ -289,7 +289,7 @@ export function DashboardPage() {
                         {/* Items list */}
                         {alertas.map((alerta: any, i: number) => {
                             const qty = alerta.quantidade ?? 0
-                            const min = alerta.material?.estoqueMinimo ?? 0
+                            const min = alerta.estoque_minimo ?? 0
                             const isCritical = qty === 0
                             const pctStock = min > 0 ? Math.min((qty / min) * 100, 100) : 0
                             const accentColor = isCritical ? clr.red : clr.orange
@@ -310,7 +310,7 @@ export function DashboardPage() {
                                     {/* Info */}
                                     <div className="min-w-0 flex-1">
                                         <div className="flex items-center gap-2 mb-0.5">
-                                            <p className="text-[15px] font-medium truncate">{alerta.material?.nome ?? '—'}</p>
+                                            <p className="text-[15px] font-medium truncate">{alerta.material_nome ?? '—'}</p>
                                             {isCritical && (
                                                 <span className="flex-shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
                                                     style={{ backgroundColor: '#FF3B3018', color: clr.red }}>
@@ -319,7 +319,7 @@ export function DashboardPage() {
                                             )}
                                         </div>
                                         <p className="text-[12px] text-muted-foreground truncate">
-                                            {alerta.almoxarifado?.nome ?? '—'} · {alerta.almoxarifado?.obra?.nome ?? '—'}
+                                            {alerta.almoxarifado_nome ?? '—'} · {alerta.obra_nome ?? '—'}
                                         </p>
                                         {/* Mini progress bar */}
                                         <div className="flex items-center gap-2 mt-2">

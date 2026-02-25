@@ -254,7 +254,7 @@ export function ObrasPage() {
                         <DialogTitle>Nova Obra</DialogTitle>
                         <DialogDescription>Cadastre uma nova obra de construção.</DialogDescription>
                     </DialogHeader>
-                    <form onSubmit={handleSubmit((d) => createMutation.mutate({ nome: d.nome, endereco: d.endereco, status: d.status, orcamento: d.orcamento, valorTerreno: d.valorTerreno }, {
+                    <form onSubmit={handleSubmit((d) => createMutation.mutate({ nome: d.nome, endereco: d.endereco, status: d.status, orcamento: d.orcamento, valorTerreno: d.valorTerreno, valorBurocracia: d.valorBurocracia, valorConstrucao: d.valorConstrucao }, {
                         onSuccess: () => {
                             setOpen(false)
                             reset()
@@ -293,10 +293,31 @@ export function ObrasPage() {
                                 {errors.orcamento && <p className="text-[13px] text-destructive mt-1">{errors.orcamento.message}</p>}
                             </div>
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="valorTerreno">Valor do Terreno (R$)</Label>
-                            <Input id="valorTerreno" type="number" step="0.01" min="0" {...register('valorTerreno', { valueAsNumber: true })} placeholder="0,00" />
-                            {errors.valorTerreno && <p className="text-[13px] text-destructive mt-1">{errors.valorTerreno.message}</p>}
+                        <div className="rounded-xl border border-border/60 p-4 space-y-4 bg-muted/20">
+                            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Composição do Investimento</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="valorTerreno" className="flex items-center gap-1.5">
+                                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: '#AF52DE' }} />Terreno (R$)
+                                    </Label>
+                                    <Input id="valorTerreno" type="number" step="0.01" min="0" {...register('valorTerreno', { valueAsNumber: true })} placeholder="0,00" />
+                                    {errors.valorTerreno && <p className="text-[12px] text-destructive">{errors.valorTerreno.message}</p>}
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="valorBurocracia" className="flex items-center gap-1.5">
+                                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: '#007AFF' }} />Burocracia (R$)
+                                    </Label>
+                                    <Input id="valorBurocracia" type="number" step="0.01" min="0" {...register('valorBurocracia', { valueAsNumber: true })} placeholder="0,00" />
+                                    {errors.valorBurocracia && <p className="text-[12px] text-destructive">{errors.valorBurocracia.message}</p>}
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="valorConstrucao" className="flex items-center gap-1.5">
+                                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: '#FF9500' }} />Construção (R$)
+                                    </Label>
+                                    <Input id="valorConstrucao" type="number" step="0.01" min="0" {...register('valorConstrucao', { valueAsNumber: true })} placeholder="0,00" />
+                                    {errors.valorConstrucao && <p className="text-[12px] text-destructive">{errors.valorConstrucao.message}</p>}
+                                </div>
+                            </div>
                         </div>
                         <DialogFooter>
                             <Button type="button" variant="outline" onClick={() => { setOpen(false); reset() }}>Cancelar</Button>

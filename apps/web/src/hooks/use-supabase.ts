@@ -108,13 +108,15 @@ export function useObra(obraId: string) {
 export function useCreateObra() {
     const qc = useQueryClient()
     return useMutation({
-        mutationFn: async (body: { nome: string; endereco: string; status?: string; orcamento?: number; valorTerreno?: number }) => {
+        mutationFn: async (body: { nome: string; endereco: string; status?: string; orcamento?: number; valorTerreno?: number; valorBurocracia?: number; valorConstrucao?: number }) => {
             const { data, error } = await supabase.from('obras').insert({
                 nome: body.nome,
                 endereco: body.endereco,
                 status: (body.status as any) || 'ATIVA',
                 orcamento: body.orcamento || 0,
                 valor_terreno: body.valorTerreno || 0,
+                valor_burocracia: body.valorBurocracia || 0,
+                valor_construcao: body.valorConstrucao || 0,
             }).select().single()
             if (error) throw error
             return data
@@ -129,7 +131,7 @@ export function useCreateObra() {
 export function useUpdateObra() {
     const qc = useQueryClient()
     return useMutation({
-        mutationFn: async ({ id, ...body }: { id: string; nome?: string; endereco?: string; status?: string; orcamento?: number }) => {
+        mutationFn: async ({ id, ...body }: { id: string; nome?: string; endereco?: string; status?: string; orcamento?: number; valor_terreno?: number; valor_burocracia?: number; valor_construcao?: number }) => {
             const { data, error } = await supabase.from('obras').update(body as any).eq('id', id).select().single()
             if (error) throw error
             return data

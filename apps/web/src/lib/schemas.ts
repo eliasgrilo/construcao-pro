@@ -14,6 +14,8 @@ export const createObraSchema = z.object({
     status: z.enum(['ATIVA', 'FINALIZADA', 'PAUSADA', 'VENDIDO', 'TERRENO']).default('ATIVA'),
     orcamento: z.number().min(0, 'Orçamento deve ser positivo').default(0),
     valorTerreno: z.number().min(0, 'Valor deve ser positivo').default(0),
+    valorBurocracia: z.number().min(0, 'Valor deve ser positivo').default(0),
+    valorConstrucao: z.number().min(0, 'Valor deve ser positivo').default(0),
 })
 export type CreateObraInput = z.infer<typeof createObraSchema>
 

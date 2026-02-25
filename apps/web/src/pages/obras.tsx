@@ -208,13 +208,12 @@ export function ObrasPage() {
                                         <span className="truncate">{obra.endereco}</span>
                                     </div>
 
-                                    {/* Investimento (Terreno / Burocracia / Construção) */}
-                                    {((obra.valor_terreno ?? 0) > 0 || (obra.valor_burocracia ?? 0) > 0 || (obra.valor_construcao ?? 0) > 0) && (
+                                    {/* Investimento (Terreno / Burocracia) */}
+                                    {((obra.valor_terreno ?? 0) > 0 || (obra.valor_burocracia ?? 0) > 0) && (
                                         <div className="mb-4 space-y-1.5">
                                             {[
-                                                { key: 'valor_terreno',    label: 'Terreno',    Icon: Landmark,  color: '#AF52DE' },
-                                                { key: 'valor_burocracia', label: 'Burocracia', Icon: FileText,  color: '#007AFF' },
-                                                { key: 'valor_construcao', label: 'Construção', Icon: Building2, color: '#FF9500' },
+                                                { key: 'valor_terreno',    label: 'Terreno',    Icon: Landmark, color: '#AF52DE' },
+                                                { key: 'valor_burocracia', label: 'Burocracia', Icon: FileText, color: '#007AFF' },
                                             ].filter(({ key }) => (obra[key as keyof typeof obra] as number ?? 0) > 0)
                                              .map(({ key, label, Icon, color }) => (
                                                 <div key={key} className="flex items-center gap-1.5">

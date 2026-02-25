@@ -175,18 +175,6 @@ export function ObraDetailPage() {
     const [budgetInput, setBudgetInput] = useState('')
     const budgetRef = useRef<HTMLInputElement>(null)
 
-    const [editingTerreno, setEditingTerreno] = useState(false)
-    const [terrenoInput, setTerrenoInput] = useState('')
-    const terrenoRef = useRef<HTMLInputElement>(null)
-
-    const [editingBurocracia, setEditingBurocracia] = useState(false)
-    const [burocraciaInput, setBurocraciaInput] = useState('')
-    const burocraciaRef = useRef<HTMLInputElement>(null)
-
-    const [editingConstrucao, setEditingConstrucao] = useState(false)
-    const [construcaoInput, setConstrucaoInput] = useState('')
-    const construcaoRef = useRef<HTMLInputElement>(null)
-
     /* ── Dar Baixa (Saída rápida) ── */
     const [baixaTarget, setBaixaTarget] = useState<{
         materialId: string
@@ -442,62 +430,15 @@ export function ObraDetailPage() {
                                     </div>
                                     {/* Values */}
                                     <div className="space-y-2.5 flex-1 min-w-0">
-                                        {/* Orçamento row */}
                                         <div className="flex justify-between items-center text-[13px]">
                                             <span className="text-muted-foreground">Orçamento</span>
                                             <span className="font-semibold tabular-nums">{formatCurrency(custos.orcamento)}</span>
                                         </div>
-
-                                        <div className="border-t border-border/30 pt-2.5 space-y-2.5">
-                                            {/* Terreno — editable */}
-                                            {[
-                                                { label: 'Terreno', field: 'valor_terreno' as const, editing: editingTerreno, setEditing: setEditingTerreno, inputVal: terrenoInput, setInput: setTerrenoInput, ref: terrenoRef },
-                                                { label: 'Burocracia', field: 'valor_burocracia' as const, editing: editingBurocracia, setEditing: setEditingBurocracia, inputVal: burocraciaInput, setInput: setBurocraciaInput, ref: burocraciaRef },
-                                                { label: 'Construção', field: 'valor_construcao' as const, editing: editingConstrucao, setEditing: setEditingConstrucao, inputVal: construcaoInput, setInput: setConstrucaoInput, ref: construcaoRef },
-                                            ].map(({ label, field, editing, setEditing, inputVal, setInput, ref }) => {
-                                                const currentVal: number = custos[field === 'valor_terreno' ? 'valorTerreno' : field === 'valor_burocracia' ? 'valorBurocracia' : 'valorConstrucao'] ?? 0
-                                                return (
-                                                    <div key={label} className="flex justify-between items-center text-[13px]">
-                                                        <span className="text-muted-foreground">{label}</span>
-                                                        {editing ? (
-                                                            <input
-                                                                ref={ref}
-                                                                type="number" step="0.01" min="0"
-                                                                className="text-[13px] font-semibold tabular-nums bg-transparent border-b border-primary outline-none w-28 text-right"
-                                                                value={inputVal}
-                                                                onChange={(e) => setInput(e.target.value)}
-                                                                onBlur={() => {
-                                                                    const val = Number(inputVal)
-                                                                    if (val >= 0) updateOrcamento.mutate({ id: obraId, [field]: val }, { onSuccess: () => setEditing(false) })
-                                                                    else setEditing(false)
-                                                                }}
-                                                                onKeyDown={(e) => {
-                                                                    if (e.key === 'Enter') { const val = Number(inputVal); if (val >= 0) updateOrcamento.mutate({ id: obraId, [field]: val }, { onSuccess: () => setEditing(false) }) }
-                                                                    if (e.key === 'Escape') setEditing(false)
-                                                                }}
-                                                                autoFocus
-                                                            />
-                                                        ) : (
-                                                            <span
-                                                                className="font-semibold tabular-nums cursor-pointer hover:text-primary transition-colors"
-                                                                style={{ color: (currentVal as number) > 0 ? '#AF52DE' : undefined }}
-                                                                onClick={() => { setInput(String(currentVal)); setEditing(true); setTimeout(() => ref.current?.focus(), 50) }}
-                                                                title="Clique para editar"
-                                                            >
-                                                                {formatCurrency(currentVal as number)}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                )
-                                            })}
+                                        <div className="flex justify-between items-center text-[13px]">
+                                            <span className="font-medium">Total</span>
+                                            <span className="font-bold tabular-nums">{formatCurrency(custos.total ?? 0)}</span>
                                         </div>
-
-                                        {/* Total + Saldo */}
-                                        <div className="border-t border-border/40 pt-2.5 space-y-2">
-                                            <div className="flex justify-between text-[13px]">
-                                                <span className="font-medium">Total</span>
-                                                <span className="font-bold tabular-nums">{formatCurrency(custos.total ?? 0)}</span>
-                                            </div>
+                                        <div className="border-t border-border/30 pt-2.5">
                                             <div className="flex justify-between text-[13px]">
                                                 <span className="text-muted-foreground">Saldo</span>
                                                 <span className={cn('font-semibold tabular-nums', (custos.saldo ?? 0) < 0 ? 'text-destructive' : 'text-success')}>
@@ -519,20 +460,18 @@ export function ObraDetailPage() {
                                         <ResponsiveContainer width={160} height={160}>
                                             <PieChart>
                                                 <Pie data={custos.porCategoria || []} dataKey="valor" nameKey="categoria" cx="50%" cy="50%" outerRadius={68} innerRadius={44} paddingAngle={3} strokeWidth={0} cornerRadius={3}>
-                                                    {(custos.porCategoria || []).map((cat: any, i: number) => {
-                                                        const catColors: Record<string, string> = { 'Terreno': '#AF52DE', 'Burocracia': '#007AFF', 'Construção': '#FF9500' }
-                                                        return <Cell key={i} fill={catColors[cat.categoria] ?? RING_COLORS[i % RING_COLORS.length]} />
-                                                    })}
+                                                    {(custos.porCategoria || []).map((_cat: any, i: number) => (
+                                                        <Cell key={i} fill={RING_COLORS[i % RING_COLORS.length]} />
+                                                    ))}
                                                 </Pie>
                                                 <Tooltip content={<ChartTip />} />
                                             </PieChart>
                                         </ResponsiveContainer>
                                         <div className="flex-1 space-y-2.5 ml-2">
                                             {(custos.porCategoria || []).map((cat: any, i: number) => {
-                                                const catColors: Record<string, string> = { 'Terreno': '#AF52DE', 'Burocracia': '#007AFF', 'Construção': '#FF9500' }
-                                                const color = catColors[cat.categoria] ?? RING_COLORS[i % RING_COLORS.length]
-                                                const total = custos.total ?? 0
-                                                const pct = total > 0 ? Math.round((cat.valor / total) * 100) : 0
+                                                const color = RING_COLORS[i % RING_COLORS.length]
+                                                const totalPie = (custos.porCategoria || []).reduce((sum: number, c: any) => sum + (c.valor ?? 0), 0)
+                                                const pct = totalPie > 0 ? Math.round((cat.valor / totalPie) * 100) : 0
                                                 return (
                                                     <div key={cat.categoria} className="flex items-center text-[12px] gap-2">
                                                         <span className="h-[8px] w-[8px] rounded-full flex-shrink-0" style={{ background: color }} />

@@ -1,0 +1,269 @@
+import { useNavigate } from '@tanstack/react-router'
+import { motion } from 'framer-motion'
+import {
+    ArrowDownRight, ArrowUpRight, ArrowLeftRight,
+    AlertTriangle, Bell, FileText, ChevronRight, MapPin,
+} from 'lucide-react'
+import { useDashboardStats, useDashboardCustoPorObra, useMovimentacoesRecentes, useEstoqueAlertas } from '@/hooks/use-supabase'
+import { cn, formatDate, formatNumber, formatCurrency } from '@/lib/utils'
+import { useAuthStore } from '@/stores/auth-store'
+
+/* Apple System Colors */
+const clr = { blue: '#007AFF', green: '#34C759', red: '#FF3B30', orange: '#FF9500' }
+
+function greeting() {
+    const h = new Date().getHours()
+    return h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite'
+}
+
+/* SVG Ring */
+function Ring({ percent, size = 80, stroke = 6, color }: { percent: number; size?: number; stroke?: number; color: string }) {
+    const r = (size - stroke) / 2
+    const circ = 2 * Math.PI * r
+    return (
+        <svg viewBox={`0 0 ${size} ${size}`} style={{ width: size, height: size }} className="flex-shrink-0">
+            <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" className="text-muted/40" strokeWidth={stroke} />
+            <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round"
+                strokeDasharray={`${(Math.min(percent, 100) / 100) * circ} ${circ}`}
+                transform={`rotate(-90 ${size / 2} ${size / 2})`}
+            />
+        </svg>
+    )
+}
+
+function ringColor(p: number) { return p > 90 ? clr.red : p > 70 ? clr.orange : clr.green }
+
+const statusMap: Record<string, { label: string; color: string }> = {
+    ATIVA: { label: 'Ativa', color: '#34C759' },
+    PAUSADA: { label: 'Pausada', color: '#FF9500' },
+    FINALIZADA: { label: 'Finalizada', color: '#8E8E93' },
+}
+
+const tipos: Record<string, { label: string; icon: typeof ArrowLeftRight; tint: string }> = {
+    ENTRADA: { label: 'Entrada', icon: ArrowDownRight, tint: clr.green },
+    SAIDA: { label: 'Saída', icon: ArrowUpRight, tint: clr.red },
+    TRANSFERENCIA: { label: 'Transferência', icon: ArrowLeftRight, tint: clr.blue },
+}
+
+export function DashboardPage() {
+    const { user } = useAuthStore()
+    const navigate = useNavigate()
+
+    const { data: stats } = useDashboardStats()
+    const { data: recentMovs } = useMovimentacoesRecentes()
+    const { data: custoPorObra } = useDashboardCustoPorObra()
+    const { data: alertasData } = useEstoqueAlertas()
+
+    const s = stats
+    const movs = recentMovs || []
+    const obras = custoPorObra || []
+    const alertas = alertasData || []
+    const pct = s?.orcamentoTotal && s.orcamentoTotal > 0 ? Math.round((s.custoTotal / s.orcamentoTotal) * 100) : 0
+
+    return (
+        <div className="pb-16">
+
+            {/* ─── Large Title ─── */}
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }} className="px-4 md:px-6 pt-10 pb-8">
+                <h1 className="text-[28px] md:text-[34px] font-bold tracking-tight leading-tight">
+                    {greeting()}, {user?.nome?.split(' ')[0] ?? 'usuário'}.
+                </h1>
+                <p className="text-[15px] md:text-[17px] text-muted-foreground mt-1">
+                    {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                </p>
+            </motion.div>
+
+            {/* ─── Financial Summary ─── */}
+            <motion.div
+                initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.1 }}
+                className="mx-4 md:mx-6 rounded-2xl bg-card p-5 md:p-6"
+            >
+                <div className="flex flex-col items-center gap-5 md:flex-row md:items-center md:gap-8">
+                    <div className="relative">
+                        <Ring percent={pct} size={120} stroke={10} color={ringColor(pct)} />
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <span className="text-[24px] font-bold tabular-nums leading-none">{pct}%</span>
+                            <span className="text-[11px] text-muted-foreground mt-1 uppercase tracking-wider">usado</span>
+                        </div>
+                    </div>
+                    <div className="text-center md:text-left">
+                        <p className="text-[26px] md:text-[34px] font-bold tabular-nums tracking-tight leading-none">
+                            {formatCurrency(s?.custoTotal ?? 0)}
+                        </p>
+                        <p className="text-[15px] md:text-[17px] text-muted-foreground mt-2">
+                            de {formatCurrency(s?.orcamentoTotal ?? 0)} em orçamento
+                        </p>
+                        <div className="flex justify-center md:justify-start gap-6 mt-4 pt-4 border-t border-border/20">
+                            {[
+                                { l: 'Obras', v: s?.obrasAtivas ?? 0 },
+                                { l: 'Materiais', v: s?.totalMateriais ?? 0 },
+                                { l: 'Movim.', v: formatNumber(s?.totalMovimentacoes ?? 0) },
+                            ].map(m => (
+                                <div key={m.l}>
+                                    <p className="text-[20px] md:text-[22px] font-semibold tabular-nums leading-none">{m.v}</p>
+                                    <p className="text-[13px] text-muted-foreground mt-1">{m.l}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </motion.div>
+
+            {/* ─── Suas Obras ─── */}
+            <motion.div
+                initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.2 }}
+                className="mt-10 px-4 md:px-6"
+            >
+                <div className="flex items-baseline justify-between mb-4">
+                    <h2 className="text-[20px] md:text-[22px] font-bold tracking-tight">Suas Obras</h2>
+                    <button onClick={() => navigate({ to: '/obras' })} className="text-[15px] md:text-[17px] text-primary font-regular flex items-center hover:text-primary/80 transition-colors">
+                        Ver Todas<ChevronRight className="h-4 w-4 ml-1" />
+                    </button>
+                </div>
+
+                {obras.length === 0 ? (
+                    <p className="text-[17px] text-muted-foreground text-center py-10">Nenhuma obra cadastrada.</p>
+                ) : (
+                    <motion.div
+                        initial="hidden"
+                        animate="show"
+                        variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06 } } }}
+                        className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
+                    >
+                        {obras.map((obra: any) => {
+                            const op = obra.percentual ?? 0
+                            const st = statusMap[obra.status] ?? statusMap.ATIVA
+                            return (
+                                <motion.button
+                                    key={obra.id}
+                                    variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }}
+                                    onClick={() => navigate({ to: '/obras/$obraId', params: { obraId: obra.id } })}
+                                    className="apple-card flex flex-col p-5 text-left cursor-pointer"
+                                >
+                                    {/* Header: Status + Badge */}
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="flex items-center gap-2">
+                                            <span className="flex h-[9px] w-[9px] rounded-full" style={{ backgroundColor: st.color }} />
+                                            <span className="text-[13px] font-medium" style={{ color: st.color }}>{st.label}</span>
+                                        </div>
+                                        <ChevronRight className="h-4 w-4 text-muted-foreground/30" />
+                                    </div>
+
+                                    {/* Nome */}
+                                    <h3 className="text-[17px] font-semibold leading-snug">{obra.obra}</h3>
+
+                                    {/* Endereço */}
+                                    <div className="flex items-center gap-1.5 mt-1.5">
+                                        <MapPin className="h-3.5 w-3.5 text-muted-foreground/40 flex-shrink-0" />
+                                        <span className="text-[13px] text-muted-foreground leading-snug truncate">{obra.endereco}</span>
+                                    </div>
+
+                                    {/* Spacer to push footer down */}
+                                    <div className="flex-1 min-h-4" />
+
+                                    {/* Budget progress bar */}
+                                    <div className="mt-4 pt-4 border-t border-border/15">
+                                        <div className="flex items-baseline justify-between mb-2.5">
+                                            <span className="text-[15px] font-semibold tabular-nums">{formatCurrency(obra.custo)}</span>
+                                            <span className="text-[12px] text-muted-foreground tabular-nums">de {formatCurrency(obra.orcamento)}</span>
+                                        </div>
+                                        <div className="h-[5px] w-full rounded-full bg-muted/50 overflow-hidden">
+                                            <div
+                                                className="h-full rounded-full transition-all duration-500 ease-out"
+                                                style={{
+                                                    width: `${Math.min(op, 100)}%`,
+                                                    backgroundColor: ringColor(op),
+                                                }}
+                                            />
+                                        </div>
+                                        <p className="text-[12px] text-muted-foreground mt-1.5 tabular-nums">{op}% do orçamento utilizado</p>
+                                    </div>
+                                </motion.button>
+                            )
+                        })}
+                    </motion.div>
+                )}
+            </motion.div>
+
+            {/* ─── Insights ─── */}
+            <motion.div
+                initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.3 }}
+                className="px-4 md:px-6 mt-10 grid grid-cols-2 gap-3 md:gap-4"
+            >
+                <div className="rounded-2xl bg-card p-4 md:p-5">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl mb-3"
+                        style={{ backgroundColor: alertas.length > 0 ? '#FF3B3018' : '#8E8E9318' }}>
+                        <Bell className="h-5 w-5" style={{ color: alertas.length > 0 ? clr.red : '#8E8E93' }} />
+                    </span>
+                    <p className="text-[24px] md:text-[28px] font-bold tabular-nums leading-none">{alertas.length}</p>
+                    <p className="text-[13px] md:text-[15px] text-muted-foreground mt-1">{alertas.length === 1 ? 'Alerta' : 'Alertas'}</p>
+                </div>
+                <div className="rounded-2xl bg-card p-4 md:p-5">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl mb-3"
+                        style={{ backgroundColor: '#007AFF18' }}>
+                        <FileText className="h-5 w-5" style={{ color: clr.blue }} />
+                    </span>
+                    <p className="text-[24px] md:text-[28px] font-bold tabular-nums leading-none">{s?.totalNFs ?? 0}</p>
+                    <p className="text-[13px] md:text-[15px] text-muted-foreground mt-1">Notas Fiscais</p>
+                </div>
+            </motion.div>
+
+            {/* ─── Atividade Recente ─── */}
+            <motion.div
+                initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.4 }}
+                className="px-4 md:px-6 mt-10"
+            >
+                <div className="flex items-baseline justify-between mb-3">
+                    <h2 className="text-[20px] md:text-[22px] font-bold tracking-tight">Atividade Recente</h2>
+                    <button onClick={() => navigate({ to: '/movimentacoes' })} className="text-[15px] md:text-[17px] text-primary flex items-center hover:text-primary/80 transition-colors">
+                        Ver Todas<ChevronRight className="h-4 w-4 ml-1" />
+                    </button>
+                </div>
+                <div className="rounded-2xl bg-card overflow-hidden">
+                    {movs.length === 0 ? (
+                        <p className="text-[17px] text-muted-foreground text-center py-12">Nenhuma movimentação.</p>
+                    ) : (
+                        movs.map((mov: any, i: number) => {
+                            const t = tipos[mov.tipo] ?? tipos.ENTRADA
+                            const Icon = t.icon
+                            const cost = mov.quantidade * (mov.precoUnitario ?? mov.preco_unitario ?? mov.material?.preco_unitario ?? 0)
+                            return (
+                                <div
+                                    key={mov.id}
+                                    className={cn(
+                                        'flex items-center gap-3 md:gap-4 px-4 md:px-5 min-h-[56px] md:min-h-[64px] py-3',
+                                        i > 0 && 'border-t border-border/20',
+                                    )}
+                                >
+                                    <span className="flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0"
+                                        style={{ backgroundColor: `${t.tint}14` }}>
+                                        <Icon className="h-5 w-5" style={{ color: t.tint }} />
+                                    </span>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-[15px] md:text-[17px] font-medium truncate">{mov.material?.nome ?? '—'}</p>
+                                        <p className="text-[13px] md:text-[15px] text-muted-foreground">
+                                            {t.label} · {formatNumber(mov.quantidade)} un
+                                        </p>
+                                    </div>
+                                    <div className="text-right flex-shrink-0">
+                                        <p className={cn(
+                                            'text-[17px] font-semibold tabular-nums',
+                                            mov.tipo === 'SAIDA' ? 'text-destructive' : 'text-success'
+                                        )}>
+                                            {mov.tipo === 'SAIDA' ? '−' : '+'}{formatCurrency(cost)}
+                                        </p>
+                                        <p className="text-[13px] text-muted-foreground tabular-nums">{formatDate(mov.created_at)}</p>
+                                    </div>
+                                </div>
+                            )
+                        })
+                    )}
+                </div>
+            </motion.div>
+        </div>
+    )
+}

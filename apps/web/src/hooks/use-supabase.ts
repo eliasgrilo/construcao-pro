@@ -107,12 +107,13 @@ export function useObra(obraId: string) {
 export function useCreateObra() {
     const qc = useQueryClient()
     return useMutation({
-        mutationFn: async (body: { nome: string; endereco: string; status?: string; orcamento?: number }) => {
+        mutationFn: async (body: { nome: string; endereco: string; status?: string; orcamento?: number; valorTerreno?: number }) => {
             const { data, error } = await supabase.from('obras').insert({
                 nome: body.nome,
                 endereco: body.endereco,
                 status: (body.status as any) || 'ATIVA',
                 orcamento: body.orcamento || 0,
+                valor_terreno: body.valorTerreno || 0,
             }).select().single()
             if (error) throw error
             return data

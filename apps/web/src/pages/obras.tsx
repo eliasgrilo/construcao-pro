@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { createObraSchema, type CreateObraInput } from '@/lib/schemas'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, MapPin, Trash2, Building2, Warehouse } from 'lucide-react'
+import { Plus, MapPin, Trash2, Building2, Warehouse, Landmark } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -196,10 +196,21 @@ export function ObrasPage() {
                                     </div>
 
                                     {/* Address */}
-                                    <div className="flex items-center gap-1.5 text-[15px] text-muted-foreground mb-4">
+                                    <div className="flex items-center gap-1.5 text-[15px] text-muted-foreground mb-3">
                                         <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
                                         <span className="truncate">{obra.endereco}</span>
                                     </div>
+
+                                    {/* Valor do Terreno */}
+                                    {(obra.valor_terreno ?? 0) > 0 && (
+                                        <div className="flex items-center gap-1.5 mb-4">
+                                            <span className="flex h-6 w-6 items-center justify-center rounded-md flex-shrink-0" style={{ backgroundColor: '#5856D618' }}>
+                                                <Landmark className="h-3.5 w-3.5" style={{ color: '#5856D6' }} />
+                                            </span>
+                                            <span className="text-[13px] text-muted-foreground">Terreno</span>
+                                            <span className="text-[13px] font-semibold tabular-nums ml-auto" style={{ color: '#5856D6' }}>{formatCurrency(obra.valor_terreno)}</span>
+                                        </div>
+                                    )}
 
                                     {/* Stats Bar */}
                                     <div className="flex items-center gap-4 pt-3 border-t border-border/30">
@@ -236,7 +247,7 @@ export function ObrasPage() {
                         <DialogTitle>Nova Obra</DialogTitle>
                         <DialogDescription>Cadastre uma nova obra de construção.</DialogDescription>
                     </DialogHeader>
-                    <form onSubmit={handleSubmit((d) => createMutation.mutate({ nome: d.nome, endereco: d.endereco, status: d.status, orcamento: d.orcamento }, {
+                    <form onSubmit={handleSubmit((d) => createMutation.mutate({ nome: d.nome, endereco: d.endereco, status: d.status, orcamento: d.orcamento, valorTerreno: d.valorTerreno }, {
                         onSuccess: () => {
                             setOpen(false)
                             reset()
@@ -274,6 +285,11 @@ export function ObrasPage() {
                                 <Input id="orcamento" type="number" step="0.01" min="0" {...register('orcamento', { valueAsNumber: true })} placeholder="0,00" />
                                 {errors.orcamento && <p className="text-[13px] text-destructive mt-1">{errors.orcamento.message}</p>}
                             </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="valorTerreno">Valor do Terreno (R$)</Label>
+                            <Input id="valorTerreno" type="number" step="0.01" min="0" {...register('valorTerreno', { valueAsNumber: true })} placeholder="0,00" />
+                            {errors.valorTerreno && <p className="text-[13px] text-destructive mt-1">{errors.valorTerreno.message}</p>}
                         </div>
                         <DialogFooter>
                             <Button type="button" variant="outline" onClick={() => { setOpen(false); reset() }}>Cancelar</Button>

@@ -32,10 +32,11 @@ interface ChartTooltipProps {
 }
 
 /* ── Constants ── */
-const statusMap: Record<string, { label: string; variant: 'success' | 'secondary' | 'warning'; color: string }> = {
+const statusMap: Record<string, { label: string; variant: 'success' | 'secondary' | 'warning' | 'info'; color: string }> = {
     ATIVA: { label: 'Ativa', variant: 'success', color: '#34C759' },
     FINALIZADA: { label: 'Finalizada', variant: 'secondary', color: '#8E8E93' },
     PAUSADA: { label: 'Pausada', variant: 'warning', color: '#FF9500' },
+    VENDIDO: { label: 'Vendido', variant: 'info', color: '#5856D6' },
 }
 const tipoConfig: Record<string, { label: string; icon: typeof ArrowLeftRight; tint: string }> = {
     ENTRADA: { label: 'Entrada', icon: ArrowDownRight, tint: '#34C759' },

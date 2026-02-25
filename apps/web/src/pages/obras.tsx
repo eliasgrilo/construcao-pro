@@ -15,10 +15,11 @@ import { useObras, useCreateObra, useDeleteObra } from '@/hooks/use-supabase'
 import { cn, formatCurrency } from '@/lib/utils'
 import { useToast } from '@/components/ui/toast'
 
-const statusMap: Record<string, { label: string; variant: 'success' | 'secondary' | 'warning'; color: string }> = {
+const statusMap: Record<string, { label: string; variant: 'success' | 'secondary' | 'warning' | 'info'; color: string }> = {
     ATIVA: { label: 'Ativa', variant: 'success', color: '#34C759' },
     FINALIZADA: { label: 'Finalizada', variant: 'secondary', color: '#8E8E93' },
     PAUSADA: { label: 'Pausada', variant: 'warning', color: '#FF9500' },
+    VENDIDO: { label: 'Vendido', variant: 'info', color: '#5856D6' },
 }
 
 export function ObrasPage() {
@@ -27,7 +28,7 @@ export function ObrasPage() {
     const [open, setOpen] = useState(false)
     const [deleteTarget, setDeleteTarget] = useState<{ id: string; nome: string } | null>(null)
     const [search, setSearch] = useState('')
-    const [filterStatus, setFilterStatus] = useState<'ALL' | 'ATIVA' | 'PAUSADA' | 'FINALIZADA'>('ALL')
+    const [filterStatus, setFilterStatus] = useState<'ALL' | 'ATIVA' | 'PAUSADA' | 'FINALIZADA' | 'VENDIDO'>('ALL')
 
     const { data: obrasData, isLoading } = useObras()
     const createMutation = useCreateObra()
@@ -42,6 +43,7 @@ export function ObrasPage() {
         ATIVA: obrasData?.filter((o: any) => o.status === 'ATIVA').length ?? 0,
         PAUSADA: obrasData?.filter((o: any) => o.status === 'PAUSADA').length ?? 0,
         FINALIZADA: obrasData?.filter((o: any) => o.status === 'FINALIZADA').length ?? 0,
+        VENDIDO: obrasData?.filter((o: any) => o.status === 'VENDIDO').length ?? 0,
     }
 
     const obras = (obrasData || []).filter((o: any) => {
@@ -55,6 +57,7 @@ export function ObrasPage() {
         { key: 'ATIVA' as const, label: 'Ativa', color: '#34C759' },
         { key: 'PAUSADA' as const, label: 'Pausada', color: '#FF9500' },
         { key: 'FINALIZADA' as const, label: 'Finalizada', color: '#8E8E93' },
+        { key: 'VENDIDO' as const, label: 'Vendido', color: '#5856D6' },
     ]
 
     return (
@@ -262,6 +265,7 @@ export function ObrasPage() {
                                         <SelectItem value="ATIVA">Ativa</SelectItem>
                                         <SelectItem value="PAUSADA">Pausada</SelectItem>
                                         <SelectItem value="FINALIZADA">Finalizada</SelectItem>
+                                        <SelectItem value="VENDIDO">Vendido</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>

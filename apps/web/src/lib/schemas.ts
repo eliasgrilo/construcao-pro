@@ -11,7 +11,7 @@ export type LoginInput = z.infer<typeof loginSchema>
 export const createObraSchema = z.object({
     nome: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres'),
     endereco: z.string().min(5, 'Endereço deve ter no mínimo 5 caracteres'),
-    status: z.enum(['ATIVA', 'FINALIZADA', 'PAUSADA']).default('ATIVA'),
+    status: z.enum(['ATIVA', 'FINALIZADA', 'PAUSADA', 'VENDIDO']).default('ATIVA'),
     orcamento: z.number().min(0, 'Orçamento deve ser positivo').default(0),
 })
 export type CreateObraInput = z.infer<typeof createObraSchema>

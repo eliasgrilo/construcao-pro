@@ -746,11 +746,30 @@ export function ObraDetailPage() {
                 <DialogContent className="sm:max-w-sm">
                     <DialogHeader>
                         <DialogTitle>Excluir Almoxarifado</DialogTitle>
-                        <DialogDescription>Tem certeza que deseja excluir <strong>{deleteTarget?.nome}</strong>?</DialogDescription>
+                        <DialogDescription>
+                            Tem certeza que deseja excluir <strong>{deleteTarget?.nome}</strong>?{' '}
+                            Todo o estoque e histórico de movimentações deste almoxarifado serão excluídos permanentemente.
+                        </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancelar</Button>
-                        <Button variant="destructive" onClick={() => deleteTarget && deleteAlmox.mutate(deleteTarget.id, { onSuccess: () => setDeleteTarget(null), onError: () => toast({ title: 'Erro ao excluir almoxarifado', variant: 'error' }) })} loading={deleteAlmox.isPending}>Excluir</Button>
+                        <Button
+                            variant="destructive"
+                            onClick={() => deleteTarget && deleteAlmox.mutate(deleteTarget.id, {
+                                onSuccess: () => {
+                                    setDeleteTarget(null)
+                                    toast({ title: 'Almoxarifado excluído com sucesso' })
+                                },
+                                onError: () => toast({
+                                    title: 'Erro ao excluir almoxarifado',
+                                    description: 'Tente novamente ou contate o suporte.',
+                                    variant: 'error',
+                                }),
+                            })}
+                            loading={deleteAlmox.isPending}
+                        >
+                            Excluir
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

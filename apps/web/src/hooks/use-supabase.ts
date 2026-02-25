@@ -230,6 +230,8 @@ export function useDeleteAlmoxarifado() {
             qc.invalidateQueries({ queryKey: ['almoxarifados'] })
             qc.invalidateQueries({ queryKey: ['obras'] })
             qc.invalidateQueries({ queryKey: ['obra'] })
+            qc.invalidateQueries({ queryKey: ['estoque'] })
+            qc.invalidateQueries({ queryKey: ['movimentacoes'] })
         },
     })
 }

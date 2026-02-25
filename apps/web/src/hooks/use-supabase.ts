@@ -40,6 +40,8 @@ export function useDashboardCustoPorObra() {
                 custo: number
                 orcamento: number
                 valor_terreno: number
+                valor_burocracia: number
+                valor_construcao: number
                 percentual: number
             }[]
         },

@@ -211,16 +211,16 @@ export function ObrasPage() {
                                     {/* Investimento */}
                                     <div className="mb-4 space-y-1.5">
                                         {[
-                                            { label: 'Terreno',    Icon: Landmark,  color: '#AF52DE', value: obra.valor_terreno    ?? 0 },
-                                            { label: 'Burocracia', Icon: FileText,  color: '#007AFF', value: obra.valor_burocracia ?? 0 },
-                                            { label: 'Construção', Icon: Building2, color: '#FF9500', value: obra.valor_construcao ?? 0 },
-                                        ].map(({ label, Icon, color, value }) => (
+                                            { label: 'Terreno',    Icon: Landmark,  color: '#AF52DE', value: obra.valor_terreno    ?? 0, valueColor: (obra.valor_terreno ?? 0) > 0 ? '#AF52DE' : undefined },
+                                            { label: 'Burocracia', Icon: FileText,  color: '#007AFF', value: obra.valor_burocracia ?? 0, valueColor: '#ffffff' },
+                                            { label: 'Construção', Icon: Building2, color: '#FF9500', value: obra.valor_construcao ?? 0, valueColor: '#ffffff' },
+                                        ].map(({ label, Icon, color, value, valueColor }) => (
                                             <div key={label} className="flex items-center gap-1.5">
                                                 <span className="flex h-6 w-6 items-center justify-center rounded-md flex-shrink-0" style={{ backgroundColor: `${color}18` }}>
                                                     <Icon className="h-3.5 w-3.5" style={{ color }} />
                                                 </span>
                                                 <span className="text-[13px] text-muted-foreground">{label}</span>
-                                                <span className="text-[13px] font-semibold tabular-nums ml-auto" style={{ color: value > 0 ? color : undefined }}>
+                                                <span className="text-[13px] font-semibold tabular-nums ml-auto" style={{ color: valueColor }}>
                                                     {formatCurrency(value)}
                                                 </span>
                                             </div>

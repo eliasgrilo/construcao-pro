@@ -3,7 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { createObraSchema, type CreateObraInput } from '@/lib/schemas'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, MapPin, Trash2, Building2, Warehouse } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -27,6 +27,7 @@ export function ObrasPage() {
     const [open, setOpen] = useState(false)
     const [deleteTarget, setDeleteTarget] = useState<{ id: string; nome: string } | null>(null)
     const [search, setSearch] = useState('')
+    const [filterStatus, setFilterStatus] = useState<'ALL' | 'ATIVA' | 'PAUSADA' | 'FINALIZADA'>('ALL')
 
     const { data: obrasData, isLoading } = useObras()
     const createMutation = useCreateObra()
@@ -36,9 +37,25 @@ export function ObrasPage() {
         resolver: zodResolver(createObraSchema),
     })
 
-    const obras = (obrasData || []).filter((o: any) =>
-        !search || o.nome.toLowerCase().includes(search.toLowerCase()) || o.endereco.toLowerCase().includes(search.toLowerCase()),
-    )
+    const counts = {
+        ALL: obrasData?.length ?? 0,
+        ATIVA: obrasData?.filter((o: any) => o.status === 'ATIVA').length ?? 0,
+        PAUSADA: obrasData?.filter((o: any) => o.status === 'PAUSADA').length ?? 0,
+        FINALIZADA: obrasData?.filter((o: any) => o.status === 'FINALIZADA').length ?? 0,
+    }
+
+    const obras = (obrasData || []).filter((o: any) => {
+        const matchesSearch = !search || o.nome.toLowerCase().includes(search.toLowerCase()) || o.endereco.toLowerCase().includes(search.toLowerCase())
+        const matchesStatus = filterStatus === 'ALL' || o.status === filterStatus
+        return matchesSearch && matchesStatus
+    })
+
+    const segments = [
+        { key: 'ALL' as const, label: 'Todas', color: null },
+        { key: 'ATIVA' as const, label: 'Ativa', color: '#34C759' },
+        { key: 'PAUSADA' as const, label: 'Pausada', color: '#FF9500' },
+        { key: 'FINALIZADA' as const, label: 'Finalizada', color: '#8E8E93' },
+    ]
 
     return (
         <div className="pb-10">
@@ -46,20 +63,69 @@ export function ObrasPage() {
             <div className="px-4 md:px-8 pt-10 pb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                     <h1 className="text-[28px] md:text-[34px] font-bold tracking-tight">Obras</h1>
-                    <p className="text-[15px] text-muted-foreground mt-0.5">{obras.length} obra{obras.length !== 1 ? 's' : ''} cadastrada{obras.length !== 1 ? 's' : ''}</p>
+                    <p className="text-[15px] text-muted-foreground mt-0.5">
+                        {obras.length} obra{obras.length !== 1 ? 's' : ''}
+                        {filterStatus !== 'ALL' && (
+                            <span className="text-muted-foreground/60"> · {statusMap[filterStatus]?.label}</span>
+                        )}
+                    </p>
                 </div>
                 <Button onClick={() => setOpen(true)} size="sm">
                     <Plus className="h-4 w-4 mr-1.5" />Nova Obra
                 </Button>
             </div>
 
-            {/* Search */}
-            <div className="px-4 md:px-8 mb-6">
+            {/* Filter + Search */}
+            <div className="px-4 md:px-8 mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                {/* Segmented Control */}
+                <div className="flex items-center bg-muted rounded-[12px] p-1 gap-0.5 overflow-x-auto scrollbar-hide flex-shrink-0 self-start sm:self-auto">
+                    {segments.map((seg) => (
+                        <button
+                            key={seg.key}
+                            onClick={() => setFilterStatus(seg.key)}
+                            className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-[9px] text-[13px] font-medium whitespace-nowrap"
+                        >
+                            {filterStatus === seg.key && (
+                                <motion.div
+                                    layoutId="filter-pill"
+                                    className="absolute inset-0 rounded-[9px] bg-background shadow-sm"
+                                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                                />
+                            )}
+                            <span className={cn(
+                                'relative flex items-center gap-1.5 transition-colors duration-150',
+                                filterStatus === seg.key ? 'text-foreground' : 'text-muted-foreground',
+                            )}>
+                                {seg.color && (
+                                    <span className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: seg.color }} />
+                                )}
+                                {seg.label}
+                                <AnimatePresence mode="wait">
+                                    <motion.span
+                                        key={counts[seg.key]}
+                                        initial={{ opacity: 0, y: -4 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: 4 }}
+                                        transition={{ duration: 0.15 }}
+                                        className={cn(
+                                            'text-[11px] tabular-nums',
+                                            filterStatus === seg.key ? 'text-muted-foreground' : 'text-muted-foreground/50',
+                                        )}
+                                    >
+                                        {counts[seg.key]}
+                                    </motion.span>
+                                </AnimatePresence>
+                            </span>
+                        </button>
+                    ))}
+                </div>
+
+                {/* Search */}
                 <Input
                     placeholder="Buscar obras..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="max-w-full sm:max-w-sm"
+                    className="sm:max-w-xs"
                 />
             </div>
 
@@ -78,8 +144,22 @@ export function ObrasPage() {
                 ) : obras.length === 0 ? (
                     <div className="text-center py-20">
                         <Building2 className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
-                        <p className="text-[17px] font-medium text-muted-foreground">Nenhuma obra encontrada</p>
-                        <p className="text-[15px] text-muted-foreground/70 mt-1">Crie sua primeira obra para começar</p>
+                        {filterStatus !== 'ALL' || search ? (
+                            <>
+                                <p className="text-[17px] font-medium text-muted-foreground">Nenhuma obra encontrada</p>
+                                <button
+                                    onClick={() => { setFilterStatus('ALL'); setSearch('') }}
+                                    className="text-[14px] text-primary mt-2 hover:underline"
+                                >
+                                    Limpar filtros
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <p className="text-[17px] font-medium text-muted-foreground">Nenhuma obra cadastrada</p>
+                                <p className="text-[15px] text-muted-foreground/70 mt-1">Crie sua primeira obra para começar</p>
+                            </>
+                        )}
                     </div>
                 ) : (
                     <motion.div

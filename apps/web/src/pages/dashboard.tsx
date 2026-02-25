@@ -4,7 +4,7 @@ import {
     ArrowDownRight, ArrowUpRight, ArrowLeftRight,
     AlertTriangle, Bell, FileText, ChevronRight, MapPin,
 } from 'lucide-react'
-import { useDashboardStats, useDashboardCustoPorObra, useMovimentacoesRecentes, useEstoqueAlertas } from '@/hooks/use-supabase'
+import { useDashboardStats, useDashboardCustoPorObra, useMovimentacoesRecentes, useEstoqueAlertas, useObras } from '@/hooks/use-supabase'
 import { cn, formatDate, formatNumber, formatCurrency } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
 
@@ -37,7 +37,15 @@ const statusMap: Record<string, { label: string; color: string }> = {
     ATIVA: { label: 'Ativa', color: '#34C759' },
     PAUSADA: { label: 'Pausada', color: '#FF9500' },
     FINALIZADA: { label: 'Finalizada', color: '#8E8E93' },
+    VENDIDO: { label: 'Vendido', color: '#5856D6' },
 }
+
+const statusBreakdown = [
+    { key: 'ATIVA', label: 'Ativa', color: '#34C759' },
+    { key: 'PAUSADA', label: 'Pausada', color: '#FF9500' },
+    { key: 'FINALIZADA', label: 'Finaliz.', color: '#8E8E93' },
+    { key: 'VENDIDO', label: 'Vendido', color: '#5856D6' },
+]
 
 const tipos: Record<string, { label: string; icon: typeof ArrowLeftRight; tint: string }> = {
     ENTRADA: { label: 'Entrada', icon: ArrowDownRight, tint: clr.green },
@@ -53,6 +61,7 @@ export function DashboardPage() {
     const { data: recentMovs } = useMovimentacoesRecentes()
     const { data: custoPorObra } = useDashboardCustoPorObra()
     const { data: alertasData } = useEstoqueAlertas()
+    const { data: obrasData } = useObras()
 
     const s = stats
     const movs = recentMovs || []
@@ -94,17 +103,25 @@ export function DashboardPage() {
                         <p className="text-[15px] md:text-[17px] text-muted-foreground mt-2">
                             de {formatCurrency(s?.orcamentoTotal ?? 0)} em orçamento
                         </p>
-                        <div className="flex justify-center md:justify-start gap-6 mt-4 pt-4 border-t border-border/20">
-                            {[
-                                { l: 'Obras', v: s?.obrasAtivas ?? 0 },
-                                { l: 'Materiais', v: s?.totalMateriais ?? 0 },
-                                { l: 'Movim.', v: formatNumber(s?.totalMovimentacoes ?? 0) },
-                            ].map(m => (
-                                <div key={m.l}>
-                                    <p className="text-[20px] md:text-[22px] font-semibold tabular-nums leading-none">{m.v}</p>
-                                    <p className="text-[13px] text-muted-foreground mt-1">{m.l}</p>
-                                </div>
-                            ))}
+                        <div className="flex justify-center md:justify-start gap-5 mt-4 pt-4 border-t border-border/20">
+                            {statusBreakdown.map((st) => {
+                                const count = obrasData?.filter((o: any) => o.status === st.key).length ?? 0
+                                return (
+                                    <motion.div
+                                        key={st.key}
+                                        className={cn('transition-opacity duration-300', count === 0 ? 'opacity-30' : 'opacity-100')}
+                                        whileTap={{ scale: 0.94 }}
+                                        onClick={() => navigate({ to: '/obras' })}
+                                        style={{ cursor: 'pointer' }}
+                                    >
+                                        <p className="text-[20px] md:text-[22px] font-semibold tabular-nums leading-none">{count}</p>
+                                        <div className="flex items-center gap-1 mt-1">
+                                            <span className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: st.color }} />
+                                            <p className="text-[13px] text-muted-foreground">{st.label}</p>
+                                        </div>
+                                    </motion.div>
+                                )
+                            })}
                         </div>
                     </div>
                 </div>

@@ -435,6 +435,15 @@ export function ObraDetailPage() {
                                             <span className="font-semibold tabular-nums">{formatCurrency(custos.orcamento)}</span>
                                         </div>
                                         <div className="flex justify-between items-center text-[13px]">
+                                            <span className="flex items-center gap-1.5 text-muted-foreground">
+                                                <span className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: '#AF52DE' }} />
+                                                Terreno
+                                            </span>
+                                            <span className="font-semibold tabular-nums" style={{ color: (custos.valorTerreno ?? 0) > 0 ? '#AF52DE' : undefined }}>
+                                                {formatCurrency(custos.valorTerreno ?? 0)}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-[13px]">
                                             <span className="font-medium">Total</span>
                                             <span className="font-bold tabular-nums">{formatCurrency(custos.total ?? 0)}</span>
                                         </div>

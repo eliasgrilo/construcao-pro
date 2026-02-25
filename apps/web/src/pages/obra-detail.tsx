@@ -1,10 +1,10 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useParams, useNavigate } from '@tanstack/react-router'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
     ArrowLeft, MapPin, Warehouse, Package, ArrowLeftRight,
     ArrowDownRight, ArrowUpRight, Plus, Trash2, AlertTriangle,
-    User, DollarSign, Minus, ArrowRightLeft,
+    User, DollarSign, Minus, ArrowRightLeft, Check, ChevronDown,
 } from 'lucide-react'
 import {
     PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
@@ -57,6 +57,91 @@ const tabs: { key: Tab; label: string; icon: typeof Warehouse }[] = [
     { key: 'estoque', label: 'Estoque', icon: Package },
     { key: 'movimentacoes', label: 'Movimentações', icon: ArrowLeftRight },
 ]
+
+/* ── Status Switcher ── */
+function StatusSwitcher({
+    currentStatus,
+    isUpdating,
+    onStatusChange,
+}: {
+    currentStatus: string
+    isUpdating: boolean
+    onStatusChange: (status: string) => void
+}) {
+    const [open, setOpen] = useState(false)
+    const ref = useRef<HTMLDivElement>(null)
+    const current = statusMap[currentStatus]
+
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+        }
+        document.addEventListener('mousedown', handler)
+        return () => document.removeEventListener('mousedown', handler)
+    }, [])
+
+    return (
+        <div ref={ref} className="relative">
+            <button
+                onClick={() => !isUpdating && setOpen((o) => !o)}
+                className={cn(
+                    'flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide border transition-all select-none',
+                    isUpdating ? 'opacity-50 cursor-wait' : 'cursor-pointer',
+                    current?.variant === 'success' && 'bg-success/12 text-success border-success/20 hover:bg-success/20',
+                    current?.variant === 'warning' && 'bg-warning/12 text-warning border-warning/20 hover:bg-warning/20',
+                    current?.variant === 'secondary' && 'bg-secondary text-secondary-foreground border-border hover:bg-accent',
+                )}
+            >
+                <span className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: current?.color }} />
+                {current?.label}
+                <motion.span
+                    className="flex items-center"
+                    animate={{ rotate: open ? 180 : 0 }}
+                    transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+                >
+                    <ChevronDown className="h-2.5 w-2.5" />
+                </motion.span>
+            </button>
+
+            <AnimatePresence>
+                {open && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -6, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -6, scale: 0.96 }}
+                        transition={{ duration: 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
+                        className="absolute left-0 top-full mt-2 z-50 min-w-[148px] rounded-xl bg-popover border shadow-xl shadow-black/10 dark:shadow-black/30 overflow-hidden py-1"
+                    >
+                        {Object.entries(statusMap).map(([key, cfg], i) => (
+                            <motion.button
+                                key={key}
+                                initial={{ opacity: 0, x: -4 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: i * 0.04, duration: 0.15 }}
+                                onClick={() => {
+                                    if (key !== currentStatus) onStatusChange(key)
+                                    setOpen(false)
+                                }}
+                                className={cn(
+                                    'w-full flex items-center gap-2.5 px-3 py-2 text-[13px] transition-colors text-left',
+                                    key === currentStatus
+                                        ? 'text-foreground font-medium bg-accent/50'
+                                        : 'text-muted-foreground hover:text-foreground hover:bg-accent',
+                                )}
+                            >
+                                <span className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: cfg.color }} />
+                                {cfg.label}
+                                {key === currentStatus && (
+                                    <Check className="h-3.5 w-3.5 ml-auto text-primary" />
+                                )}
+                            </motion.button>
+                        ))}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    )
+}
 
 /* ── Apple tooltip ── */
 function ChartTip({ active, payload }: ChartTooltipProps) {
@@ -222,7 +307,21 @@ export function ObraDetailPage() {
                     <div>
                         <div className="flex items-center gap-3 flex-wrap">
                             <h1 className="text-[22px] md:text-[28px] font-bold tracking-tight">{obra?.nome ?? '—'}</h1>
-                            {status && <Badge variant={status.variant}>{status.label}</Badge>}
+                            {obra && (
+                                <StatusSwitcher
+                                    currentStatus={obra.status}
+                                    isUpdating={updateOrcamento.isPending}
+                                    onStatusChange={(newStatus) =>
+                                        updateOrcamento.mutate(
+                                            { id: obraId, status: newStatus },
+                                            {
+                                                onSuccess: () => toast({ title: `Status alterado para ${statusMap[newStatus]?.label}` }),
+                                                onError: () => toast({ title: 'Erro ao alterar status', variant: 'error' }),
+                                            },
+                                        )
+                                    }
+                                />
+                            )}
                         </div>
                         <div className="flex items-center gap-1.5 mt-1.5 text-[13px] text-muted-foreground">
                             <MapPin className="h-3.5 w-3.5" />{obra?.endereco}

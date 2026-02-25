@@ -281,6 +281,7 @@ export function ObrasPage() {
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="ATIVA">Ativa</SelectItem>
+                                        <SelectItem value="TERRENO">Terreno</SelectItem>
                                         <SelectItem value="PAUSADA">Pausada</SelectItem>
                                         <SelectItem value="FINALIZADA">Finalizada</SelectItem>
                                         <SelectItem value="VENDIDO">Vendido</SelectItem>

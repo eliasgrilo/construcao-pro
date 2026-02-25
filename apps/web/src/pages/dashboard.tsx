@@ -2,7 +2,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { motion } from 'framer-motion'
 import {
     ArrowDownRight, ArrowUpRight, ArrowLeftRight,
-    AlertTriangle, ChevronRight, MapPin, Landmark, Package,
+    AlertTriangle, ChevronRight, MapPin, Landmark, Package, CheckCircle2,
 } from 'lucide-react'
 import { useDashboardStats, useDashboardCustoPorObra, useMovimentacoesRecentes, useEstoqueAlertas, useObras } from '@/hooks/use-supabase'
 import { cn, formatDate, formatNumber, formatCurrency } from '@/lib/utils'
@@ -43,10 +43,9 @@ const statusMap: Record<string, { label: string; color: string }> = {
 
 const statusBreakdown = [
     { key: 'ATIVA', label: 'Ativa', color: '#34C759' },
-    { key: 'PAUSADA', label: 'Pausada', color: '#FF9500' },
+    { key: 'TERRENO', label: 'Terreno', color: '#AF52DE' },
     { key: 'FINALIZADA', label: 'Finaliz.', color: '#8E8E93' },
     { key: 'VENDIDO', label: 'Vendido', color: '#5856D6' },
-    { key: 'TERRENO', label: 'Terreno', color: '#AF52DE' },
 ]
 
 const tipos: Record<string, { label: string; icon: typeof ArrowLeftRight; tint: string }> = {
@@ -264,82 +263,105 @@ export function DashboardPage() {
                 </motion.div>
             </motion.div>
 
-            {/* ─── Alertas de Estoque (lista detalhada) ─── */}
-            {alertas.length > 0 && (
-                <motion.div
-                    initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, delay: 0.35 }}
-                    className="px-4 md:px-6 mt-4"
-                >
-                    <div className="rounded-2xl bg-card overflow-hidden">
-                        {/* Header */}
-                        <div className="flex items-center gap-2.5 px-4 md:px-5 pt-4 pb-3 border-b border-border/20">
-                            <span className="flex h-7 w-7 items-center justify-center rounded-lg flex-shrink-0"
-                                style={{ backgroundColor: '#FF3B3018' }}>
-                                <AlertTriangle className="h-4 w-4" style={{ color: clr.red }} />
-                            </span>
-                            <div>
-                                <p className="text-[15px] font-semibold leading-none">Itens com Estoque Baixo</p>
-                                <p className="text-[12px] text-muted-foreground mt-0.5">
-                                    {alertas.length} {alertas.length === 1 ? 'material abaixo do mínimo' : 'materiais abaixo do mínimo'}
-                                </p>
-                            </div>
+            {/* ─── Alertas de Estoque (lista detalhada, sempre visível) ─── */}
+            <motion.div
+                initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.35 }}
+                className="px-4 md:px-6 mt-4"
+            >
+                <div className="rounded-2xl bg-card overflow-hidden">
+                    {/* Header */}
+                    <div className="flex items-center gap-2.5 px-4 md:px-5 pt-4 pb-3 border-b border-border/20">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-lg flex-shrink-0"
+                            style={{ backgroundColor: alertas.length > 0 ? '#FF3B3018' : '#34C75918' }}>
+                            {alertas.length > 0
+                                ? <AlertTriangle className="h-4 w-4" style={{ color: clr.red }} />
+                                : <CheckCircle2 className="h-4 w-4" style={{ color: clr.green }} />
+                            }
+                        </span>
+                        <div>
+                            <p className="text-[15px] font-semibold leading-none">
+                                {alertas.length > 0 ? 'Itens com Estoque Baixo' : 'Estoque em Dia'}
+                            </p>
+                            <p className="text-[12px] text-muted-foreground mt-0.5">
+                                {alertas.length > 0
+                                    ? `${alertas.length} ${alertas.length === 1 ? 'material abaixo do mínimo' : 'materiais abaixo do mínimo'}`
+                                    : 'Nenhum item abaixo do estoque mínimo'
+                                }
+                            </p>
                         </div>
+                    </div>
 
-                        {/* Items list */}
-                        {alertas.map((alerta: any, i: number) => {
-                            const qty = alerta.quantidade ?? 0
-                            const min = alerta.estoque_minimo ?? 0
-                            const isCritical = qty === 0
-                            const pctStock = min > 0 ? Math.min((qty / min) * 100, 100) : 0
-                            const accentColor = isCritical ? clr.red : clr.orange
-                            return (
-                                <div
-                                    key={alerta.id}
-                                    className={cn(
-                                        'flex items-center gap-3 md:gap-4 px-4 md:px-5 py-3.5',
-                                        i > 0 && 'border-t border-border/15',
-                                    )}
-                                >
-                                    {/* Icon */}
-                                    <span className="flex h-9 w-9 items-center justify-center rounded-xl flex-shrink-0"
-                                        style={{ backgroundColor: `${accentColor}14` }}>
-                                        <Package className="h-4 w-4" style={{ color: accentColor }} />
-                                    </span>
+                    {/* Empty state */}
+                    {alertas.length === 0 && (
+                        <div className="flex flex-col items-center justify-center py-8 px-4 gap-2">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-full"
+                                style={{ backgroundColor: '#34C75918' }}>
+                                <CheckCircle2 className="h-6 w-6" style={{ color: clr.green }} />
+                            </div>
+                            <p className="text-[15px] font-semibold mt-1">Todos os materiais em dia</p>
+                            <p className="text-[13px] text-muted-foreground text-center max-w-[220px]">
+                                Todos os estoques estão acima do mínimo requerido
+                            </p>
+                        </div>
+                    )}
 
-                                    {/* Info */}
-                                    <div className="min-w-0 flex-1">
-                                        <div className="flex items-center gap-2 mb-0.5">
-                                            <p className="text-[15px] font-medium truncate">{alerta.material_nome ?? '—'}</p>
-                                            {isCritical && (
-                                                <span className="flex-shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                                                    style={{ backgroundColor: '#FF3B3018', color: clr.red }}>
-                                                    Sem estoque
-                                                </span>
-                                            )}
+                    {/* Items list */}
+                    {alertas.map((alerta: any, i: number) => {
+                        const qty = alerta.quantidade ?? 0
+                        const min = alerta.estoque_minimo ?? 0
+                        const isCritical = qty === 0
+                        const pctStock = min > 0 ? Math.min((qty / min) * 100, 100) : 0
+                        const accentColor = isCritical ? clr.red : clr.orange
+                        return (
+                            <div
+                                key={alerta.id}
+                                className={cn(
+                                    'flex items-center gap-3 md:gap-4 px-4 md:px-5 py-3.5',
+                                    i > 0 && 'border-t border-border/15',
+                                )}
+                            >
+                                {/* Icon */}
+                                <span className="flex h-9 w-9 items-center justify-center rounded-xl flex-shrink-0"
+                                    style={{ backgroundColor: `${accentColor}14` }}>
+                                    <Package className="h-4 w-4" style={{ color: accentColor }} />
+                                </span>
+
+                                {/* Info */}
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2 mb-0.5">
+                                        <p className="text-[15px] font-medium truncate leading-snug">{alerta.material_nome ?? '—'}</p>
+                                        <span
+                                            className="flex-shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                                            style={{
+                                                backgroundColor: isCritical ? '#FF3B3018' : '#FF950018',
+                                                color: accentColor,
+                                            }}
+                                        >
+                                            {isCritical ? 'Sem estoque' : 'Estoque baixo'}
+                                        </span>
+                                    </div>
+                                    <p className="text-[12px] text-muted-foreground truncate">
+                                        {alerta.almoxarifado_nome ?? '—'} · {alerta.obra_nome ?? '—'}
+                                    </p>
+                                    {/* Mini progress bar */}
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <div className="flex-1 h-[3px] rounded-full bg-muted/60 overflow-hidden">
+                                            <div
+                                                className="h-full rounded-full transition-all"
+                                                style={{ width: `${pctStock}%`, backgroundColor: accentColor }}
+                                            />
                                         </div>
-                                        <p className="text-[12px] text-muted-foreground truncate">
-                                            {alerta.almoxarifado_nome ?? '—'} · {alerta.obra_nome ?? '—'}
-                                        </p>
-                                        {/* Mini progress bar */}
-                                        <div className="flex items-center gap-2 mt-2">
-                                            <div className="flex-1 h-[3px] rounded-full bg-muted/60 overflow-hidden">
-                                                <div
-                                                    className="h-full rounded-full transition-all"
-                                                    style={{ width: `${pctStock}%`, backgroundColor: accentColor }}
-                                                />
-                                            </div>
-                                            <span className="text-[11px] tabular-nums text-muted-foreground flex-shrink-0">
-                                                {formatNumber(qty)} / {formatNumber(min)} un.
-                                            </span>
-                                        </div>
+                                        <span className="text-[11px] tabular-nums text-muted-foreground flex-shrink-0">
+                                            {formatNumber(qty)} / {formatNumber(min)} un.
+                                        </span>
                                     </div>
                                 </div>
-                            )
-                        })}
-                    </div>
-                </motion.div>
-            )}
+                            </div>
+                        )
+                    })}
+                </div>
+            </motion.div>
 
             {/* ─── Atividade Recente ─── */}
             <motion.div

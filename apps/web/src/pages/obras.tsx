@@ -56,11 +56,11 @@ export function ObrasPage() {
 
     const segments = [
         { key: 'ALL' as const, label: 'Todas', color: null },
+        { key: 'TERRENO' as const, label: 'Terreno', color: '#AF52DE' },
         { key: 'ATIVA' as const, label: 'Ativa', color: '#34C759' },
         { key: 'PAUSADA' as const, label: 'Pausada', color: '#FF9500' },
         { key: 'FINALIZADA' as const, label: 'Finalizada', color: '#8E8E93' },
         { key: 'VENDIDO' as const, label: 'Vendido', color: '#5856D6' },
-        { key: 'TERRENO' as const, label: 'Terreno', color: '#AF52DE' },
     ]
 
     return (
@@ -82,57 +82,61 @@ export function ObrasPage() {
             </div>
 
             {/* Filter + Search */}
-            <div className="px-4 md:px-8 mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-                {/* Segmented Control */}
-                <div className="flex items-center bg-muted rounded-[12px] p-1 gap-0.5 overflow-x-auto scrollbar-hide flex-shrink-0 self-start sm:self-auto">
-                    {segments.map((seg) => (
-                        <button
-                            key={seg.key}
-                            onClick={() => setFilterStatus(seg.key)}
-                            className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-[9px] text-[13px] font-medium whitespace-nowrap"
-                        >
-                            {filterStatus === seg.key && (
-                                <motion.div
-                                    layoutId="filter-pill"
-                                    className="absolute inset-0 rounded-[9px] bg-background shadow-sm"
-                                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                                />
-                            )}
-                            <span className={cn(
-                                'relative flex items-center gap-1.5 transition-colors duration-150',
-                                filterStatus === seg.key ? 'text-foreground' : 'text-muted-foreground',
-                            )}>
-                                {seg.color && (
-                                    <span className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: seg.color }} />
+            <div className="mb-6 flex flex-col gap-3">
+                {/* Segmented Control — scrollable strip, never wraps */}
+                <div className="w-full overflow-x-auto scrollbar-hide px-4 md:px-8">
+                    <div className="inline-flex items-center bg-muted rounded-[12px] p-1 gap-0.5 min-w-max">
+                        {segments.map((seg) => (
+                            <button
+                                key={seg.key}
+                                onClick={() => setFilterStatus(seg.key)}
+                                className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-[9px] text-[13px] font-medium whitespace-nowrap"
+                            >
+                                {filterStatus === seg.key && (
+                                    <motion.div
+                                        layoutId="filter-pill"
+                                        className="absolute inset-0 rounded-[9px] bg-background shadow-sm"
+                                        transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                                    />
                                 )}
-                                {seg.label}
-                                <AnimatePresence mode="wait">
-                                    <motion.span
-                                        key={counts[seg.key]}
-                                        initial={{ opacity: 0, y: -4 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: 4 }}
-                                        transition={{ duration: 0.15 }}
-                                        className={cn(
-                                            'text-[11px] tabular-nums',
-                                            filterStatus === seg.key ? 'text-muted-foreground' : 'text-muted-foreground/50',
-                                        )}
-                                    >
-                                        {counts[seg.key]}
-                                    </motion.span>
-                                </AnimatePresence>
-                            </span>
-                        </button>
-                    ))}
+                                <span className={cn(
+                                    'relative flex items-center gap-1.5 transition-colors duration-150',
+                                    filterStatus === seg.key ? 'text-foreground' : 'text-muted-foreground',
+                                )}>
+                                    {seg.color && (
+                                        <span className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: seg.color }} />
+                                    )}
+                                    {seg.label}
+                                    <AnimatePresence mode="wait">
+                                        <motion.span
+                                            key={counts[seg.key]}
+                                            initial={{ opacity: 0, y: -4 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: 4 }}
+                                            transition={{ duration: 0.15 }}
+                                            className={cn(
+                                                'text-[11px] tabular-nums',
+                                                filterStatus === seg.key ? 'text-muted-foreground' : 'text-muted-foreground/50',
+                                            )}
+                                        >
+                                            {counts[seg.key]}
+                                        </motion.span>
+                                    </AnimatePresence>
+                                </span>
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 {/* Search */}
-                <Input
-                    placeholder="Buscar obras..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="sm:max-w-xs"
-                />
+                <div className="px-4 md:px-8">
+                    <Input
+                        placeholder="Buscar obras..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="max-w-xs"
+                    />
+                </div>
             </div>
 
             {/* Grid */}

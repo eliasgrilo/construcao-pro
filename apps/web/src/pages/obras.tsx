@@ -254,7 +254,7 @@ export function ObrasPage() {
                         <DialogTitle>Nova Obra</DialogTitle>
                         <DialogDescription>Cadastre uma nova obra de construção.</DialogDescription>
                     </DialogHeader>
-                    <form onSubmit={handleSubmit((d) => createMutation.mutate({ nome: d.nome, endereco: d.endereco, status: d.status, orcamento: d.orcamento }, {
+                    <form onSubmit={handleSubmit((d) => createMutation.mutate({ nome: d.nome, endereco: d.endereco, status: d.status, orcamento: d.orcamento, valorTerreno: d.valorTerreno }, {
                         onSuccess: () => {
                             setOpen(false)
                             reset()
@@ -293,6 +293,14 @@ export function ObrasPage() {
                                 <Input id="orcamento" type="number" step="0.01" min="0" {...register('orcamento', { valueAsNumber: true })} placeholder="0,00" />
                                 {errors.orcamento && <p className="text-[13px] text-destructive mt-1">{errors.orcamento.message}</p>}
                             </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="valorTerreno" className="flex items-center gap-1.5">
+                                <span className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: '#AF52DE' }} />
+                                Valor do Terreno (R$)
+                            </Label>
+                            <Input id="valorTerreno" type="number" step="0.01" min="0" {...register('valorTerreno', { valueAsNumber: true })} placeholder="0,00" />
+                            {errors.valorTerreno && <p className="text-[13px] text-destructive mt-1">{errors.valorTerreno.message}</p>}
                         </div>
                         <DialogFooter>
                             <Button type="button" variant="outline" onClick={() => { setOpen(false); reset() }}>Cancelar</Button>

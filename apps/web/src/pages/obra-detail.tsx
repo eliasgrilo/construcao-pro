@@ -5,6 +5,7 @@ import {
     ArrowLeft, MapPin, Warehouse, Package, ArrowLeftRight,
     ArrowDownRight, ArrowUpRight, Plus, Trash2, AlertTriangle,
     User, DollarSign, Minus, ArrowRightLeft, Check, ChevronDown,
+    Landmark, FileText, Building2,
 } from 'lucide-react'
 import {
     PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
@@ -174,6 +175,10 @@ export function ObraDetailPage() {
     const [editingBudget, setEditingBudget] = useState(false)
     const [budgetInput, setBudgetInput] = useState('')
     const budgetRef = useRef<HTMLInputElement>(null)
+
+    const [editingTerreno, setEditingTerreno] = useState(false)
+    const [terrenoInput, setTerrenoInput] = useState('')
+    const terrenoRef = useRef<HTMLInputElement>(null)
 
     /* ── Dar Baixa (Saída rápida) ── */
     const [baixaTarget, setBaixaTarget] = useState<{
@@ -434,21 +439,63 @@ export function ObraDetailPage() {
                                             <span className="text-muted-foreground">Orçamento</span>
                                             <span className="font-semibold tabular-nums">{formatCurrency(custos.orcamento)}</span>
                                         </div>
-                                        {[
-                                            { label: 'Terreno',    color: '#AF52DE', value: custos.valorTerreno    ?? 0 },
-                                            { label: 'Burocracia', color: '#007AFF', value: custos.valorBurocracia ?? 0 },
-                                            { label: 'Construção', color: '#FF9500', value: custos.valorConstrucao ?? 0 },
-                                        ].map(({ label, color, value }) => (
-                                            <div key={label} className="flex justify-between items-center text-[13px]">
-                                                <span className="flex items-center gap-1.5 text-muted-foreground">
-                                                    <span className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                                                    {label}
+                                        {/* Terreno — click to edit */}
+                                        <div className="flex justify-between items-center text-[13px]">
+                                            <span className="flex items-center gap-1.5 text-muted-foreground">
+                                                <Landmark className="h-3.5 w-3.5 flex-shrink-0" style={{ color: '#AF52DE' }} />
+                                                Terreno
+                                            </span>
+                                            {editingTerreno ? (
+                                                <input
+                                                    ref={terrenoRef}
+                                                    type="number" step="0.01" min="0"
+                                                    className="text-[13px] font-semibold tabular-nums bg-transparent border-b border-primary outline-none w-28 text-right"
+                                                    value={terrenoInput}
+                                                    onChange={(e) => setTerrenoInput(e.target.value)}
+                                                    onBlur={() => {
+                                                        const val = Number(terrenoInput)
+                                                        if (val >= 0) updateOrcamento.mutate({ id: obraId, valor_terreno: val }, { onSuccess: () => setEditingTerreno(false) })
+                                                        else setEditingTerreno(false)
+                                                    }}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') { const val = Number(terrenoInput); if (val >= 0) updateOrcamento.mutate({ id: obraId, valor_terreno: val }, { onSuccess: () => setEditingTerreno(false) }) }
+                                                        if (e.key === 'Escape') setEditingTerreno(false)
+                                                    }}
+                                                    autoFocus
+                                                />
+                                            ) : (
+                                                <span
+                                                    className="font-semibold tabular-nums cursor-pointer hover:text-primary transition-colors"
+                                                    style={{ color: (custos.valorTerreno ?? 0) > 0 ? '#AF52DE' : undefined }}
+                                                    onClick={() => { setTerrenoInput(String(custos.valorTerreno ?? 0)); setEditingTerreno(true); setTimeout(() => terrenoRef.current?.focus(), 50) }}
+                                                    title="Clique para editar"
+                                                >
+                                                    {formatCurrency(custos.valorTerreno ?? 0)}
                                                 </span>
-                                                <span className="font-semibold tabular-nums" style={{ color: value > 0 ? color : undefined }}>
-                                                    {formatCurrency(value)}
-                                                </span>
-                                            </div>
-                                        ))}
+                                            )}
+                                        </div>
+
+                                        {/* Burocracia — read only */}
+                                        <div className="flex justify-between items-center text-[13px]">
+                                            <span className="flex items-center gap-1.5 text-muted-foreground">
+                                                <FileText className="h-3.5 w-3.5 flex-shrink-0" style={{ color: '#007AFF' }} />
+                                                Burocracia
+                                            </span>
+                                            <span className="font-semibold tabular-nums" style={{ color: (custos.valorBurocracia ?? 0) > 0 ? '#007AFF' : undefined }}>
+                                                {formatCurrency(custos.valorBurocracia ?? 0)}
+                                            </span>
+                                        </div>
+
+                                        {/* Construção — read only */}
+                                        <div className="flex justify-between items-center text-[13px]">
+                                            <span className="flex items-center gap-1.5 text-muted-foreground">
+                                                <Building2 className="h-3.5 w-3.5 flex-shrink-0" style={{ color: '#FF9500' }} />
+                                                Construção
+                                            </span>
+                                            <span className="font-semibold tabular-nums" style={{ color: (custos.valorConstrucao ?? 0) > 0 ? '#FF9500' : undefined }}>
+                                                {formatCurrency(custos.valorConstrucao ?? 0)}
+                                            </span>
+                                        </div>
                                         <div className="flex justify-between items-center text-[13px]">
                                             <span className="font-medium">Total</span>
                                             <span className="font-bold tabular-nums">{formatCurrency(custos.total ?? 0)}</span>

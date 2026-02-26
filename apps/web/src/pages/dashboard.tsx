@@ -91,42 +91,47 @@ export function DashboardPage() {
             <motion.div
                 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.1 }}
-                className="mx-4 md:mx-6 rounded-2xl bg-card p-5 md:p-6"
+                className="mt-6 px-4 md:px-6"
             >
-                <div className="flex flex-col items-center gap-5 md:flex-row md:items-center md:gap-8">
-                    <div className="relative">
-                        <Ring percent={pct} size={120} stroke={10} color={ringColor(pct)} />
-                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <span className="text-[24px] font-bold tabular-nums leading-none">{pct}%</span>
-                            <span className="text-[11px] text-muted-foreground mt-1 uppercase tracking-wider">usado</span>
+                <div className="flex items-baseline justify-between mb-4">
+                    <h2 className="text-[20px] md:text-[22px] font-bold tracking-tight">Orçamento Geral</h2>
+                </div>
+                <div className="rounded-2xl bg-card p-5 md:p-6">
+                    <div className="flex flex-col items-center gap-5 md:flex-row md:items-center md:gap-8">
+                        <div className="relative">
+                            <Ring percent={pct} size={120} stroke={10} color={ringColor(pct)} />
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                <span className="text-[24px] font-bold tabular-nums leading-none">{pct}%</span>
+                                <span className="text-[11px] text-muted-foreground mt-1 uppercase tracking-wider">usado</span>
+                            </div>
                         </div>
-                    </div>
-                    <div className="text-center md:text-left">
-                        <p className="text-[26px] md:text-[34px] font-bold tabular-nums tracking-tight leading-none">
-                            {formatCurrency(s?.custoTotal ?? 0)}
-                        </p>
-                        <p className="text-[15px] md:text-[17px] text-muted-foreground mt-2">
-                            de {formatCurrency(s?.orcamentoTotal ?? 0)} em orçamento
-                        </p>
-                        <div className="flex justify-center md:justify-start gap-5 mt-4 pt-4 border-t border-border/20">
-                            {statusBreakdown.map((st) => {
-                                const count = obrasData?.filter((o: any) => o.status === st.key).length ?? 0
-                                return (
-                                    <motion.div
-                                        key={st.key}
-                                        className={cn('transition-opacity duration-300', count === 0 ? 'opacity-30' : 'opacity-100')}
-                                        whileTap={{ scale: 0.94 }}
-                                        onClick={() => navigate({ to: '/obras' })}
-                                        style={{ cursor: 'pointer' }}
-                                    >
-                                        <p className="text-[20px] md:text-[22px] font-semibold tabular-nums leading-none">{count}</p>
-                                        <div className="flex items-center gap-1 mt-1">
-                                            <span className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: st.color }} />
-                                            <p className="text-[13px] text-muted-foreground">{st.label}</p>
-                                        </div>
-                                    </motion.div>
-                                )
-                            })}
+                        <div className="text-center md:text-left">
+                            <p className="text-[26px] md:text-[34px] font-bold tabular-nums tracking-tight leading-none">
+                                {formatCurrency(s?.custoTotal ?? 0)}
+                            </p>
+                            <p className="text-[15px] md:text-[17px] text-muted-foreground mt-2">
+                                de {formatCurrency(s?.orcamentoTotal ?? 0)} em orçamento
+                            </p>
+                            <div className="flex justify-center md:justify-start gap-5 mt-4 pt-4 border-t border-border/20">
+                                {statusBreakdown.map((st) => {
+                                    const count = obrasData?.filter((o: any) => o.status === st.key).length ?? 0
+                                    return (
+                                        <motion.div
+                                            key={st.key}
+                                            className={cn('transition-opacity duration-300', count === 0 ? 'opacity-30' : 'opacity-100')}
+                                            whileTap={{ scale: 0.94 }}
+                                            onClick={() => navigate({ to: '/obras' })}
+                                            style={{ cursor: 'pointer' }}
+                                        >
+                                            <p className="text-[20px] md:text-[22px] font-semibold tabular-nums leading-none">{count}</p>
+                                            <div className="flex items-center gap-1 mt-1">
+                                                <span className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: st.color }} />
+                                                <p className="text-[13px] text-muted-foreground">{st.label}</p>
+                                            </div>
+                                        </motion.div>
+                                    )
+                                })}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -185,9 +190,9 @@ export function DashboardPage() {
                                     {/* Investimento */}
                                     <div className="mt-2.5 space-y-1.5">
                                         {[
-                                            { label: 'Terreno',    Icon: Landmark,  color: '#AF52DE', value: obra.valor_terreno    ?? 0, valueColor: (obra.valor_terreno ?? 0) > 0 ? '#AF52DE' : undefined },
-                                            { label: 'Burocracia', Icon: FileText,  color: '#007AFF', value: obra.valor_burocracia ?? 0, valueColor: '#ffffff' },
-                                            { label: 'Construção', Icon: Building2, color: '#FF9500', value: obra.valor_construcao ?? 0, valueColor: '#ffffff' },
+                                            { label: 'Terreno', Icon: Landmark, color: '#AF52DE', value: obra.valor_terreno ?? 0, valueColor: (obra.valor_terreno ?? 0) > 0 ? '#AF52DE' : undefined },
+                                            { label: 'Burocracia', Icon: FileText, color: '#007AFF', value: obra.valor_burocracia ?? 0, valueColor: (obra.valor_burocracia ?? 0) > 0 ? '#007AFF' : undefined },
+                                            { label: 'Construção', Icon: Building2, color: '#FF9500', value: obra.valor_construcao ?? 0, valueColor: (obra.valor_construcao ?? 0) > 0 ? '#FF9500' : undefined },
                                         ].map(({ label, Icon, color, value, valueColor }) => (
                                             <div key={label} className="flex items-center gap-1.5">
                                                 <span className="flex h-[22px] w-[22px] items-center justify-center rounded-md flex-shrink-0" style={{ backgroundColor: `${color}18` }}>

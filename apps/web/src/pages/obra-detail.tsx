@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
 import {
     useObra, useObraAlmoxarifados, useObraEstoque, useObraMovimentacoes,
-    useMateriais, useObraCustos, useAlmoxarifados,
+    useMateriais, useObraCustos, useAlmoxarifados, useFornecedores,
     useCreateAlmoxarifado, useDeleteAlmoxarifado, useUpdateObra,
     useCreateMovimentacaoEntrada, useCreateMovimentacaoSaida, useCreateMovimentacaoTransferencia,
 } from '@/hooks/use-supabase'
@@ -180,6 +180,17 @@ export function ObraDetailPage() {
     const [terrenoInput, setTerrenoInput] = useState('')
     const terrenoRef = useRef<HTMLInputElement>(null)
 
+    /* ── Rich Entrada Dialog ── */
+    const [entradaDialog, setEntradaDialog] = useState(false)
+    const [entMaterialId, setEntMaterialId] = useState('')
+    const [entQty, setEntQty] = useState('')
+    const [entPreco, setEntPreco] = useState('')
+    const [entUnidade, setEntUnidade] = useState('')
+    const [entPagamento, setEntPagamento] = useState('')
+    const [entAlmoxId, setEntAlmoxId] = useState('')
+    const [entFornecedorId, setEntFornecedorId] = useState('')
+    const [entObs, setEntObs] = useState('')
+
     /* ── Dar Baixa (Saída rápida) ── */
     const [baixaTarget, setBaixaTarget] = useState<{
         materialId: string
@@ -214,6 +225,7 @@ export function ObraDetailPage() {
     const { data: materiais = [] } = useMateriais()
     const { data: custos } = useObraCustos(obraId)
     const { data: allAlmoxarifados = [] } = useAlmoxarifados()
+    const { data: fornecedoresData = [] } = useFornecedores()
 
     /* Mutations */
     const createAlmox = useCreateAlmoxarifado()
@@ -233,6 +245,15 @@ export function ObraDetailPage() {
         setMovAlmoxDestinoId('')
         setMovQty('')
     }
+
+    const resetEntrada = () => {
+        setEntradaDialog(false)
+        setEntMaterialId(''); setEntQty(''); setEntPreco('')
+        setEntUnidade(''); setEntPagamento('')
+        setEntAlmoxId(''); setEntFornecedorId(''); setEntObs('')
+    }
+    const selectedEntMaterial = (materiais as any[]).find((m: any) => m.id === entMaterialId)
+    const canSubmitEntrada = !!(entMaterialId && entAlmoxId && entQty && Number(entQty) > 0 && entUnidade && entPagamento)
 
     const handleCreateMov = () => {
         const onSuccess = () => {
@@ -696,7 +717,7 @@ export function ObraDetailPage() {
                     <div>
                         <div className="flex items-center justify-between mb-5">
                             <h2 className="text-[15px] font-semibold">Estoque desta obra</h2>
-                            <Button size="sm" onClick={() => { setMovTipo('ENTRADA'); setMovDialog(true) }}><Plus className="h-4 w-4 mr-1.5" />Entrada</Button>
+                            <Button size="sm" onClick={() => setEntradaDialog(true)}><Plus className="h-4 w-4 mr-1.5" />Entrada</Button>
                         </div>
 
                         {/* Instruction banner */}
@@ -1026,6 +1047,181 @@ export function ObraDetailPage() {
                             >
                                 <Minus className="h-4 w-4 mr-1.5" />
                                 Confirmar Baixa
+                            </Button>
+                        </DialogFooter>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* ═══════ RICH ENTRADA DIALOG ═══════ */}
+            <Dialog open={entradaDialog} onOpenChange={(v) => { if (!v) resetEntrada(); else setEntradaDialog(true) }}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Nova Entrada de Estoque</DialogTitle>
+                        <DialogDescription>Registre a entrada de material em um almoxarifado desta obra.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-5">
+                        {/* 1. Material */}
+                        <div className="space-y-2">
+                            <Label>Material</Label>
+                            <Select value={entMaterialId} onValueChange={setEntMaterialId}>
+                                <SelectTrigger><SelectValue placeholder="Selecione o material" /></SelectTrigger>
+                                <SelectContent>
+                                    {(materiais as any[]).map((m: any) => (
+                                        <SelectItem key={m.id} value={m.id}>
+                                            {m.nome} <span className="text-muted-foreground ml-1">({m.codigo})</span>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* Material info chip */}
+                        {selectedEntMaterial && (
+                            <div className="flex flex-wrap items-center gap-2 rounded-xl bg-accent/50 px-4 py-3">
+                                <Badge variant="secondary">{selectedEntMaterial.categoria?.nome}</Badge>
+                                <span className="text-[13px] sm:text-[12px] text-muted-foreground">
+                                    Unidade: <strong>{selectedEntMaterial.categoria?.unidade}</strong>
+                                </span>
+                                {selectedEntMaterial.preco_unitario > 0 && (
+                                    <span className="text-[13px] sm:text-[12px] text-muted-foreground sm:ml-auto">
+                                        Último: <strong>{formatCurrency(selectedEntMaterial.preco_unitario)}</strong>
+                                    </span>
+                                )}
+                            </div>
+                        )}
+
+                        {/* 2. Unidade */}
+                        <div className="space-y-2">
+                            <Label>Unidade</Label>
+                            <Select value={entUnidade} onValueChange={setEntUnidade}>
+                                <SelectTrigger><SelectValue placeholder="Selecione a unidade" /></SelectTrigger>
+                                <SelectContent>
+                                    {[
+                                        { value: 'UN', label: 'Unidade (un)' },
+                                        { value: 'KG', label: 'Quilograma (kg)' },
+                                        { value: 'SC', label: 'Saco (sc)' },
+                                        { value: 'M', label: 'Metro (m)' },
+                                        { value: 'M2', label: 'Metro² (m²)' },
+                                        { value: 'M3', label: 'Metro³ (m³)' },
+                                        { value: 'L', label: 'Litro (L)' },
+                                        { value: 'CX', label: 'Caixa (cx)' },
+                                        { value: 'PC', label: 'Peça (pç)' },
+                                        { value: 'TB', label: 'Tubo (tb)' },
+                                        { value: 'GL', label: 'Galão (gl)' },
+                                        { value: 'FD', label: 'Fardo (fd)' },
+                                        { value: 'RL', label: 'Rolo (rl)' },
+                                        { value: 'PR', label: 'Par (pr)' },
+                                        { value: 'TN', label: 'Tonelada (t)' },
+                                    ].map((u) => (
+                                        <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* 3. Quantidade + Preço */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Quantidade</Label>
+                                <Input type="number" step="0.01" value={entQty} onChange={(e) => setEntQty(e.target.value)} placeholder="0" className="tabular-nums" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Preço Un. (R$)</Label>
+                                <Input
+                                    type="number" step="0.01"
+                                    value={entPreco}
+                                    onChange={(e) => setEntPreco(e.target.value)}
+                                    placeholder={(selectedEntMaterial?.preco_unitario ?? 0) > 0 ? String(selectedEntMaterial!.preco_unitario) : '0,00'}
+                                    className="tabular-nums"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Subtotal preview */}
+                        {entQty && Number(entQty) > 0 && (
+                            <div className="flex items-center justify-between rounded-xl bg-accent/50 px-4 py-3">
+                                <span className="text-[14px] sm:text-[13px] text-muted-foreground">Subtotal</span>
+                                <span className="text-[18px] sm:text-[17px] font-bold tabular-nums">
+                                    {formatCurrency(Number(entQty) * (Number(entPreco) || selectedEntMaterial?.preco_unitario || 0))}
+                                </span>
+                            </div>
+                        )}
+
+                        {/* 4. Almoxarifado (desta obra) */}
+                        <div className="space-y-2">
+                            <Label>Almoxarifado (destino)</Label>
+                            <Select value={entAlmoxId} onValueChange={setEntAlmoxId}>
+                                <SelectTrigger><SelectValue placeholder="Selecione o almoxarifado" /></SelectTrigger>
+                                <SelectContent>
+                                    {(almoxarifados as any[]).map((a: any) => (
+                                        <SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* 5. Forma de Pagamento */}
+                        <div className="space-y-2">
+                            <Label>Forma de Pagamento</Label>
+                            <Select value={entPagamento} onValueChange={setEntPagamento}>
+                                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="PIX">PIX</SelectItem>
+                                    <SelectItem value="CARTAO_CREDITO">Cartão de Crédito</SelectItem>
+                                    <SelectItem value="CARTAO_DEBITO">Cartão de Débito</SelectItem>
+                                    <SelectItem value="BOLETO">Boleto Bancário</SelectItem>
+                                    <SelectItem value="TRANSFERENCIA">Transferência Bancária</SelectItem>
+                                    <SelectItem value="DINHEIRO">Dinheiro</SelectItem>
+                                    <SelectItem value="CHEQUE">Cheque</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* 6. Fornecedor (optional) */}
+                        <div className="space-y-2">
+                            <Label>Fornecedor <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+                            <Select value={entFornecedorId} onValueChange={setEntFornecedorId}>
+                                <SelectTrigger><SelectValue placeholder="Selecione o fornecedor" /></SelectTrigger>
+                                <SelectContent>
+                                    {(fornecedoresData as any[]).map((f: any) => (
+                                        <SelectItem key={f.id} value={f.id}>
+                                            {f.nome}{f.cnpj ? ` — ${f.cnpj}` : ''}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* 7. Observação */}
+                        <div className="space-y-2">
+                            <Label>Observação <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+                            <Input value={entObs} onChange={(e) => setEntObs(e.target.value)} placeholder="Ex: Compra NF 12345" />
+                        </div>
+
+                        <DialogFooter>
+                            <Button type="button" variant="outline" onClick={resetEntrada}>Cancelar</Button>
+                            <Button
+                                disabled={!canSubmitEntrada}
+                                loading={createEntrada.isPending}
+                                onClick={() => createEntrada.mutate({
+                                    p_material_id: entMaterialId,
+                                    p_quantidade: Number(entQty),
+                                    p_preco_unitario: Number(entPreco) || selectedEntMaterial?.preco_unitario || 0,
+                                    p_almoxarifado_id: entAlmoxId,
+                                    p_fornecedor_id: entFornecedorId || undefined,
+                                    p_unidade: entUnidade || undefined,
+                                    p_forma_pagamento: entPagamento || undefined,
+                                    p_observacao: entObs || undefined,
+                                }, {
+                                    onSuccess: () => {
+                                        toast({ title: 'Entrada registrada', description: 'O estoque foi atualizado.', variant: 'success' })
+                                        resetEntrada()
+                                    },
+                                    onError: () => toast({ title: 'Erro ao registrar entrada', variant: 'error' }),
+                                })}
+                            >
+                                Registrar Entrada
                             </Button>
                         </DialogFooter>
                     </div>

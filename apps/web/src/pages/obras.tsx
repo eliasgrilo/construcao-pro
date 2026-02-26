@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { useObras, useCreateObra, useDeleteObra } from '@/hooks/use-supabase'
+import { useObras, useCreateObra, useDeleteObra, useDashboardCustoPorObra } from '@/hooks/use-supabase'
 import { cn, formatCurrency } from '@/lib/utils'
 import { useToast } from '@/components/ui/toast'
 
@@ -32,6 +32,7 @@ export function ObrasPage() {
     const [filterStatus, setFilterStatus] = useState<'ALL' | 'ATIVA' | 'PAUSADA' | 'FINALIZADA' | 'VENDIDO' | 'TERRENO'>('ALL')
 
     const { data: obrasData, isLoading } = useObras()
+    const { data: custosData = [] } = useDashboardCustoPorObra()
     const createMutation = useCreateObra()
     const deleteMutation = useDeleteObra()
 
@@ -209,23 +210,31 @@ export function ObrasPage() {
                                     </div>
 
                                     {/* Investimento */}
-                                    <div className="mb-4 space-y-1.5">
-                                        {[
-                                            { label: 'Terreno',    Icon: Landmark,  color: '#AF52DE', value: obra.valor_terreno    ?? 0, valueColor: (obra.valor_terreno ?? 0) > 0 ? '#AF52DE' : undefined },
-                                            { label: 'Burocracia', Icon: FileText,  color: '#007AFF', value: obra.valor_burocracia ?? 0, valueColor: '#ffffff' },
-                                            { label: 'Construção', Icon: Building2, color: '#FF9500', value: obra.valor_construcao ?? 0, valueColor: '#ffffff' },
-                                        ].map(({ label, Icon, color, value, valueColor }) => (
-                                            <div key={label} className="flex items-center gap-1.5">
-                                                <span className="flex h-6 w-6 items-center justify-center rounded-md flex-shrink-0" style={{ backgroundColor: `${color}18` }}>
-                                                    <Icon className="h-3.5 w-3.5" style={{ color }} />
-                                                </span>
-                                                <span className="text-[13px] text-muted-foreground">{label}</span>
-                                                <span className="text-[13px] font-semibold tabular-nums ml-auto" style={{ color: valueColor }}>
-                                                    {formatCurrency(value)}
-                                                </span>
+                                    {(() => {
+                                        const custos = custosData.find((c: any) => c.id === obra.id)
+                                        const vTerreno = obra.valor_terreno ?? 0
+                                        const vBurocracia = obra.valor_burocracia ?? 0
+                                        const vConstrucao = custos?.valor_construcao ?? obra.valor_construcao ?? 0
+                                        return (
+                                            <div className="mb-4 space-y-1.5">
+                                                {[
+                                                    { label: 'Terreno', Icon: Landmark, color: '#AF52DE', value: vTerreno, valueColor: vTerreno > 0 ? '#AF52DE' : undefined },
+                                                    { label: 'Burocracia', Icon: FileText, color: '#007AFF', value: vBurocracia, valueColor: '#ffffff' },
+                                                    { label: 'Construção', Icon: Building2, color: '#FF9500', value: vConstrucao, valueColor: '#ffffff' },
+                                                ].map(({ label, Icon, color, value, valueColor }) => (
+                                                    <div key={label} className="flex items-center gap-1.5">
+                                                        <span className="flex h-6 w-6 items-center justify-center rounded-md flex-shrink-0" style={{ backgroundColor: `${color}18` }}>
+                                                            <Icon className="h-3.5 w-3.5" style={{ color }} />
+                                                        </span>
+                                                        <span className="text-[13px] text-muted-foreground">{label}</span>
+                                                        <span className="text-[13px] font-semibold tabular-nums ml-auto" style={{ color: valueColor }}>
+                                                            {formatCurrency(value)}
+                                                        </span>
+                                                    </div>
+                                                ))}
                                             </div>
-                                        ))}
-                                    </div>
+                                        )
+                                    })()}
 
                                     {/* Stats Bar */}
                                     <div className="flex items-center gap-4 pt-3 border-t border-border/30">

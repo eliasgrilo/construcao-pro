@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
+import { type ColumnDef } from '@tanstack/react-table'
 import { useParams, useNavigate } from '@tanstack/react-router'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -11,6 +12,7 @@ import {
     PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
     AreaChart, Area, XAxis, YAxis,
 } from 'recharts'
+import { DataTable } from '@/components/data-table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -758,156 +760,145 @@ export function ObraDetailPage() {
                     </div>
                 )}
 
-                {/* ════════ ESTOQUE (Redesigned — Apple Command Center) ════════ */}
-                {activeTab === 'estoque' && (
-                    <div>
-                        <div className="flex items-center justify-between mb-5">
-                            <h2 className="text-[15px] font-semibold">Estoque desta obra</h2>
-                            <Button size="sm" onClick={() => setEntradaDialog(true)}><Plus className="h-4 w-4 mr-1.5" />Entrada</Button>
-                        </div>
+                {/* ════════ ESTOQUE ════════ */}
+                {activeTab === 'estoque' && (() => {
+                    const lowCount = estoque.filter((e: any) => e.material?.estoque_minimo > 0 && (e.quantidade ?? 0) <= e.material.estoque_minimo).length
 
-                        {/* Instruction banner */}
-                        {estoque.length > 0 && (
-                            <div className="flex items-center gap-2.5 rounded-xl bg-accent/50 px-4 py-3 text-[13px] text-muted-foreground mb-5">
-                                <span className="flex-shrink-0">📦</span>
-                                <span>Toque em <strong>Dar Baixa</strong> para registrar o uso de materiais na obra.</span>
-                            </div>
-                        )}
-
-                        {estoque.length === 0 ? (
-                            <Empty icon={Package} text="Nenhum material em estoque" sub="Registre uma entrada para adicionar materiais." />
-                        ) : (
-                            <div className="rounded-xl border bg-card overflow-hidden">
-                                <ul className="divide-y divide-border/50">
-                                    {estoque.map((e: any) => {
-                                        const isLow = e.material?.estoque_minimo > 0 && (e.quantidade ?? 0) <= e.material.estoque_minimo
-                                        const qty = e.quantidade ?? 0
-                                        const min = e.material?.estoque_minimo ?? 0
-                                        const unidade = e.material?.categoria?.unidade ?? 'UN'
-                                        const pct = min > 0 ? Math.min((qty / min) * 100, 100) : 100
-
-                                        return (
-                                            <li key={e.id} className="px-4 sm:px-5 py-4 group">
-                                                <div className="flex items-center gap-3.5">
-                                                    {/* Quantity badge */}
-                                                    <span className={cn(
-                                                        'flex h-12 w-12 items-center justify-center rounded-xl flex-shrink-0 text-[15px] font-bold tabular-nums',
-                                                        isLow
-                                                            ? 'bg-destructive/10 text-destructive'
-                                                            : 'bg-accent text-foreground',
-                                                    )}>
-                                                        {formatNumber(qty)}
-                                                    </span>
-
-                                                    {/* Material info */}
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-[14px] sm:text-[13px] font-semibold truncate">{e.material?.nome ?? '—'}</p>
-                                                        <p className="text-[12px] sm:text-[11px] text-muted-foreground mt-0.5">
-                                                            {e.almoxarifado?.nome ?? '—'}
-                                                            <span className="mx-1.5">·</span>
-                                                            <Badge variant="secondary" className="text-[10px] py-0 h-[16px] align-middle">{e.material?.categoria?.nome ?? '—'}</Badge>
-                                                            <span className="mx-1.5">·</span>
-                                                            {unidade}
-                                                        </p>
-
-                                                        {/* Stock level bar */}
-                                                        {min > 0 && (
-                                                            <div className="flex items-center gap-2 mt-2">
-                                                                <div className="flex-1 h-[4px] rounded-full bg-muted overflow-hidden max-w-[120px]">
-                                                                    <div
-                                                                        className={cn(
-                                                                            'h-full rounded-full transition-all',
-                                                                            isLow ? 'bg-destructive' : pct > 50 ? 'bg-green-500' : 'bg-amber-500',
-                                                                        )}
-                                                                        style={{ width: `${pct}%` }}
-                                                                    />
-                                                                </div>
-                                                                <span className={cn(
-                                                                    'text-[10px] tabular-nums font-medium',
-                                                                    isLow ? 'text-destructive' : 'text-muted-foreground'
-                                                                )}>
-                                                                    {isLow && <AlertTriangle className="h-3 w-3 inline mr-0.5 -mt-0.5" />}
-                                                                    mín: {formatNumber(min)}
-                                                                </span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-
-                                                    {/* Action buttons */}
-                                                    <div className="flex items-center gap-2 flex-shrink-0">
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            className="h-9 sm:h-8 px-3 text-[13px] sm:text-[12px] border-orange-500/30 text-orange-600 dark:text-orange-400 hover:bg-orange-500/10 hover:border-orange-500/50"
-                                                            onClick={() => setBaixaTarget({
-                                                                materialId: e.material?.id,
-                                                                materialNome: e.material?.nome ?? '—',
-                                                                materialCodigo: e.material?.codigo ?? '',
-                                                                almoxarifadoId: e.almoxarifado?.id,
-                                                                almoxarifadoNome: e.almoxarifado?.nome ?? '—',
-                                                                quantidadeDisponivel: qty,
-                                                                unidade,
-                                                                precoUnitario: e.material?.preco_unitario ?? 0,
-                                                            })}
-                                                        >
-                                                            <Minus className="h-3.5 w-3.5 mr-1" />
-                                                            Dar Baixa
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            className="h-9 sm:h-8 px-2 text-muted-foreground hover:text-primary hidden sm:flex"
-                                                            title="Transferir"
-                                                            onClick={() => {
-                                                                setMovTipo('TRANSFERENCIA')
-                                                                setMovMaterialId(e.material?.id)
-                                                                setMovAlmoxId(e.almoxarifado?.id)
-                                                                setMovDialog(true)
-                                                            }}
-                                                        >
-                                                            <ArrowRightLeft className="h-3.5 w-3.5" />
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            className="h-9 sm:h-8 px-2 text-muted-foreground hover:text-destructive"
-                                                            title="Remover do estoque"
-                                                            onClick={() => setDeleteEstoqueTarget({
-                                                                id: e.id,
-                                                                materialId: e.material?.id,
-                                                                materialNome: e.material?.nome ?? '—',
-                                                                almoxarifadoId: e.almoxarifado?.id,
-                                                                almoxarifadoNome: e.almoxarifado?.nome ?? '—',
-                                                                quantidade: qty,
-                                                                unidade,
-                                                                precoUnitario: e.material?.preco_unitario ?? 0,
-                                                            })}
-                                                        >
-                                                            <Trash2 className="h-3.5 w-3.5" />
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            </li>
-                                        )
-                                    })}
-                                </ul>
-
-                                {/* Summary footer */}
-                                <div className="flex items-center justify-between px-5 py-3 border-t bg-muted/30">
-                                    <span className="text-[13px] font-semibold">{estoque.length} {estoque.length === 1 ? 'material' : 'materiais'}</span>
-                                    <span className="text-[12px] text-muted-foreground">
-                                        {estoque.filter((e: any) => e.material?.estoque_minimo > 0 && (e.quantidade ?? 0) <= e.material.estoque_minimo).length > 0 && (
-                                            <span className="text-destructive font-medium">
-                                                <AlertTriangle className="h-3 w-3 inline mr-1 -mt-0.5" />
-                                                {estoque.filter((e: any) => e.material?.estoque_minimo > 0 && (e.quantidade ?? 0) <= e.material.estoque_minimo).length} com estoque baixo
-                                            </span>
-                                        )}
-                                    </span>
+                    const estoqueColumns: ColumnDef<any>[] = [
+                        {
+                            accessorKey: 'material.nome', header: 'Material',
+                            cell: ({ row }) => (
+                                <div>
+                                    <span className="font-medium text-[13px]">{row.original.material?.nome || '—'}</span>
+                                    <p className="text-[11px] text-muted-foreground font-mono">{row.original.material?.codigo || ''}</p>
                                 </div>
+                            ),
+                        },
+                        {
+                            accessorKey: 'material.categoria.nome', header: 'Categoria',
+                            cell: ({ row }) => <Badge variant="secondary">{row.original.material?.categoria?.nome || '—'}</Badge>,
+                        },
+                        {
+                            accessorKey: 'almoxarifado.nome', header: 'Almoxarifado',
+                            cell: ({ row }) => <span className="text-[13px]">{row.original.almoxarifado?.nome || '—'}</span>,
+                        },
+                        {
+                            accessorKey: 'quantidade', header: 'Qtd.',
+                            cell: ({ row }) => {
+                                const qty = row.original.quantidade ?? 0
+                                const min = row.original.material?.estoque_minimo || 0
+                                const isLow = min > 0 && qty <= min
+                                return (
+                                    <div className="flex items-center gap-1.5">
+                                        <span className={cn('font-semibold tabular-nums text-[13px]', isLow && 'text-destructive')}>{formatNumber(qty)}</span>
+                                        {isLow && <AlertTriangle className="h-3 w-3 text-warning" />}
+                                    </div>
+                                )
+                            },
+                        },
+                        {
+                            id: 'custoUnitario', header: 'Custo Un.',
+                            cell: ({ row }) => <span className="tabular-nums text-[13px]">{formatCurrency(row.original.material?.preco_unitario ?? 0)}</span>,
+                        },
+                        {
+                            id: 'valorTotal', header: 'Total',
+                            cell: ({ row }) => {
+                                const total = (row.original.quantidade ?? 0) * (row.original.material?.preco_unitario ?? 0)
+                                return <span className="font-semibold tabular-nums text-[13px]">{formatCurrency(total)}</span>
+                            },
+                        },
+                        {
+                            id: 'actions', header: '',
+                            cell: ({ row }) => {
+                                const e = row.original
+                                const qty = e.quantidade ?? 0
+                                const unidade = e.material?.categoria?.unidade ?? 'UN'
+                                return (
+                                    <div className="flex items-center gap-1 justify-end">
+                                        <Button
+                                            size="sm" variant="outline"
+                                            className="h-8 px-2.5 text-[12px] border-orange-500/30 text-orange-600 dark:text-orange-400 hover:bg-orange-500/10 hover:border-orange-500/50"
+                                            onClick={() => setBaixaTarget({
+                                                materialId: e.material?.id,
+                                                materialNome: e.material?.nome ?? '—',
+                                                materialCodigo: e.material?.codigo ?? '',
+                                                almoxarifadoId: e.almoxarifado?.id,
+                                                almoxarifadoNome: e.almoxarifado?.nome ?? '—',
+                                                quantidadeDisponivel: qty,
+                                                unidade,
+                                                precoUnitario: e.material?.preco_unitario ?? 0,
+                                            })}
+                                        >
+                                            <Minus className="h-3 w-3 mr-1" />Baixa
+                                        </Button>
+                                        <Button
+                                            size="sm" variant="ghost"
+                                            className="h-8 px-2 text-muted-foreground hover:text-primary"
+                                            title="Transferir"
+                                            onClick={() => { setMovTipo('TRANSFERENCIA'); setMovMaterialId(e.material?.id); setMovAlmoxId(e.almoxarifado?.id); setMovDialog(true) }}
+                                        >
+                                            <ArrowRightLeft className="h-3.5 w-3.5" />
+                                        </Button>
+                                        <Button
+                                            size="sm" variant="ghost"
+                                            className="h-8 px-2 text-muted-foreground hover:text-destructive"
+                                            title="Remover do estoque"
+                                            onClick={() => setDeleteEstoqueTarget({
+                                                id: e.id,
+                                                materialId: e.material?.id,
+                                                materialNome: e.material?.nome ?? '—',
+                                                almoxarifadoId: e.almoxarifado?.id,
+                                                almoxarifadoNome: e.almoxarifado?.nome ?? '—',
+                                                quantidade: qty,
+                                                unidade,
+                                                precoUnitario: e.material?.preco_unitario ?? 0,
+                                            })}
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                    </div>
+                                )
+                            },
+                        },
+                    ]
+
+                    return (
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-[15px] font-semibold">Estoque desta obra</h2>
+                                <Button size="sm" onClick={() => setEntradaDialog(true)}><Plus className="h-4 w-4 mr-1.5" />Entrada</Button>
                             </div>
-                        )}
-                    </div>
-                )}
+
+                            {/* Instruction banner */}
+                            <div className="flex items-center gap-2.5 rounded-xl bg-accent/50 px-4 py-3 text-[13px] text-muted-foreground">
+                                <span className="flex-shrink-0">📦</span>
+                                <span>Use <strong>Baixa</strong> para registrar uso de materiais. Use <strong>↔</strong> para transferir entre almoxarifados.</span>
+                            </div>
+
+                            {/* Low stock alert */}
+                            {lowCount > 0 && (
+                                <div className="flex items-center gap-3 rounded-2xl border border-warning/30 bg-warning/5 px-4 py-3">
+                                    <AlertTriangle className="h-4 w-4 text-warning flex-shrink-0" />
+                                    <p className="text-[13px]">
+                                        <span className="font-medium text-warning">{lowCount} {lowCount === 1 ? 'item' : 'itens'}</span>
+                                        <span className="text-muted-foreground"> abaixo do estoque mínimo</span>
+                                    </p>
+                                </div>
+                            )}
+
+                            {estoque.length === 0 ? (
+                                <Empty icon={Package} text="Nenhum material em estoque" sub="Registre uma entrada para adicionar materiais." />
+                            ) : (
+                                <DataTable
+                                    columns={estoqueColumns}
+                                    data={estoque}
+                                    isLoading={false}
+                                    searchPlaceholder="Buscar material..."
+                                />
+                            )}
+                        </div>
+                    )
+                })()}
 
                 {/* ════════ MOVIMENTAÇÕES ════════ */}
                 {activeTab === 'movimentacoes' && (

@@ -263,8 +263,8 @@ export function ObrasPage() {
                                                             </span>
                                                         </div>
                                                         <div className="flex items-center justify-between pt-1.5 border-t border-border/20 mt-1">
-                                                            <span className="text-[12px] text-muted-foreground">Margem</span>
-                                                            <span className={cn('text-[15px] font-bold tabular-nums', isPositive ? 'text-success' : 'text-destructive')}>
+                                                            <span className="text-[13px] text-muted-foreground">Margem</span>
+                                                            <span className={cn('text-[13px] font-semibold tabular-nums', isPositive ? 'text-success' : 'text-destructive')}>
                                                                 {isPositive ? '+' : ''}{margem}%
                                                             </span>
                                                         </div>

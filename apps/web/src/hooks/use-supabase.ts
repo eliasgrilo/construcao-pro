@@ -42,6 +42,7 @@ export function useDashboardCustoPorObra() {
                 valor_terreno: number
                 valor_burocracia: number
                 valor_construcao: number
+                valor_venda: number
                 percentual: number
             }[]
         },
@@ -133,7 +134,7 @@ export function useCreateObra() {
 export function useUpdateObra() {
     const qc = useQueryClient()
     return useMutation({
-        mutationFn: async ({ id, ...body }: { id: string; nome?: string; endereco?: string; status?: string; orcamento?: number; valor_terreno?: number; valor_burocracia?: number; valor_construcao?: number }) => {
+        mutationFn: async ({ id, ...body }: { id: string; nome?: string; endereco?: string; status?: string; orcamento?: number; valor_terreno?: number; valor_burocracia?: number; valor_construcao?: number; valor_venda?: number }) => {
             const { data, error } = await supabase.from('obras').update(body as any).eq('id', id).select().single()
             if (error) throw error
             return data

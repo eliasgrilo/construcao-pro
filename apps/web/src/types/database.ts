@@ -445,6 +445,10 @@ export type Database = {
           orcamento: number
           status: Database["public"]["Enums"]["status_obra"]
           updated_at: string
+          valor_terreno: number
+          valor_burocracia: number
+          valor_construcao: number
+          valor_venda: number
         }
         Insert: {
           created_at?: string
@@ -454,6 +458,10 @@ export type Database = {
           orcamento?: number
           status?: Database["public"]["Enums"]["status_obra"]
           updated_at?: string
+          valor_terreno?: number
+          valor_burocracia?: number
+          valor_construcao?: number
+          valor_venda?: number
         }
         Update: {
           created_at?: string
@@ -463,6 +471,10 @@ export type Database = {
           orcamento?: number
           status?: Database["public"]["Enums"]["status_obra"]
           updated_at?: string
+          valor_terreno?: number
+          valor_burocracia?: number
+          valor_construcao?: number
+          valor_venda?: number
         }
         Relationships: []
       }
@@ -601,7 +613,7 @@ export type Database = {
     Enums: {
       role: "ADMIN" | "GESTOR" | "ALMOXARIFE" | "VISUALIZADOR"
       status_nf: "PENDENTE" | "PROCESSADA" | "VINCULADA" | "REJEITADA"
-      status_obra: "ATIVA" | "FINALIZADA" | "PAUSADA"
+      status_obra: "ATIVA" | "FINALIZADA" | "PAUSADA" | "VENDIDO" | "TERRENO"
       status_transferencia:
         | "PENDENTE"
         | "APROVADA_NIVEL_1"

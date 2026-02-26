@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import {
     ArrowDownRight, ArrowUpRight, ArrowLeftRight,
     AlertTriangle, ChevronRight, MapPin, Landmark, Package, CheckCircle2, FileText, Building2,
+    Banknote, TrendingUp, TrendingDown,
 } from 'lucide-react'
 import { useDashboardStats, useDashboardCustoPorObra, useMovimentacoesRecentes, useEstoqueAlertas, useObras } from '@/hooks/use-supabase'
 import { cn, formatDate, formatNumber, formatCurrency } from '@/lib/utils'
@@ -67,6 +68,7 @@ export function DashboardPage() {
     const s = stats
     const movs = recentMovs || []
     const obras = (custoPorObra || []).filter((o: any) => o.status === 'ATIVA')
+    const obrasVendidas = (custoPorObra || []).filter((o: any) => o.status === 'VENDIDO' && (o.valor_venda ?? 0) > 0)
     const alertas = alertasData || []
     const pct = s?.orcamentoTotal && s.orcamentoTotal > 0 ? Math.round((s.custoTotal / s.orcamentoTotal) * 100) : 0
 
@@ -232,6 +234,113 @@ export function DashboardPage() {
                     </motion.div>
                 )}
             </motion.div>
+
+            {/* ─── Obras Vendidas ─── */}
+            {obrasVendidas.length > 0 && (
+                <motion.div
+                    initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: 0.25 }}
+                    className="mt-10 px-4 md:px-6"
+                >
+                    <div className="flex items-baseline justify-between mb-4">
+                        <h2 className="text-[20px] md:text-[22px] font-bold tracking-tight">Obras Vendidas</h2>
+                        <button onClick={() => navigate({ to: '/obras' })} className="text-[15px] md:text-[17px] text-primary font-regular flex items-center hover:text-primary/80 transition-colors">
+                            Ver Todas<ChevronRight className="h-4 w-4 ml-1" />
+                        </button>
+                    </div>
+                    <motion.div
+                        initial="hidden"
+                        animate="show"
+                        variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06 } } }}
+                        className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
+                    >
+                        {obrasVendidas.map((obra: any) => {
+                            const valorVenda = obra.valor_venda ?? 0
+                            const totalInvestido = (obra.valor_terreno ?? 0) + (obra.valor_burocracia ?? 0) + (obra.valor_construcao ?? 0)
+                            const lucro = valorVenda - totalInvestido
+                            const isPositive = lucro >= 0
+                            const margem = totalInvestido > 0 ? ((lucro / totalInvestido) * 100).toFixed(1) : '0.0'
+                            return (
+                                <motion.button
+                                    key={obra.id}
+                                    variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }}
+                                    onClick={() => navigate({ to: '/obras/$obraId', params: { obraId: obra.id } })}
+                                    className="apple-card flex flex-col p-5 text-left cursor-pointer"
+                                >
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="flex items-center gap-2">
+                                            <span className="flex h-[9px] w-[9px] rounded-full" style={{ backgroundColor: '#5856D6' }} />
+                                            <span className="text-[13px] font-medium" style={{ color: '#5856D6' }}>Vendido</span>
+                                        </div>
+                                        <ChevronRight className="h-4 w-4 text-muted-foreground/30" />
+                                    </div>
+                                    <h3 className="text-[17px] font-semibold leading-snug">{obra.obra}</h3>
+                                    <div className="flex items-center gap-1.5 mt-1.5">
+                                        <MapPin className="h-3.5 w-3.5 text-muted-foreground/40 flex-shrink-0" />
+                                        <span className="text-[13px] text-muted-foreground leading-snug truncate">{obra.endereco}</span>
+                                    </div>
+
+                                    {/* Investimento */}
+                                    <div className="mt-2.5 space-y-1.5">
+                                        {[
+                                            { label: 'Terreno', Icon: Landmark, color: '#AF52DE', value: obra.valor_terreno ?? 0 },
+                                            { label: 'Burocracia', Icon: FileText, color: '#007AFF', value: obra.valor_burocracia ?? 0 },
+                                            { label: 'Construção', Icon: Building2, color: '#FF9500', value: obra.valor_construcao ?? 0 },
+                                        ].map(({ label, Icon, color, value }) => (
+                                            <div key={label} className="flex items-center gap-1.5">
+                                                <span className="flex h-[22px] w-[22px] items-center justify-center rounded-md flex-shrink-0" style={{ backgroundColor: `${color}18` }}>
+                                                    <Icon className="h-3 w-3" style={{ color }} />
+                                                </span>
+                                                <span className="text-[12px] text-muted-foreground">{label}</span>
+                                                <span className="text-[12px] font-semibold tabular-nums ml-auto">
+                                                    {formatCurrency(value)}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Venda + Lucro */}
+                                    <div className="mt-2.5 pt-2.5 border-t border-border/15 space-y-1.5">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="flex h-[22px] w-[22px] items-center justify-center rounded-md flex-shrink-0" style={{ backgroundColor: '#5856D618' }}>
+                                                <Banknote className="h-3 w-3" style={{ color: '#5856D6' }} />
+                                            </span>
+                                            <span className="text-[12px] text-muted-foreground">Venda</span>
+                                            <span className="text-[12px] font-semibold tabular-nums ml-auto" style={{ color: '#5856D6' }}>
+                                                {formatCurrency(valorVenda)}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="flex h-[22px] w-[22px] items-center justify-center rounded-md flex-shrink-0" style={{ backgroundColor: isPositive ? '#34C75918' : '#FF3B3018' }}>
+                                                {isPositive
+                                                    ? <TrendingUp className="h-3 w-3" style={{ color: '#34C759' }} />
+                                                    : <TrendingDown className="h-3 w-3" style={{ color: '#FF3B30' }} />
+                                                }
+                                            </span>
+                                            <span className="text-[12px] text-muted-foreground">{isPositive ? 'Lucro' : 'Prejuízo'}</span>
+                                            <span className={cn('text-[12px] font-bold tabular-nums ml-auto', isPositive ? 'text-success' : 'text-destructive')}>
+                                                {isPositive ? '+' : ''}{formatCurrency(lucro)}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex-1 min-h-4" />
+
+                                    {/* Margin footer */}
+                                    <div className="mt-4 pt-4 border-t border-border/15">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[13px] text-muted-foreground">Margem</span>
+                                            <span className={cn('text-[17px] font-bold tabular-nums', isPositive ? 'text-success' : 'text-destructive')}>
+                                                {isPositive ? '+' : ''}{margem}%
+                                            </span>
+                                        </div>
+                                    </div>
+                                </motion.button>
+                            )
+                        })}
+                    </motion.div>
+                </motion.div>
+            )}
 
             {/* ─── Insights row ─── */}
             <motion.div

@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { createObraSchema, type CreateObraInput } from '@/lib/schemas'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, MapPin, Trash2, Building2, Warehouse, Landmark, FileText } from 'lucide-react'
+import { Plus, MapPin, Trash2, Building2, Warehouse, Landmark, FileText, Banknote, TrendingUp, TrendingDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -215,6 +215,10 @@ export function ObrasPage() {
                                         const vTerreno = obra.valor_terreno ?? 0
                                         const vBurocracia = obra.valor_burocracia ?? 0
                                         const vConstrucao = custos?.valor_construcao ?? obra.valor_construcao ?? 0
+                                        const valorVenda = custos?.valor_venda ?? 0
+                                        const totalInvestido = vTerreno + vBurocracia + vConstrucao
+                                        const lucro = valorVenda - totalInvestido
+                                        const isPositive = lucro >= 0
                                         return (
                                             <div className="mb-4 space-y-1.5">
                                                 {[
@@ -232,6 +236,33 @@ export function ObrasPage() {
                                                         </span>
                                                     </div>
                                                 ))}
+
+                                                {/* Venda + Lucro for VENDIDO */}
+                                                {obra.status === 'VENDIDO' && valorVenda > 0 && (
+                                                    <div className="mt-2 pt-2 border-t border-border/20 space-y-1.5">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="flex h-6 w-6 items-center justify-center rounded-md flex-shrink-0" style={{ backgroundColor: '#5856D618' }}>
+                                                                <Banknote className="h-3.5 w-3.5" style={{ color: '#5856D6' }} />
+                                                            </span>
+                                                            <span className="text-[13px] text-muted-foreground">Venda</span>
+                                                            <span className="text-[13px] font-semibold tabular-nums ml-auto" style={{ color: '#5856D6' }}>
+                                                                {formatCurrency(valorVenda)}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="flex h-6 w-6 items-center justify-center rounded-md flex-shrink-0" style={{ backgroundColor: isPositive ? '#34C75918' : '#FF3B3018' }}>
+                                                                {isPositive
+                                                                    ? <TrendingUp className="h-3.5 w-3.5" style={{ color: '#34C759' }} />
+                                                                    : <TrendingDown className="h-3.5 w-3.5" style={{ color: '#FF3B30' }} />
+                                                                }
+                                                            </span>
+                                                            <span className="text-[13px] text-muted-foreground">{isPositive ? 'Lucro' : 'Prejuízo'}</span>
+                                                            <span className={cn('text-[13px] font-semibold tabular-nums ml-auto', isPositive ? 'text-success' : 'text-destructive')}>
+                                                                {isPositive ? '+' : ''}{formatCurrency(lucro)}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         )
                                     })()}

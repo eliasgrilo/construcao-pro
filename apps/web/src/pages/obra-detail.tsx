@@ -5,7 +5,7 @@ import {
     ArrowLeft, MapPin, Warehouse, Package, ArrowLeftRight,
     ArrowDownRight, ArrowUpRight, Plus, Trash2, AlertTriangle,
     User, DollarSign, Minus, ArrowRightLeft, Check, ChevronDown,
-    Landmark, FileText, Building2,
+    Landmark, FileText, Building2, Banknote, TrendingUp, TrendingDown, Sparkles,
 } from 'lucide-react'
 import {
     PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
@@ -180,6 +180,11 @@ export function ObraDetailPage() {
     const [terrenoInput, setTerrenoInput] = useState('')
     const terrenoRef = useRef<HTMLInputElement>(null)
 
+    /* ── Venda Dialog ── */
+    const [vendaDialog, setVendaDialog] = useState(false)
+    const [vendaInput, setVendaInput] = useState('')
+    const vendaInputRef = useRef<HTMLInputElement>(null)
+
     /* ── Rich Entrada Dialog ── */
     const [entradaDialog, setEntradaDialog] = useState(false)
     const [entMaterialId, setEntMaterialId] = useState('')
@@ -339,15 +344,21 @@ export function ObraDetailPage() {
                                 <StatusSwitcher
                                     currentStatus={obra.status}
                                     isUpdating={updateOrcamento.isPending}
-                                    onStatusChange={(newStatus) =>
-                                        updateOrcamento.mutate(
-                                            { id: obraId, status: newStatus },
-                                            {
-                                                onSuccess: () => toast({ title: `Status alterado para ${statusMap[newStatus]?.label}` }),
-                                                onError: () => toast({ title: 'Erro ao alterar status', variant: 'error' }),
-                                            },
-                                        )
-                                    }
+                                    onStatusChange={(newStatus) => {
+                                        if (newStatus === 'VENDIDO') {
+                                            setVendaInput('')
+                                            setVendaDialog(true)
+                                            setTimeout(() => vendaInputRef.current?.focus(), 150)
+                                        } else {
+                                            updateOrcamento.mutate(
+                                                { id: obraId, status: newStatus },
+                                                {
+                                                    onSuccess: () => toast({ title: `Status alterado para ${statusMap[newStatus]?.label}` }),
+                                                    onError: () => toast({ title: 'Erro ao alterar status', variant: 'error' }),
+                                                },
+                                            )
+                                        }
+                                    }}
                                 />
                             )}
                         </div>
@@ -521,14 +532,49 @@ export function ObraDetailPage() {
                                             <span className="font-medium">Total</span>
                                             <span className="font-bold tabular-nums">{formatCurrency(custos.total ?? 0)}</span>
                                         </div>
-                                        <div className="border-t border-border/30 pt-2.5">
-                                            <div className="flex justify-between text-[13px]">
-                                                <span className="text-muted-foreground">Saldo</span>
-                                                <span className={cn('font-semibold tabular-nums', (custos.saldo ?? 0) < 0 ? 'text-destructive' : 'text-success')}>
-                                                    {formatCurrency(custos.saldo ?? 0)}
-                                                </span>
+
+                                        {/* Venda / Lucro — only for VENDIDO */}
+                                        {obra?.status === 'VENDIDO' && (custos.valorVenda ?? 0) > 0 ? (() => {
+                                            const valorVenda = custos.valorVenda ?? 0
+                                            const lucro = valorVenda - (custos.total ?? 0)
+                                            const isPositive = lucro >= 0
+                                            const margem = (custos.total ?? 0) > 0 ? ((lucro / (custos.total ?? 0)) * 100).toFixed(1) : '0.0'
+                                            return (
+                                                <div className="border-t border-border/30 pt-2.5 space-y-2">
+                                                    <div className="flex justify-between items-center text-[13px]">
+                                                        <span className="flex items-center gap-1.5 text-muted-foreground">
+                                                            <Banknote className="h-3.5 w-3.5 flex-shrink-0" style={{ color: '#5856D6' }} />
+                                                            Venda
+                                                        </span>
+                                                        <span className="font-semibold tabular-nums" style={{ color: '#5856D6' }}>{formatCurrency(valorVenda)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center text-[13px]">
+                                                        <span className="flex items-center gap-1.5 text-muted-foreground">
+                                                            {isPositive
+                                                                ? <TrendingUp className="h-3.5 w-3.5 flex-shrink-0 text-success" />
+                                                                : <TrendingDown className="h-3.5 w-3.5 flex-shrink-0 text-destructive" />
+                                                            }
+                                                            {isPositive ? 'Lucro' : 'Prejuízo'}
+                                                        </span>
+                                                        <span className={cn('font-semibold tabular-nums', isPositive ? 'text-success' : 'text-destructive')}>
+                                                            {isPositive ? '+' : ''}{formatCurrency(lucro)}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-[11px] text-muted-foreground text-right">
+                                                        Margem: <span className={cn('font-semibold', isPositive ? 'text-success' : 'text-destructive')}>{isPositive ? '+' : ''}{margem}%</span>
+                                                    </p>
+                                                </div>
+                                            )
+                                        })() : (
+                                            <div className="border-t border-border/30 pt-2.5">
+                                                <div className="flex justify-between text-[13px]">
+                                                    <span className="text-muted-foreground">Saldo</span>
+                                                    <span className={cn('font-semibold tabular-nums', (custos.saldo ?? 0) < 0 ? 'text-destructive' : 'text-success')}>
+                                                        {formatCurrency(custos.saldo ?? 0)}
+                                                    </span>
+                                                </div>
                                             </div>
-                                        </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -1047,6 +1093,129 @@ export function ObraDetailPage() {
                             >
                                 <Minus className="h-4 w-4 mr-1.5" />
                                 Confirmar Baixa
+                            </Button>
+                        </DialogFooter>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* ═══════ VENDA DIALOG ═══════ */}
+            <Dialog open={vendaDialog} onOpenChange={(v) => { if (!v) setVendaDialog(false) }}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <span className="flex h-8 w-8 items-center justify-center rounded-xl" style={{ background: 'linear-gradient(135deg, #5856D6, #AF52DE)' }}>
+                                <Banknote className="h-4 w-4 text-white" />
+                            </span>
+                            Registrar Venda
+                        </DialogTitle>
+                        <DialogDescription>Informe o valor de venda desta obra para calcular o lucro.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-5">
+                        {/* Investment summary */}
+                        <div className="rounded-xl bg-accent/50 p-4 space-y-2">
+                            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">Investimento Total</p>
+                            {[
+                                { label: 'Terreno', Icon: Landmark, color: '#AF52DE', value: custos?.valorTerreno ?? 0 },
+                                { label: 'Burocracia', Icon: FileText, color: '#007AFF', value: custos?.valorBurocracia ?? 0 },
+                                { label: 'Construção', Icon: Building2, color: '#FF9500', value: custos?.valorConstrucao ?? 0 },
+                            ].map(({ label, Icon, color, value }) => (
+                                <div key={label} className="flex items-center justify-between text-[12px]">
+                                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                                        <Icon className="h-3 w-3" style={{ color }} />{label}
+                                    </span>
+                                    <span className="font-medium tabular-nums">{formatCurrency(value)}</span>
+                                </div>
+                            ))}
+                            <div className="border-t border-border/30 pt-2 mt-2">
+                                <div className="flex items-center justify-between text-[13px]">
+                                    <span className="font-semibold">Total Investido</span>
+                                    <span className="font-bold tabular-nums">{formatCurrency(custos?.total ?? 0)}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Sale value input */}
+                        <div className="space-y-2">
+                            <Label className="text-[13px] font-semibold">Valor da Venda (R$)</Label>
+                            <Input
+                                ref={vendaInputRef}
+                                type="number" step="0.01" min="0"
+                                value={vendaInput}
+                                onChange={(e) => setVendaInput(e.target.value)}
+                                placeholder="0,00"
+                                className="text-[18px] font-semibold tabular-nums h-14 text-center"
+                                autoFocus
+                            />
+                        </div>
+
+                        {/* Live profit preview */}
+                        <AnimatePresence>
+                            {vendaInput && Number(vendaInput) > 0 && (() => {
+                                const venda = Number(vendaInput)
+                                const investido = custos?.total ?? 0
+                                const lucro = venda - investido
+                                const isPositive = lucro >= 0
+                                const margem = investido > 0 ? ((lucro / investido) * 100).toFixed(1) : '0.0'
+                                return (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                                        transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+                                        className={cn(
+                                            'rounded-xl p-4 text-center',
+                                            isPositive ? 'bg-success/8 border border-success/20' : 'bg-destructive/8 border border-destructive/20',
+                                        )}
+                                    >
+                                        <div className="flex items-center justify-center gap-1.5 mb-1">
+                                            {isPositive
+                                                ? <TrendingUp className="h-4 w-4 text-success" />
+                                                : <TrendingDown className="h-4 w-4 text-destructive" />
+                                            }
+                                            <span className="text-[12px] font-semibold uppercase tracking-wider" style={{ color: isPositive ? 'var(--color-success)' : 'var(--color-destructive)' }}>
+                                                {isPositive ? 'Lucro Estimado' : 'Prejuízo Estimado'}
+                                            </span>
+                                        </div>
+                                        <p className={cn('text-[28px] font-bold tabular-nums tracking-tight', isPositive ? 'text-success' : 'text-destructive')}>
+                                            {isPositive ? '+' : '-'}{formatCurrency(Math.abs(lucro))}
+                                        </p>
+                                        <p className="text-[12px] text-muted-foreground mt-0.5">
+                                            Margem: <span className={cn('font-semibold', isPositive ? 'text-success' : 'text-destructive')}>{isPositive ? '+' : ''}{margem}%</span>
+                                        </p>
+                                    </motion.div>
+                                )
+                            })()}
+                        </AnimatePresence>
+
+                        <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => setVendaDialog(false)}>Cancelar</Button>
+                            <Button
+                                disabled={!vendaInput || Number(vendaInput) <= 0}
+                                loading={updateOrcamento.isPending}
+                                style={{ background: 'linear-gradient(135deg, #5856D6, #AF52DE)' }}
+                                className="text-white border-0"
+                                onClick={() => {
+                                    const venda = Number(vendaInput)
+                                    if (venda <= 0) return
+                                    updateOrcamento.mutate(
+                                        { id: obraId, status: 'VENDIDO', valor_venda: venda },
+                                        {
+                                            onSuccess: () => {
+                                                setVendaDialog(false)
+                                                toast({
+                                                    title: 'Venda registrada',
+                                                    description: `${obra?.nome} vendida por ${formatCurrency(venda)}`,
+                                                    variant: 'success',
+                                                })
+                                            },
+                                            onError: () => toast({ title: 'Erro ao registrar venda', variant: 'error' }),
+                                        },
+                                    )
+                                }}
+                            >
+                                <Sparkles className="h-4 w-4 mr-1.5" />
+                                Confirmar Venda
                             </Button>
                         </DialogFooter>
                     </div>

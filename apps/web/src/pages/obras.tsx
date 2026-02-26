@@ -224,8 +224,8 @@ export function ObrasPage() {
                                             <div className="mb-4 space-y-1.5">
                                                 {[
                                                     { label: 'Terreno', Icon: Landmark, color: '#AF52DE', value: vTerreno, valueColor: vTerreno > 0 ? '#AF52DE' : undefined },
-                                                    { label: 'Burocracia', Icon: FileText, color: '#007AFF', value: vBurocracia, valueColor: '#ffffff' },
-                                                    { label: 'Construção', Icon: Building2, color: '#FF9500', value: vConstrucao, valueColor: '#ffffff' },
+                                                    { label: 'Burocracia', Icon: FileText, color: '#007AFF', value: vBurocracia, valueColor: vBurocracia > 0 ? '#007AFF' : undefined },
+                                                    { label: 'Construção', Icon: Building2, color: '#FF9500', value: vConstrucao, valueColor: vConstrucao > 0 ? '#FF9500' : undefined },
                                                 ].map(({ label, Icon, color, value, valueColor }) => (
                                                     <div key={label} className="flex items-center gap-1.5">
                                                         <span className="flex h-6 w-6 items-center justify-center rounded-md flex-shrink-0" style={{ backgroundColor: `${color}18` }}>

@@ -26,6 +26,7 @@ import {
     useCreateMovimentacaoEntrada, useCreateMovimentacaoSaida, useCreateMovimentacaoTransferencia,
 } from '@/hooks/use-supabase'
 import { cn, formatNumber, formatDate, formatCurrency } from '@/lib/utils'
+import { CurrencyInput, parseCurrency } from '@/components/ui/currency-input'
 import { useToast } from '@/components/ui/toast'
 
 interface ChartTooltipProps {
@@ -396,18 +397,19 @@ export function ObraDetailPage() {
                         {editingBudget ? (
                             <input
                                 ref={budgetRef}
-                                type="number"
-                                className="text-[20px] md:text-[26px] font-semibold tabular-nums leading-none bg-transparent border-b-2 border-primary outline-none w-32 md:w-40"
+                                type="text"
+                                inputMode="decimal"
+                                className="text-[20px] md:text-[26px] font-semibold tabular-nums leading-none bg-transparent border-b-2 border-primary outline-none w-40 md:w-48"
                                 value={budgetInput}
-                                onChange={(e) => setBudgetInput(e.target.value)}
+                                onChange={(e) => setBudgetInput(e.target.value.replace(/[^\d,\.]/g, ''))}
                                 onBlur={() => {
-                                    const val = Number(budgetInput)
+                                    const val = parseCurrency(budgetInput)
                                     if (val >= 0) updateOrcamento.mutate({ id: obraId, orcamento: val }, { onSuccess: () => setEditingBudget(false) })
                                     else setEditingBudget(false)
                                 }}
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
-                                        const val = Number(budgetInput)
+                                        const val = parseCurrency(budgetInput)
                                         if (val >= 0) updateOrcamento.mutate({ id: obraId, orcamento: val }, { onSuccess: () => setEditingBudget(false) })
                                     }
                                     if (e.key === 'Escape') setEditingBudget(false)
@@ -501,17 +503,18 @@ export function ObraDetailPage() {
                                             {editingTerreno ? (
                                                 <input
                                                     ref={terrenoRef}
-                                                    type="number" step="0.01" min="0"
-                                                    className="text-[13px] font-semibold tabular-nums bg-transparent border-b border-primary outline-none w-28 text-right"
+                                                    type="text"
+                                                    inputMode="decimal"
+                                                    className="text-[13px] font-semibold tabular-nums bg-transparent border-b border-primary outline-none w-32 text-right"
                                                     value={terrenoInput}
-                                                    onChange={(e) => setTerrenoInput(e.target.value)}
+                                                    onChange={(e) => setTerrenoInput(e.target.value.replace(/[^\d,\.]/g, ''))}
                                                     onBlur={() => {
-                                                        const val = Number(terrenoInput)
+                                                        const val = parseCurrency(terrenoInput)
                                                         if (val >= 0) updateOrcamento.mutate({ id: obraId, valor_terreno: val }, { onSuccess: () => setEditingTerreno(false) })
                                                         else setEditingTerreno(false)
                                                     }}
                                                     onKeyDown={(e) => {
-                                                        if (e.key === 'Enter') { const val = Number(terrenoInput); if (val >= 0) updateOrcamento.mutate({ id: obraId, valor_terreno: val }, { onSuccess: () => setEditingTerreno(false) }) }
+                                                        if (e.key === 'Enter') { const val = parseCurrency(terrenoInput); if (val >= 0) updateOrcamento.mutate({ id: obraId, valor_terreno: val }, { onSuccess: () => setEditingTerreno(false) }) }
                                                         if (e.key === 'Escape') setEditingTerreno(false)
                                                     }}
                                                     autoFocus
@@ -1306,13 +1309,11 @@ export function ObraDetailPage() {
                                 <Input type="number" step="0.01" value={entQty} onChange={(e) => setEntQty(e.target.value)} placeholder="0" className="tabular-nums" />
                             </div>
                             <div className="space-y-2">
-                                <Label>Preço Un. (R$)</Label>
-                                <Input
-                                    type="number" step="0.01"
+                                <Label>Preço Un.</Label>
+                                <CurrencyInput
                                     value={entPreco}
                                     onChange={(e) => setEntPreco(e.target.value)}
-                                    placeholder={(selectedEntMaterial?.preco_unitario ?? 0) > 0 ? String(selectedEntMaterial!.preco_unitario) : '0,00'}
-                                    className="tabular-nums"
+                                    placeholder={(selectedEntMaterial?.preco_unitario ?? 0) > 0 ? String(selectedEntMaterial!.preco_unitario).replace('.', ',') : '0,00'}
                                 />
                             </div>
                         </div>
@@ -1322,7 +1323,7 @@ export function ObraDetailPage() {
                             <div className="flex items-center justify-between rounded-xl bg-accent/50 px-4 py-3">
                                 <span className="text-[14px] sm:text-[13px] text-muted-foreground">Subtotal</span>
                                 <span className="text-[18px] sm:text-[17px] font-bold tabular-nums">
-                                    {formatCurrency(Number(entQty.replace(',', '.')) * (Number(entPreco.replace(',', '.')) || selectedEntMaterial?.preco_unitario || 0))}
+                                    {formatCurrency(Number(entQty.replace(',', '.')) * (parseCurrency(entPreco) || selectedEntMaterial?.preco_unitario || 0))}
                                 </span>
                             </div>
                         )}
@@ -1386,7 +1387,7 @@ export function ObraDetailPage() {
                                 onClick={() => createEntrada.mutate({
                                     p_material_id: entMaterialId,
                                     p_quantidade: Number(entQty.replace(',', '.')),
-                                    p_preco_unitario: Number(entPreco.replace(',', '.')) || selectedEntMaterial?.preco_unitario || 0,
+                                    p_preco_unitario: parseCurrency(entPreco) || selectedEntMaterial?.preco_unitario || 0,
                                     p_almoxarifado_id: entAlmoxId,
                                     p_fornecedor_id: entFornecedorId || undefined,
                                     p_unidade: entUnidade || undefined,

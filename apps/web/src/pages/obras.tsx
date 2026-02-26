@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useObras, useCreateObra, useDeleteObra, useDashboardCustoPorObra } from '@/hooks/use-supabase'
 import { cn, formatCurrency } from '@/lib/utils'
+import { CurrencyInput, parseCurrency } from '@/components/ui/currency-input'
 import { useToast } from '@/components/ui/toast'
 
 const statusMap: Record<string, { label: string; variant: 'success' | 'secondary' | 'warning' | 'info'; color: string }> = {
@@ -383,17 +384,17 @@ export function ObrasPage() {
                                 </Select>
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="orcamento">Orçamento (R$)</Label>
-                                <Input id="orcamento" type="number" step="0.01" min="0" {...register('orcamento', { valueAsNumber: true })} placeholder="0,00" />
+                                <Label htmlFor="orcamento">Orçamento</Label>
+                                <CurrencyInput id="orcamento" {...register('orcamento', { setValueAs: (v) => parseCurrency(String(v)) })} placeholder="0,00" />
                                 {errors.orcamento && <p className="text-[13px] text-destructive mt-1">{errors.orcamento.message}</p>}
                             </div>
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="valorTerreno" className="flex items-center gap-1.5">
                                 <span className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: '#AF52DE' }} />
-                                Valor do Terreno (R$)
+                                Valor do Terreno
                             </Label>
-                            <Input id="valorTerreno" type="number" step="0.01" min="0" {...register('valorTerreno', { valueAsNumber: true })} placeholder="0,00" />
+                            <CurrencyInput id="valorTerreno" {...register('valorTerreno', { setValueAs: (v) => parseCurrency(String(v)) })} placeholder="0,00" />
                             {errors.valorTerreno && <p className="text-[13px] text-destructive mt-1">{errors.valorTerreno.message}</p>}
                         </div>
                         <DialogFooter>

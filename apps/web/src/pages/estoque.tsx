@@ -17,6 +17,7 @@ import {
     useCreateMovimentacaoEntrada, useCreateMovimentacaoSaida, useCreateMovimentacaoTransferencia,
 } from '@/hooks/use-supabase'
 import { cn, formatNumber, formatCurrency } from '@/lib/utils'
+import { CurrencyInput, parseCurrency } from '@/components/ui/currency-input'
 import { useToast } from '@/components/ui/toast'
 
 /* ── Types ── */
@@ -826,14 +827,11 @@ export function EstoquePage() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label>Preço Un. (R$)</Label>
-                                <Input
-                                    type="number"
-                                    step="0.01"
+                                <Label>Preço Un.</Label>
+                                <CurrencyInput
                                     value={entPreco}
                                     onChange={(e) => setEntPreco(e.target.value)}
-                                    placeholder={(selectedMaterial?.preco_unitario ?? 0) > 0 ? String(selectedMaterial!.preco_unitario) : '0,00'}
-                                    className="tabular-nums"
+                                    placeholder={(selectedMaterial?.preco_unitario ?? 0) > 0 ? String(selectedMaterial!.preco_unitario).replace('.', ',') : '0,00'}
                                 />
                             </div>
                         </div>
@@ -843,7 +841,7 @@ export function EstoquePage() {
                             <div className="flex items-center justify-between rounded-xl bg-accent/50 px-4 py-3">
                                 <span className="text-[14px] sm:text-[13px] text-muted-foreground">Subtotal</span>
                                 <span className="text-[18px] sm:text-[17px] font-bold tabular-nums">
-                                    {formatCurrency(Number(entQty.replace(',', '.')) * (Number(entPreco.replace(',', '.')) || selectedMaterial?.preco_unitario || 0))}
+                                    {formatCurrency(Number(entQty.replace(',', '.')) * (parseCurrency(entPreco) || selectedMaterial?.preco_unitario || 0))}
                                 </span>
                             </div>
                         )}
@@ -920,7 +918,7 @@ export function EstoquePage() {
                                 onClick={() => createEntrada.mutate({
                                     p_material_id: entMaterialId,
                                     p_quantidade: Number(entQty.replace(',', '.')),
-                                    p_preco_unitario: Number(entPreco.replace(',', '.')) || selectedMaterial?.preco_unitario || 0,
+                                    p_preco_unitario: parseCurrency(entPreco) || selectedMaterial?.preco_unitario || 0,
                                     p_almoxarifado_id: entAlmoxId,
                                     p_fornecedor_id: entFornecedorId || undefined,
                                     p_unidade: entUnidade || undefined,

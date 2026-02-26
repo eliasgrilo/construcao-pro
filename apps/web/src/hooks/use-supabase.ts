@@ -503,7 +503,17 @@ export function useCreateMovimentacaoEntrada() {
             p_unidade?: string
             p_forma_pagamento?: string
         }) => {
-            const { data, error } = await supabase.rpc('criar_movimentacao_entrada', params)
+            const { data, error } = await supabase.rpc('criar_movimentacao_entrada', {
+                p_material_id: params.p_material_id,
+                p_quantidade: params.p_quantidade,
+                p_preco_unitario: params.p_preco_unitario,
+                p_almoxarifado_id: params.p_almoxarifado_id,
+                p_fornecedor_id: params.p_fornecedor_id || null,
+                p_observacao: params.p_observacao || null,
+                p_unidade: params.p_unidade || null,
+                p_forma_pagamento: params.p_forma_pagamento || null,
+                p_nf_id: null,
+            } as any)
             if (error) throw error
             return data
         },
@@ -528,7 +538,14 @@ export function useCreateMovimentacaoSaida() {
             p_observacao?: string
             p_unidade?: string
         }) => {
-            const { data, error } = await supabase.rpc('criar_movimentacao_saida', params)
+            const { data, error } = await supabase.rpc('criar_movimentacao_saida', {
+                p_material_id: params.p_material_id,
+                p_quantidade: params.p_quantidade,
+                p_preco_unitario: params.p_preco_unitario,
+                p_almoxarifado_id: params.p_almoxarifado_id,
+                p_observacao: params.p_observacao || null,
+                p_unidade: params.p_unidade || null,
+            } as any)
             if (error) throw error
             return data
         },
@@ -552,7 +569,14 @@ export function useCreateMovimentacaoTransferencia() {
             p_observacao?: string
             p_unidade?: string
         }) => {
-            const { data, error } = await supabase.rpc('criar_movimentacao_transferencia', params)
+            const { data, error } = await supabase.rpc('criar_movimentacao_transferencia', {
+                p_material_id: params.p_material_id,
+                p_quantidade: params.p_quantidade,
+                p_almoxarifado_id: params.p_almoxarifado_id,
+                p_almoxarifado_destino_id: params.p_almoxarifado_destino_id,
+                p_observacao: params.p_observacao || null,
+                p_unidade: params.p_unidade || null,
+            } as any)
             if (error) throw error
             return data
         },

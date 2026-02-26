@@ -84,9 +84,12 @@ export function EstoquePage() {
         materialNome: string
         almoxarifadoId: string
         almoxarifadoNome: string
+        quantidadeDisponivel: number
+        unidade: string
     } | null>(null)
     const [transfDestinoId, setTransfDestinoId] = useState('')
     const [transfQty, setTransfQty] = useState('')
+    const [transfObs, setTransfObs] = useState('')
 
     /* ── Zerar estoque (registra saída total) ── */
     const [deleteTarget, setDeleteTarget] = useState<{
@@ -175,7 +178,7 @@ export function EstoquePage() {
         if (!baixaTarget || !baixaQty) return
         createSaida.mutate({
             p_material_id: baixaTarget.materialId,
-            p_quantidade: Number(baixaQty),
+            p_quantidade: Number(baixaQty.replace(',', '.')),
             p_preco_unitario: baixaTarget.precoUnitario,
             p_almoxarifado_id: baixaTarget.almoxarifadoId,
             p_observacao: baixaObs.trim() || undefined,
@@ -199,17 +202,19 @@ export function EstoquePage() {
         if (!transfTarget || !transfQty || !transfDestinoId) return
         createTransferencia.mutate({
             p_material_id: transfTarget.materialId,
-            p_quantidade: Number(transfQty),
+            p_quantidade: Number(transfQty.replace(',', '.')),
             p_almoxarifado_id: transfTarget.almoxarifadoId,
             p_almoxarifado_destino_id: transfDestinoId,
+            p_observacao: transfObs.trim() || undefined,
         }, {
             onSuccess: () => {
-                toast({ title: 'Transferência solicitada', description: 'Aguardando aprovação.', variant: 'success' })
+                toast({ title: 'Transferência realizada', description: `${transfQty} ${transfTarget.unidade} de ${transfTarget.materialNome} transferidos.`, variant: 'success' })
                 setTransfTarget(null)
                 setTransfQty('')
                 setTransfDestinoId('')
+                setTransfObs('')
             },
-            onError: () => toast({ title: 'Erro ao transferir', variant: 'error' }),
+            onError: () => toast({ title: 'Erro ao transferir', description: 'Verifique a quantidade disponível.', variant: 'error' }),
         })
     }
 
@@ -235,6 +240,8 @@ export function EstoquePage() {
             materialNome: item.material?.nome ?? '—',
             almoxarifadoId: item.almoxarifado?.id,
             almoxarifadoNome: item.almoxarifado?.nome ?? '—',
+            quantidadeDisponivel: item.quantidade ?? 0,
+            unidade: item.material?.categoria?.unidade ?? 'UN',
         })
     }
 
@@ -361,7 +368,7 @@ export function EstoquePage() {
         )
     }
 
-    const canSubmitEntrada = entMaterialId && entQty && Number(entQty) > 0 && entAlmoxId && entUnidade && entPagamento
+    const canSubmitEntrada = entMaterialId && entQty && Number(entQty.replace(',', '.')) > 0 && entAlmoxId && entUnidade && entPagamento
 
     return (
         <div className="pb-10">
@@ -597,18 +604,18 @@ export function EstoquePage() {
                                 min={0.01}
                                 step="any"
                                 className={cn(
-                                    Number(baixaQty) > (baixaTarget?.quantidadeDisponivel ?? 0) && 'border-destructive focus-visible:ring-destructive'
+                                    Number(baixaQty.replace(',', '.')) > (baixaTarget?.quantidadeDisponivel ?? 0) && 'border-destructive focus-visible:ring-destructive'
                                 )}
                             />
-                            {Number(baixaQty) > (baixaTarget?.quantidadeDisponivel ?? 0) && (
+                            {Number(baixaQty.replace(',', '.')) > (baixaTarget?.quantidadeDisponivel ?? 0) && (
                                 <p className="text-[12px] text-destructive flex items-center gap-1">
                                     <AlertTriangle className="h-3 w-3" />
                                     Quantidade excede o disponível ({formatNumber(baixaTarget?.quantidadeDisponivel ?? 0)} {baixaTarget?.unidade})
                                 </p>
                             )}
-                            {Number(baixaQty) > 0 && Number(baixaQty) <= (baixaTarget?.quantidadeDisponivel ?? 0) && (
+                            {Number(baixaQty.replace(',', '.')) > 0 && Number(baixaQty.replace(',', '.')) <= (baixaTarget?.quantidadeDisponivel ?? 0) && (
                                 <p className="text-[12px] text-muted-foreground">
-                                    Restará: <span className="font-semibold tabular-nums">{formatNumber((baixaTarget?.quantidadeDisponivel ?? 0) - Number(baixaQty))}</span> {baixaTarget?.unidade}
+                                    Restará: <span className="font-semibold tabular-nums">{formatNumber((baixaTarget?.quantidadeDisponivel ?? 0) - Number(baixaQty.replace(',', '.')))}</span> {baixaTarget?.unidade}
                                 </p>
                             )}
                         </div>
@@ -627,7 +634,7 @@ export function EstoquePage() {
                             <Button variant="outline" onClick={() => { setBaixaTarget(null); setBaixaQty(''); setBaixaObs('') }}>Cancelar</Button>
                             <Button
                                 onClick={handleDarBaixa}
-                                disabled={!baixaQty || Number(baixaQty) <= 0 || Number(baixaQty) > (baixaTarget?.quantidadeDisponivel ?? 0)}
+                                disabled={!baixaQty || Number(baixaQty.replace(',', '.')) <= 0 || Number(baixaQty.replace(',', '.')) > (baixaTarget?.quantidadeDisponivel ?? 0)}
                                 loading={createSaida.isPending}
                                 className="bg-orange-500 hover:bg-orange-600 text-white"
                             >
@@ -640,13 +647,14 @@ export function EstoquePage() {
             </Dialog>
 
             {/* ═══════ TRANSFER DIALOG ═══════ */}
-            <Dialog open={!!transfTarget} onOpenChange={(v) => { if (!v) { setTransfTarget(null); setTransfQty(''); setTransfDestinoId('') } }}>
+            <Dialog open={!!transfTarget} onOpenChange={(v) => { if (!v) { setTransfTarget(null); setTransfQty(''); setTransfDestinoId(''); setTransfObs('') } }}>
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle>Transferir Material</DialogTitle>
-                        <DialogDescription>Transfira material entre almoxarifados. Ficará pendente até aprovação.</DialogDescription>
+                        <DialogDescription>Transfira material entre almoxarifados instantaneamente.</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-5">
+                        {/* Material + available qty info */}
                         <div className="flex items-center gap-3.5 rounded-xl bg-accent/50 px-4 py-3.5">
                             <span className="flex h-11 w-11 items-center justify-center rounded-xl flex-shrink-0 bg-primary/10">
                                 <ArrowRightLeft className="h-5 w-5 text-primary" />
@@ -655,8 +663,13 @@ export function EstoquePage() {
                                 <p className="text-[14px] sm:text-[13px] font-semibold truncate">{transfTarget?.materialNome}</p>
                                 <p className="text-[12px] text-muted-foreground">De: {transfTarget?.almoxarifadoNome}</p>
                             </div>
+                            <div className="text-right flex-shrink-0">
+                                <p className="text-[18px] font-bold tabular-nums text-foreground">{formatNumber(transfTarget?.quantidadeDisponivel ?? 0)}</p>
+                                <p className="text-[11px] text-muted-foreground">{transfTarget?.unidade} disponível</p>
+                            </div>
                         </div>
 
+                        {/* Destination warehouse */}
                         <div className="space-y-2">
                             <Label>Almoxarifado Destino</Label>
                             <Select value={transfDestinoId} onValueChange={setTransfDestinoId}>
@@ -673,26 +686,54 @@ export function EstoquePage() {
                             </Select>
                         </div>
 
+                        {/* Quantity */}
                         <div className="space-y-2">
-                            <Label>Quantidade</Label>
+                            <Label>Quantidade a transferir</Label>
                             <Input
                                 type="number"
                                 value={transfQty}
                                 onChange={(e) => setTransfQty(e.target.value)}
                                 placeholder="0"
+                                autoFocus
+                                max={transfTarget?.quantidadeDisponivel}
                                 min={0.01}
                                 step="any"
+                                className={cn(
+                                    Number(transfQty.replace(',', '.')) > (transfTarget?.quantidadeDisponivel ?? 0) && 'border-destructive focus-visible:ring-destructive'
+                                )}
+                            />
+                            {Number(transfQty.replace(',', '.')) > (transfTarget?.quantidadeDisponivel ?? 0) && (
+                                <p className="text-[12px] text-destructive flex items-center gap-1">
+                                    <AlertTriangle className="h-3 w-3" />
+                                    Quantidade excede o disponível ({formatNumber(transfTarget?.quantidadeDisponivel ?? 0)} {transfTarget?.unidade})
+                                </p>
+                            )}
+                            {Number(transfQty.replace(',', '.')) > 0 && Number(transfQty.replace(',', '.')) <= (transfTarget?.quantidadeDisponivel ?? 0) && (
+                                <p className="text-[12px] text-muted-foreground">
+                                    Restará: <span className="font-semibold tabular-nums">{formatNumber((transfTarget?.quantidadeDisponivel ?? 0) - Number(transfQty.replace(',', '.')))}</span> {transfTarget?.unidade} na origem
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Observation */}
+                        <div className="space-y-2">
+                            <Label>Motivo / Observação <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+                            <Input
+                                value={transfObs}
+                                onChange={(e) => setTransfObs(e.target.value)}
+                                placeholder="Ex: Reforço Bloco A, Sobra de material..."
                             />
                         </div>
 
                         <DialogFooter>
-                            <Button variant="outline" onClick={() => { setTransfTarget(null); setTransfQty(''); setTransfDestinoId('') }}>Cancelar</Button>
+                            <Button variant="outline" onClick={() => { setTransfTarget(null); setTransfQty(''); setTransfDestinoId(''); setTransfObs('') }}>Cancelar</Button>
                             <Button
                                 onClick={handleTransfer}
-                                disabled={!transfDestinoId || !transfQty || Number(transfQty) <= 0}
+                                disabled={!transfDestinoId || !transfQty || Number(transfQty.replace(',', '.')) <= 0 || Number(transfQty.replace(',', '.')) > (transfTarget?.quantidadeDisponivel ?? 0)}
                                 loading={createTransferencia.isPending}
                             >
-                                Solicitar Transferência
+                                <ArrowRightLeft className="h-4 w-4 mr-1.5" />
+                                Transferir
                             </Button>
                         </DialogFooter>
                     </div>
@@ -798,11 +839,11 @@ export function EstoquePage() {
                         </div>
 
                         {/* Subtotal preview */}
-                        {entQty && Number(entQty) > 0 && (
+                        {entQty && Number(entQty.replace(',', '.')) > 0 && (
                             <div className="flex items-center justify-between rounded-xl bg-accent/50 px-4 py-3">
                                 <span className="text-[14px] sm:text-[13px] text-muted-foreground">Subtotal</span>
                                 <span className="text-[18px] sm:text-[17px] font-bold tabular-nums">
-                                    {formatCurrency(Number(entQty) * (Number(entPreco) || selectedMaterial?.preco_unitario || 0))}
+                                    {formatCurrency(Number(entQty.replace(',', '.')) * (Number(entPreco.replace(',', '.')) || selectedMaterial?.preco_unitario || 0))}
                                 </span>
                             </div>
                         )}
@@ -878,8 +919,8 @@ export function EstoquePage() {
                             <Button
                                 onClick={() => createEntrada.mutate({
                                     p_material_id: entMaterialId,
-                                    p_quantidade: Number(entQty),
-                                    p_preco_unitario: Number(entPreco) || selectedMaterial?.preco_unitario || 0,
+                                    p_quantidade: Number(entQty.replace(',', '.')),
+                                    p_preco_unitario: Number(entPreco.replace(',', '.')) || selectedMaterial?.preco_unitario || 0,
                                     p_almoxarifado_id: entAlmoxId,
                                     p_fornecedor_id: entFornecedorId || undefined,
                                     p_unidade: entUnidade || undefined,

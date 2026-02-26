@@ -260,12 +260,31 @@ export function ObraDetailPage() {
         setEntAlmoxId(''); setEntFornecedorId(''); setEntObs('')
     }
     const selectedEntMaterial = (materiais as any[]).find((m: any) => m.id === entMaterialId)
-    const canSubmitEntrada = !!(entMaterialId && entAlmoxId && entQty && Number(entQty) > 0 && entUnidade && entPagamento)
+    const canSubmitEntrada = !!(entMaterialId && entAlmoxId && entQty && Number(entQty.replace(',', '.')) > 0 && entUnidade && entPagamento)
+
+    /* ── Items in origin almoxarifado (for transfer material filtering) ── */
+    const movAlmoxEstoqueItems = useMemo(() => {
+        if (!movAlmoxId) return []
+        return (estoque as any[]).filter((e: any) => e.almoxarifado?.id === movAlmoxId && (e.quantidade ?? 0) > 0)
+    }, [movAlmoxId, estoque])
+
+    /* ── Available qty for transfer validation ── */
+    const movTransfDisponivel = useMemo(() => {
+        if (movTipo !== 'TRANSFERENCIA' || !movMaterialId || !movAlmoxId) return null
+        const item = (estoque as any[]).find(
+            (e: any) => e.material?.id === movMaterialId && e.almoxarifado?.id === movAlmoxId
+        )
+        if (!item) return null
+        return {
+            quantidade: item.quantidade ?? 0,
+            unidade: item.material?.categoria?.unidade ?? 'UN',
+        }
+    }, [movTipo, movMaterialId, movAlmoxId, estoque])
 
     const handleCreateMov = () => {
         const onSuccess = () => {
             resetMovForm()
-            const labels: Record<string, string> = { ENTRADA: 'Entrada registrada', SAIDA: 'Saída registrada', TRANSFERENCIA: 'Transferência solicitada' }
+            const labels: Record<string, string> = { ENTRADA: 'Entrada registrada', SAIDA: 'Saída registrada', TRANSFERENCIA: 'Transferência realizada' }
             toast({ title: labels[movTipo] || 'Movimentação registrada', variant: 'success' })
         }
         const onError = () => toast({ title: 'Erro ao registrar movimentação', variant: 'error' })
@@ -274,21 +293,21 @@ export function ObraDetailPage() {
         if (movTipo === 'ENTRADA') {
             createEntrada.mutate({
                 p_material_id: movMaterialId,
-                p_quantidade: Number(movQty),
+                p_quantidade: Number(movQty.replace(',', '.')),
                 p_preco_unitario: materialPrice,
                 p_almoxarifado_id: movAlmoxId,
             }, { onSuccess, onError })
         } else if (movTipo === 'SAIDA') {
             createSaida.mutate({
                 p_material_id: movMaterialId,
-                p_quantidade: Number(movQty),
+                p_quantidade: Number(movQty.replace(',', '.')),
                 p_preco_unitario: materialPrice,
                 p_almoxarifado_id: movAlmoxId,
             }, { onSuccess, onError })
         } else {
             createTransferencia.mutate({
                 p_material_id: movMaterialId,
-                p_quantidade: Number(movQty),
+                p_quantidade: Number(movQty.replace(',', '.')),
                 p_almoxarifado_id: movAlmoxId,
                 p_almoxarifado_destino_id: movAlmoxDestinoId,
             }, { onSuccess, onError })
@@ -300,7 +319,7 @@ export function ObraDetailPage() {
         if (!baixaTarget || !baixaQty) return
         createSaida.mutate({
             p_material_id: baixaTarget.materialId,
-            p_quantidade: Number(baixaQty),
+            p_quantidade: Number(baixaQty.replace(',', '.')),
             p_preco_unitario: baixaTarget.precoUnitario,
             p_almoxarifado_id: baixaTarget.almoxarifadoId,
             p_observacao: baixaObs.trim() || undefined,
@@ -835,7 +854,7 @@ export function ObraDetailPage() {
                                             size="sm" variant="ghost"
                                             className="h-8 px-2 text-muted-foreground hover:text-primary"
                                             title="Transferir"
-                                            onClick={() => { setMovTipo('TRANSFERENCIA'); setMovMaterialId(e.material?.id); setMovAlmoxId(e.almoxarifado?.id); setMovDialog(true) }}
+                                            onClick={() => { resetMovForm(); setMovTipo('TRANSFERENCIA'); setMovMaterialId(e.material?.id); setMovAlmoxId(e.almoxarifado?.id); setMovDialog(true) }}
                                         >
                                             <ArrowRightLeft className="h-3.5 w-3.5" />
                                         </Button>
@@ -1048,18 +1067,18 @@ export function ObraDetailPage() {
                                 min={0.01}
                                 step="any"
                                 className={cn(
-                                    Number(baixaQty) > (baixaTarget?.quantidadeDisponivel ?? 0) && 'border-destructive focus-visible:ring-destructive'
+                                    Number(baixaQty.replace(',', '.')) > (baixaTarget?.quantidadeDisponivel ?? 0) && 'border-destructive focus-visible:ring-destructive'
                                 )}
                             />
-                            {Number(baixaQty) > (baixaTarget?.quantidadeDisponivel ?? 0) && (
+                            {Number(baixaQty.replace(',', '.')) > (baixaTarget?.quantidadeDisponivel ?? 0) && (
                                 <p className="text-[12px] text-destructive flex items-center gap-1">
                                     <AlertTriangle className="h-3 w-3" />
                                     Quantidade excede o disponível ({formatNumber(baixaTarget?.quantidadeDisponivel ?? 0)} {baixaTarget?.unidade})
                                 </p>
                             )}
-                            {Number(baixaQty) > 0 && Number(baixaQty) <= (baixaTarget?.quantidadeDisponivel ?? 0) && (
+                            {Number(baixaQty.replace(',', '.')) > 0 && Number(baixaQty.replace(',', '.')) <= (baixaTarget?.quantidadeDisponivel ?? 0) && (
                                 <p className="text-[12px] text-muted-foreground">
-                                    Restará: <span className="font-semibold tabular-nums">{formatNumber((baixaTarget?.quantidadeDisponivel ?? 0) - Number(baixaQty))}</span> {baixaTarget?.unidade}
+                                    Restará: <span className="font-semibold tabular-nums">{formatNumber((baixaTarget?.quantidadeDisponivel ?? 0) - Number(baixaQty.replace(',', '.')))}</span> {baixaTarget?.unidade}
                                 </p>
                             )}
                         </div>
@@ -1078,7 +1097,7 @@ export function ObraDetailPage() {
                             <Button variant="outline" onClick={() => { setBaixaTarget(null); setBaixaQty(''); setBaixaObs('') }}>Cancelar</Button>
                             <Button
                                 onClick={handleDarBaixa}
-                                disabled={!baixaQty || Number(baixaQty) <= 0 || Number(baixaQty) > (baixaTarget?.quantidadeDisponivel ?? 0)}
+                                disabled={!baixaQty || Number(baixaQty.replace(',', '.')) <= 0 || Number(baixaQty.replace(',', '.')) > (baixaTarget?.quantidadeDisponivel ?? 0)}
                                 loading={createSaida.isPending}
                                 className="bg-orange-500 hover:bg-orange-600 text-white"
                             >
@@ -1299,11 +1318,11 @@ export function ObraDetailPage() {
                         </div>
 
                         {/* Subtotal preview */}
-                        {entQty && Number(entQty) > 0 && (
+                        {entQty && Number(entQty.replace(',', '.')) > 0 && (
                             <div className="flex items-center justify-between rounded-xl bg-accent/50 px-4 py-3">
                                 <span className="text-[14px] sm:text-[13px] text-muted-foreground">Subtotal</span>
                                 <span className="text-[18px] sm:text-[17px] font-bold tabular-nums">
-                                    {formatCurrency(Number(entQty) * (Number(entPreco) || selectedEntMaterial?.preco_unitario || 0))}
+                                    {formatCurrency(Number(entQty.replace(',', '.')) * (Number(entPreco.replace(',', '.')) || selectedEntMaterial?.preco_unitario || 0))}
                                 </span>
                             </div>
                         )}
@@ -1366,8 +1385,8 @@ export function ObraDetailPage() {
                                 loading={createEntrada.isPending}
                                 onClick={() => createEntrada.mutate({
                                     p_material_id: entMaterialId,
-                                    p_quantidade: Number(entQty),
-                                    p_preco_unitario: Number(entPreco) || selectedEntMaterial?.preco_unitario || 0,
+                                    p_quantidade: Number(entQty.replace(',', '.')),
+                                    p_preco_unitario: Number(entPreco.replace(',', '.')) || selectedEntMaterial?.preco_unitario || 0,
                                     p_almoxarifado_id: entAlmoxId,
                                     p_fornecedor_id: entFornecedorId || undefined,
                                     p_unidade: entUnidade || undefined,
@@ -1388,7 +1407,7 @@ export function ObraDetailPage() {
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={movDialog} onOpenChange={setMovDialog}>
+            <Dialog open={movDialog} onOpenChange={(v) => { if (!v) resetMovForm() }}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Nova Movimentação</DialogTitle>
@@ -1423,32 +1442,95 @@ export function ObraDetailPage() {
                             </div>
                         </div>
 
-                        {/* ── Material ── */}
-                        <div className="space-y-2">
-                            <Label>Material</Label>
-                            <Select value={movMaterialId} onValueChange={setMovMaterialId}>
-                                <SelectTrigger><SelectValue placeholder="Selecione o material" /></SelectTrigger>
-                                <SelectContent>
-                                    {materiais.map((m: any) => <SelectItem key={m.id} value={m.id}>{m.nome} ({m.codigo})</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        {/* ── Quantidade ── */}
-                        <div className="space-y-2">
-                            <Label>Quantidade</Label>
-                            <Input type="number" value={movQty} onChange={(e) => setMovQty(e.target.value)} placeholder="0" />
-                        </div>
+                        {/* ── Material (non-transfer) ── */}
+                        {movTipo !== 'TRANSFERENCIA' && (
+                            <div className="space-y-2">
+                                <Label>Material</Label>
+                                <Select value={movMaterialId} onValueChange={setMovMaterialId}>
+                                    <SelectTrigger><SelectValue placeholder="Selecione o material" /></SelectTrigger>
+                                    <SelectContent>
+                                        {materiais.map((m: any) => <SelectItem key={m.id} value={m.id}>{m.nome} ({m.codigo})</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
 
                         {/* ── Almoxarifado Origem ── */}
                         <div className="space-y-2">
                             <Label>{movTipo === 'TRANSFERENCIA' ? 'Almoxarifado Origem' : 'Almoxarifado'}</Label>
-                            <Select value={movAlmoxId} onValueChange={setMovAlmoxId}>
+                            <Select value={movAlmoxId} onValueChange={(v) => { setMovAlmoxId(v); setMovQty(''); if (movTipo === 'TRANSFERENCIA') setMovMaterialId('') }}>
                                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                                 <SelectContent>
                                     {almoxarifados.map((a: any) => <SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>)}
                                 </SelectContent>
                             </Select>
+                        </div>
+
+                        {/* ── Material (transfer mode: filtered to origin stock with qty) ── */}
+                        {movTipo === 'TRANSFERENCIA' && (
+                            <div className="space-y-2">
+                                <Label>Material</Label>
+                                <Select
+                                    value={movMaterialId}
+                                    onValueChange={(v) => { setMovMaterialId(v); setMovQty('') }}
+                                    disabled={!movAlmoxId}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder={movAlmoxId ? 'Selecione o material' : 'Selecione o almoxarifado primeiro'} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {movAlmoxEstoqueItems.length === 0 && movAlmoxId ? (
+                                            <div className="px-3 py-4 text-center text-[13px] text-muted-foreground">
+                                                Nenhum material disponível neste almoxarifado
+                                            </div>
+                                        ) : movAlmoxEstoqueItems.map((item: any) => (
+                                            <SelectItem key={item.material?.id} value={item.material?.id}>
+                                                {item.material?.nome} — {formatNumber(item.quantidade)} {item.material?.categoria?.unidade ?? 'UN'}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+
+                        {/* ── Available qty chip (transfer only) ── */}
+                        {movTipo === 'TRANSFERENCIA' && movTransfDisponivel && (
+                            <div className="flex items-center justify-between rounded-xl bg-accent/50 px-4 py-3">
+                                <span className="text-[13px] text-muted-foreground">Disponível neste almoxarifado</span>
+                                <span className="text-[15px] font-bold tabular-nums">
+                                    {formatNumber(movTransfDisponivel.quantidade)} <span className="text-[13px] font-normal text-muted-foreground">{movTransfDisponivel.unidade}</span>
+                                </span>
+                            </div>
+                        )}
+
+                        {/* ── Quantidade ── */}
+                        <div className="space-y-2">
+                            <Label>Quantidade</Label>
+                            <Input
+                                type="number"
+                                value={movQty}
+                                onChange={(e) => setMovQty(e.target.value)}
+                                placeholder="0"
+                                max={movTipo === 'TRANSFERENCIA' ? movTransfDisponivel?.quantidade : undefined}
+                                min={0.01}
+                                step="any"
+                                className={cn(
+                                    movTipo === 'TRANSFERENCIA' && movTransfDisponivel &&
+                                    Number(movQty.replace(',', '.')) > movTransfDisponivel.quantidade &&
+                                    'border-destructive focus-visible:ring-destructive'
+                                )}
+                            />
+                            {movTipo === 'TRANSFERENCIA' && movTransfDisponivel && Number(movQty.replace(',', '.')) > movTransfDisponivel.quantidade && (
+                                <p className="text-[12px] text-destructive flex items-center gap-1">
+                                    <AlertTriangle className="h-3 w-3" />
+                                    Excede o disponível ({formatNumber(movTransfDisponivel.quantidade)} {movTransfDisponivel.unidade})
+                                </p>
+                            )}
+                            {movTipo === 'TRANSFERENCIA' && movTransfDisponivel && Number(movQty.replace(',', '.')) > 0 && Number(movQty.replace(',', '.')) <= movTransfDisponivel.quantidade && (
+                                <p className="text-[12px] text-muted-foreground">
+                                    Restará: <span className="font-semibold tabular-nums">{formatNumber(movTransfDisponivel.quantidade - Number(movQty.replace(',', '.')))}</span> {movTransfDisponivel.unidade}
+                                </p>
+                            )}
                         </div>
 
                         {/* ── Almoxarifado Destino (só para transferência) ── */}
@@ -1467,18 +1549,23 @@ export function ObraDetailPage() {
                                             ))}
                                     </SelectContent>
                                 </Select>
-                                <p className="text-[12px] text-muted-foreground">Transferências ficam pendentes até aprovação.</p>
                             </div>
                         )}
 
                         <DialogFooter>
-                            <Button variant="outline" onClick={() => setMovDialog(false)}>Cancelar</Button>
+                            <Button variant="outline" onClick={resetMovForm}>Cancelar</Button>
                             <Button
                                 onClick={handleCreateMov}
-                                disabled={!movMaterialId || !movAlmoxId || !movQty || (movTipo === 'TRANSFERENCIA' && !movAlmoxDestinoId)}
+                                disabled={
+                                    !movMaterialId || !movAlmoxId || !movQty || Number(movQty.replace(',', '.')) <= 0 ||
+                                    (movTipo === 'TRANSFERENCIA' && (
+                                        !movAlmoxDestinoId ||
+                                        (movTransfDisponivel != null && Number(movQty.replace(',', '.')) > movTransfDisponivel.quantidade)
+                                    ))
+                                }
                                 loading={movPending}
                             >
-                                {movTipo === 'TRANSFERENCIA' ? 'Solicitar Transferência' : 'Registrar'}
+                                {movTipo === 'TRANSFERENCIA' ? 'Transferir' : 'Registrar'}
                             </Button>
                         </DialogFooter>
                     </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -21,6 +21,134 @@ const statusMap: Record<string, { label: string; variant: 'success' | 'secondary
     PAUSADA: { label: 'Pausada', variant: 'warning', color: '#FF9500' },
     VENDIDO: { label: 'Vendido', variant: 'info', color: '#5856D6' },
     TERRENO: { label: 'Terreno', variant: 'info', color: '#AF52DE' },
+}
+
+/* ── Shared card component ── */
+function ObraCard({ obra, custosData, onNavigate, onDelete, vendida = false }: {
+    obra: any
+    custosData: any[]
+    onNavigate: () => void
+    onDelete: () => void
+    vendida?: boolean
+}) {
+    const st = statusMap[obra.status] || statusMap.ATIVA
+    const custos = custosData.find((c: any) => c.id === obra.id)
+    const vTerreno = obra.valor_terreno ?? 0
+    const vBurocracia = obra.valor_burocracia ?? 0
+    const vConstrucao = custos?.valor_construcao ?? obra.valor_construcao ?? 0
+    const valorVenda = custos?.valor_venda ?? 0
+    const totalInvestido = vTerreno + vBurocracia + vConstrucao
+    const lucro = valorVenda - totalInvestido
+    const isPositive = lucro >= 0
+    const margem = totalInvestido > 0 ? ((lucro / totalInvestido) * 100).toFixed(1) : '0.0'
+
+    return (
+        <motion.div
+            variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }}
+            onClick={onNavigate}
+            className={cn(
+                'group rounded-2xl p-5 cursor-pointer transition-colors',
+                vendida
+                    ? 'bg-[#5856D608] border border-[#5856D620] hover:bg-[#5856D610]'
+                    : 'bg-card hover:bg-accent/30',
+            )}
+        >
+            {/* Top */}
+            <div className="flex items-start justify-between mb-1">
+                <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="flex h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: st.color }} />
+                    <h3 className="text-[17px] font-semibold truncate">{obra.nome}</h3>
+                </div>
+                <Button
+                    variant="ghost" size="icon"
+                    className="h-7 w-7 text-muted-foreground/50 hover:text-destructive opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex-shrink-0"
+                    onClick={(e) => { e.stopPropagation(); onDelete() }}
+                >
+                    <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+            </div>
+
+            {/* Address */}
+            <div className="flex items-center gap-1.5 text-[15px] text-muted-foreground mb-3">
+                <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
+                <span className="truncate">{obra.endereco}</span>
+            </div>
+
+            {/* Investimento */}
+            <div className="mb-4 space-y-1.5">
+                {[
+                    { label: 'Terreno', Icon: Landmark, color: '#AF52DE', value: vTerreno, valueColor: vTerreno > 0 ? '#AF52DE' : undefined },
+                    { label: 'Burocracia', Icon: FileText, color: '#007AFF', value: vBurocracia, valueColor: vBurocracia > 0 ? '#007AFF' : undefined },
+                    { label: 'Construção', Icon: Building2, color: '#FF9500', value: vConstrucao, valueColor: vConstrucao > 0 ? '#FF9500' : undefined },
+                ].map(({ label, Icon, color, value, valueColor }) => (
+                    <div key={label} className="flex items-center gap-1.5">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-md flex-shrink-0" style={{ backgroundColor: `${color}18` }}>
+                            <Icon className="h-3.5 w-3.5" style={{ color }} />
+                        </span>
+                        <span className="text-[13px] text-muted-foreground">{label}</span>
+                        <span className="text-[13px] font-semibold tabular-nums ml-auto" style={{ color: valueColor }}>
+                            {formatCurrency(value)}
+                        </span>
+                    </div>
+                ))}
+
+                {/* Venda + Lucro for VENDIDO */}
+                {obra.status === 'VENDIDO' && valorVenda > 0 && (
+                    <div className="mt-2 pt-2 border-t border-border/20 space-y-1.5">
+                        <div className="flex items-center gap-1.5">
+                            <span className="flex h-6 w-6 items-center justify-center rounded-md flex-shrink-0" style={{ backgroundColor: '#5856D618' }}>
+                                <Banknote className="h-3.5 w-3.5" style={{ color: '#5856D6' }} />
+                            </span>
+                            <span className="text-[13px] text-muted-foreground">Venda</span>
+                            <span className="text-[13px] font-semibold tabular-nums ml-auto" style={{ color: '#5856D6' }}>
+                                {formatCurrency(valorVenda)}
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <span className="flex h-6 w-6 items-center justify-center rounded-md flex-shrink-0" style={{ backgroundColor: isPositive ? '#34C75918' : '#FF3B3018' }}>
+                                {isPositive
+                                    ? <TrendingUp className="h-3.5 w-3.5" style={{ color: '#34C759' }} />
+                                    : <TrendingDown className="h-3.5 w-3.5" style={{ color: '#FF3B30' }} />
+                                }
+                            </span>
+                            <span className="text-[13px] text-muted-foreground">{isPositive ? 'Lucro' : 'Prejuízo'}</span>
+                            <span className={cn('text-[13px] font-semibold tabular-nums ml-auto', isPositive ? 'text-success' : 'text-destructive')}>
+                                {isPositive ? '+' : ''}{formatCurrency(lucro)}
+                            </span>
+                        </div>
+                        <div className="flex items-center justify-between pt-1.5 border-t border-border/20 mt-1">
+                            <span className="text-[13px] text-muted-foreground">Margem</span>
+                            <span className={cn('text-[13px] font-semibold tabular-nums', isPositive ? 'text-success' : 'text-destructive')}>
+                                {isPositive ? '+' : ''}{margem}%
+                            </span>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Stats Bar */}
+            <div className="flex items-center gap-4 pt-3 border-t border-border/30">
+                <div className="flex items-center gap-1.5">
+                    <Warehouse className="h-4 w-4 text-muted-foreground/60" />
+                    <span className="text-[15px] font-semibold tabular-nums">{obra._count?.almoxarifados ?? 0}</span>
+                    <span className="text-[13px] text-muted-foreground">almox.</span>
+                </div>
+                {obra.custoTotal > 0 && (
+                    <div className="flex items-center gap-1.5">
+                        <span className={cn(
+                            'text-[15px] font-semibold tabular-nums',
+                            (obra.percentualOrcamento ?? 0) > 90 ? 'text-destructive' :
+                                (obra.percentualOrcamento ?? 0) > 70 ? 'text-warning' : 'text-success'
+                        )}>
+                            {obra.percentualOrcamento ?? 0}%
+                        </span>
+                        <span className="text-[13px] text-muted-foreground">{formatCurrency(obra.custoTotal)}</span>
+                    </div>
+                )}
+                <Badge variant={st.variant} className="ml-auto">{st.label}</Badge>
+            </div>
+        </motion.div>
+    )
 }
 
 export function ObrasPage() {
@@ -54,6 +182,15 @@ export function ObrasPage() {
         const matchesStatus = filterStatus === 'ALL' || o.status === filterStatus
         return matchesSearch && matchesStatus
     })
+
+    /* When showing all, split vendidas into a separate section */
+    const { obrasAtivas, obrasVendidas } = useMemo(() => {
+        if (filterStatus !== 'ALL') return { obrasAtivas: obras, obrasVendidas: [] }
+        return {
+            obrasAtivas: obras.filter((o: any) => o.status !== 'VENDIDO'),
+            obrasVendidas: obras.filter((o: any) => o.status === 'VENDIDO'),
+        }
+    }, [obras, filterStatus])
 
     const segments = [
         { key: 'ALL' as const, label: 'Todas', color: null },
@@ -141,7 +278,7 @@ export function ObrasPage() {
             </div>
 
             {/* Grid */}
-            <div className="px-4 md:px-8">
+            <div className="px-4 md:px-8 space-y-10">
                 {isLoading ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
                         {Array.from({ length: 6 }).map((_, i) => (
@@ -173,132 +310,34 @@ export function ObrasPage() {
                         )}
                     </div>
                 ) : (
-                    <motion.div
-                        initial="hidden"
-                        animate="show"
-                        variants={{ hidden: {}, show: { transition: { staggerChildren: 0.04 } } }}
-                        className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5"
-                    >
-                        {obras.map((obra: any) => {
-                            const st = statusMap[obra.status] || statusMap.ATIVA
-                            return (
+                    <>
+                        {/* ── Active obras grid ── */}
+                        {obrasAtivas.length > 0 && (
+                            <motion.div
+                                initial="hidden"
+                                animate="show"
+                                variants={{ hidden: {}, show: { transition: { staggerChildren: 0.04 } } }}
+                                className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5"
+                            >
+                                {obrasAtivas.map((obra: any) => <ObraCard key={obra.id} obra={obra} custosData={custosData} onNavigate={() => navigate({ to: '/obras/$obraId', params: { obraId: obra.id } })} onDelete={() => setDeleteTarget({ id: obra.id, nome: obra.nome })} />)}
+                            </motion.div>
+                        )}
+
+                        {/* ── Obras Vendidas section (only when viewing ALL) ── */}
+                        {filterStatus === 'ALL' && obrasVendidas.length > 0 && (
+                            <div>
+                                <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mb-5">Obras Vendidas</h3>
                                 <motion.div
-                                    key={obra.id}
-                                    variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }}
-                                    onClick={() => navigate({ to: '/obras/$obraId', params: { obraId: obra.id } })}
-                                    className="group rounded-2xl bg-card p-5 cursor-pointer transition-colors hover:bg-accent/30"
+                                    initial="hidden"
+                                    animate="show"
+                                    variants={{ hidden: {}, show: { transition: { staggerChildren: 0.04 } } }}
+                                    className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5"
                                 >
-                                    {/* Top */}
-                                    <div className="flex items-start justify-between mb-1">
-                                        <div className="flex items-center gap-2.5 min-w-0">
-                                            <span className="flex h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: st.color }} />
-                                            <h3 className="text-[17px] font-semibold truncate">{obra.nome}</h3>
-                                        </div>
-                                        <Button
-                                            variant="ghost" size="icon"
-                                            className="h-7 w-7 text-muted-foreground/50 hover:text-destructive opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex-shrink-0"
-                                            onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: obra.id, nome: obra.nome }) }}
-                                        >
-                                            <Trash2 className="h-3.5 w-3.5" />
-                                        </Button>
-                                    </div>
-
-                                    {/* Address */}
-                                    <div className="flex items-center gap-1.5 text-[15px] text-muted-foreground mb-3">
-                                        <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
-                                        <span className="truncate">{obra.endereco}</span>
-                                    </div>
-
-                                    {/* Investimento */}
-                                    {(() => {
-                                        const custos = custosData.find((c: any) => c.id === obra.id)
-                                        const vTerreno = obra.valor_terreno ?? 0
-                                        const vBurocracia = obra.valor_burocracia ?? 0
-                                        const vConstrucao = custos?.valor_construcao ?? obra.valor_construcao ?? 0
-                                        const valorVenda = custos?.valor_venda ?? 0
-                                        const totalInvestido = vTerreno + vBurocracia + vConstrucao
-                                        const lucro = valorVenda - totalInvestido
-                                        const isPositive = lucro >= 0
-                                        const margem = totalInvestido > 0 ? ((lucro / totalInvestido) * 100).toFixed(1) : '0.0'
-                                        return (
-                                            <div className="mb-4 space-y-1.5">
-                                                {[
-                                                    { label: 'Terreno', Icon: Landmark, color: '#AF52DE', value: vTerreno, valueColor: vTerreno > 0 ? '#AF52DE' : undefined },
-                                                    { label: 'Burocracia', Icon: FileText, color: '#007AFF', value: vBurocracia, valueColor: vBurocracia > 0 ? '#007AFF' : undefined },
-                                                    { label: 'Construção', Icon: Building2, color: '#FF9500', value: vConstrucao, valueColor: vConstrucao > 0 ? '#FF9500' : undefined },
-                                                ].map(({ label, Icon, color, value, valueColor }) => (
-                                                    <div key={label} className="flex items-center gap-1.5">
-                                                        <span className="flex h-6 w-6 items-center justify-center rounded-md flex-shrink-0" style={{ backgroundColor: `${color}18` }}>
-                                                            <Icon className="h-3.5 w-3.5" style={{ color }} />
-                                                        </span>
-                                                        <span className="text-[13px] text-muted-foreground">{label}</span>
-                                                        <span className="text-[13px] font-semibold tabular-nums ml-auto" style={{ color: valueColor }}>
-                                                            {formatCurrency(value)}
-                                                        </span>
-                                                    </div>
-                                                ))}
-
-                                                {/* Venda + Lucro for VENDIDO */}
-                                                {obra.status === 'VENDIDO' && valorVenda > 0 && (
-                                                    <div className="mt-2 pt-2 border-t border-border/20 space-y-1.5">
-                                                        <div className="flex items-center gap-1.5">
-                                                            <span className="flex h-6 w-6 items-center justify-center rounded-md flex-shrink-0" style={{ backgroundColor: '#5856D618' }}>
-                                                                <Banknote className="h-3.5 w-3.5" style={{ color: '#5856D6' }} />
-                                                            </span>
-                                                            <span className="text-[13px] text-muted-foreground">Venda</span>
-                                                            <span className="text-[13px] font-semibold tabular-nums ml-auto" style={{ color: '#5856D6' }}>
-                                                                {formatCurrency(valorVenda)}
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex items-center gap-1.5">
-                                                            <span className="flex h-6 w-6 items-center justify-center rounded-md flex-shrink-0" style={{ backgroundColor: isPositive ? '#34C75918' : '#FF3B3018' }}>
-                                                                {isPositive
-                                                                    ? <TrendingUp className="h-3.5 w-3.5" style={{ color: '#34C759' }} />
-                                                                    : <TrendingDown className="h-3.5 w-3.5" style={{ color: '#FF3B30' }} />
-                                                                }
-                                                            </span>
-                                                            <span className="text-[13px] text-muted-foreground">{isPositive ? 'Lucro' : 'Prejuízo'}</span>
-                                                            <span className={cn('text-[13px] font-semibold tabular-nums ml-auto', isPositive ? 'text-success' : 'text-destructive')}>
-                                                                {isPositive ? '+' : ''}{formatCurrency(lucro)}
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex items-center justify-between pt-1.5 border-t border-border/20 mt-1">
-                                                            <span className="text-[13px] text-muted-foreground">Margem</span>
-                                                            <span className={cn('text-[13px] font-semibold tabular-nums', isPositive ? 'text-success' : 'text-destructive')}>
-                                                                {isPositive ? '+' : ''}{margem}%
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )
-                                    })()}
-
-                                    {/* Stats Bar */}
-                                    <div className="flex items-center gap-4 pt-3 border-t border-border/30">
-                                        <div className="flex items-center gap-1.5">
-                                            <Warehouse className="h-4 w-4 text-muted-foreground/60" />
-                                            <span className="text-[15px] font-semibold tabular-nums">{obra._count?.almoxarifados ?? 0}</span>
-                                            <span className="text-[13px] text-muted-foreground">almox.</span>
-                                        </div>
-                                        {obra.custoTotal > 0 && (
-                                            <div className="flex items-center gap-1.5">
-                                                <span className={cn(
-                                                    'text-[15px] font-semibold tabular-nums',
-                                                    (obra.percentualOrcamento ?? 0) > 90 ? 'text-destructive' :
-                                                        (obra.percentualOrcamento ?? 0) > 70 ? 'text-warning' : 'text-success'
-                                                )}>
-                                                    {obra.percentualOrcamento ?? 0}%
-                                                </span>
-                                                <span className="text-[13px] text-muted-foreground">{formatCurrency(obra.custoTotal)}</span>
-                                            </div>
-                                        )}
-                                        <Badge variant={st.variant} className="ml-auto">{st.label}</Badge>
-                                    </div>
+                                    {obrasVendidas.map((obra: any) => <ObraCard key={obra.id} obra={obra} custosData={custosData} onNavigate={() => navigate({ to: '/obras/$obraId', params: { obraId: obra.id } })} onDelete={() => setDeleteTarget({ id: obra.id, nome: obra.nome })} vendida />)}
                                 </motion.div>
-                            )
-                        })}
-                    </motion.div>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
 

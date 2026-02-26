@@ -219,6 +219,7 @@ export function ObrasPage() {
                                         const totalInvestido = vTerreno + vBurocracia + vConstrucao
                                         const lucro = valorVenda - totalInvestido
                                         const isPositive = lucro >= 0
+                                        const margem = totalInvestido > 0 ? ((lucro / totalInvestido) * 100).toFixed(1) : '0.0'
                                         return (
                                             <div className="mb-4 space-y-1.5">
                                                 {[
@@ -259,6 +260,12 @@ export function ObrasPage() {
                                                             <span className="text-[13px] text-muted-foreground">{isPositive ? 'Lucro' : 'Prejuízo'}</span>
                                                             <span className={cn('text-[13px] font-semibold tabular-nums ml-auto', isPositive ? 'text-success' : 'text-destructive')}>
                                                                 {isPositive ? '+' : ''}{formatCurrency(lucro)}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between pt-1.5 border-t border-border/20 mt-1">
+                                                            <span className="text-[12px] text-muted-foreground">Margem</span>
+                                                            <span className={cn('text-[15px] font-bold tabular-nums', isPositive ? 'text-success' : 'text-destructive')}>
+                                                                {isPositive ? '+' : ''}{margem}%
                                                             </span>
                                                         </div>
                                                     </div>

@@ -338,7 +338,7 @@ export function ContaDetailPage() {
         </div>
     )
 
-    const subLabel = [conta.agencia ? `Ag. ${conta.agencia}` : '', conta.numeroConta].filter(Boolean).join(' · ')
+    const subLabel = [conta.agencia ? `Ag. ${conta.agencia}` : '', conta.numeroConta ? `CC. ${conta.numeroConta}` : ''].filter(Boolean).join('  ·  ')
     const tipoCfg = TIPO_CFG[tipo]
     const TipoCfgIcon = tipoCfg.Icon
 

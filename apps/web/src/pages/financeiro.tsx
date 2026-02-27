@@ -342,7 +342,7 @@ export function FinanceiroPage() {
                         >
                             {contas.map((conta, i) => {
                                 const accent = accents[i % accents.length]
-                                const total = conta.valorCaixa + conta.valorAplicado
+                                const total = (Number(conta.valorCaixa) || 0) + (Number(conta.valorAplicado) || 0)
                                 const sub = contaSubLabel(conta)
                                 return (
                                     <motion.div
@@ -397,7 +397,7 @@ export function FinanceiroPage() {
                                                     <p className="text-[11px] text-muted-foreground">Em caixa</p>
                                                 </div>
                                                 <p className="text-[14px] font-semibold tabular-nums leading-none" style={{ color: '#34C759' }}>
-                                                    {formatCurrency(conta.valorCaixa)}
+                                                    {formatCurrency(Number(conta.valorCaixa) || 0)}
                                                 </p>
                                             </div>
                                             <div className="w-px bg-border/30 self-stretch" />
@@ -410,7 +410,7 @@ export function FinanceiroPage() {
                                                     <p className="text-[11px] text-muted-foreground">Aplicado</p>
                                                 </div>
                                                 <p className="text-[14px] font-semibold tabular-nums leading-none" style={{ color: '#007AFF' }}>
-                                                    {formatCurrency(conta.valorAplicado)}
+                                                    {formatCurrency(Number(conta.valorAplicado) || 0)}
                                                 </p>
                                             </div>
                                         </div>
@@ -584,7 +584,7 @@ export function FinanceiroPage() {
                         </div>
                     </DialogHeader>
 
-                    <div className="px-6 py-6 space-y-5">
+                    <div className="px-5 sm:px-6 py-6 space-y-5">
 
                         {/* Nome do banco */}
                         <div className="space-y-2">
@@ -594,19 +594,19 @@ export function FinanceiroPage() {
                                 value={banco}
                                 onChange={e => setBanco(e.target.value)}
                                 autoFocus
-                                className="h-14 rounded-2xl text-[16px] bg-black/[0.03] dark:bg-white/[0.03] border-border/50 focus-visible:ring-1 focus-visible:ring-primary/30 focus-visible:bg-transparent placeholder:text-muted-foreground/40 transition-all font-medium px-4"
+                                className="h-14 sm:h-[52px] rounded-2xl text-[16px] bg-black/[0.03] dark:bg-white/[0.03] border-border/50 focus-visible:ring-1 focus-visible:ring-primary/30 focus-visible:bg-transparent placeholder:text-muted-foreground/40 transition-all font-medium px-4"
                             />
                         </div>
 
                         {/* Agência + Número da conta */}
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-3 sm:gap-4">
                             <div className="space-y-2">
                                 <Label className="text-[13px] font-medium text-muted-foreground uppercase tracking-wider ml-1">Agência</Label>
                                 <Input
                                     placeholder="0001"
                                     value={agencia}
                                     onChange={e => setAgencia(e.target.value)}
-                                    className="h-14 rounded-2xl text-[16px] bg-black/[0.03] dark:bg-white/[0.03] border-border/50 focus-visible:ring-1 focus-visible:ring-primary/30 focus-visible:bg-transparent placeholder:text-muted-foreground/40 transition-all font-medium px-4"
+                                    className="h-14 sm:h-[52px] rounded-2xl text-[16px] bg-black/[0.03] dark:bg-white/[0.03] border-border/50 focus-visible:ring-1 focus-visible:ring-primary/30 focus-visible:bg-transparent placeholder:text-muted-foreground/40 transition-all font-medium px-4"
                                 />
                             </div>
                             <div className="space-y-2">
@@ -615,20 +615,20 @@ export function FinanceiroPage() {
                                     placeholder="12345-6"
                                     value={numeroConta}
                                     onChange={e => setNumeroConta(e.target.value)}
-                                    className="h-14 rounded-2xl text-[16px] bg-black/[0.03] dark:bg-white/[0.03] border-border/50 focus-visible:ring-1 focus-visible:ring-primary/30 focus-visible:bg-transparent placeholder:text-muted-foreground/40 transition-all font-medium px-4"
+                                    className="h-14 sm:h-[52px] rounded-2xl text-[16px] bg-black/[0.03] dark:bg-white/[0.03] border-border/50 focus-visible:ring-1 focus-visible:ring-primary/30 focus-visible:bg-transparent placeholder:text-muted-foreground/40 transition-all font-medium px-4"
                                 />
                             </div>
                         </div>
 
                         {/* Valores */}
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-3 sm:gap-4">
                             <div className="space-y-2">
                                 <Label className="text-[13px] font-medium uppercase tracking-wider ml-1" style={{ color: '#34C759' }}>Saldo Caixa</Label>
                                 <CurrencyInput
                                     placeholder="0,00"
                                     value={valorCaixa}
                                     onChange={e => setValorCaixa(e.target.value)}
-                                    className="h-14 rounded-2xl text-[16px] bg-[#34C75908] border-[#34C75920] focus-visible:ring-1 focus-visible:ring-[#34C759] focus-visible:bg-[#34C75910] placeholder:text-[#34C759]/40 transition-all font-medium px-4"
+                                    className="h-14 sm:h-[52px] rounded-2xl text-[16px] bg-[#34C75908] border-[#34C75920] focus-visible:ring-1 focus-visible:ring-[#34C759] focus-visible:bg-[#34C75910] placeholder:text-[#34C759]/40 transition-all font-medium px-4"
                                 />
                             </div>
                             <div className="space-y-2">
@@ -637,20 +637,20 @@ export function FinanceiroPage() {
                                     placeholder="0,00"
                                     value={valorAplicado}
                                     onChange={e => setValorAplicado(e.target.value)}
-                                    className="h-14 rounded-2xl text-[16px] bg-[#007AFF08] border-[#007AFF20] focus-visible:ring-1 focus-visible:ring-[#007AFF] focus-visible:bg-[#007AFF10] placeholder:text-[#007AFF]/40 transition-all font-medium px-4"
+                                    className="h-14 sm:h-[52px] rounded-2xl text-[16px] bg-[#007AFF08] border-[#007AFF20] focus-visible:ring-1 focus-visible:ring-[#007AFF] focus-visible:bg-[#007AFF10] placeholder:text-[#007AFF]/40 transition-all font-medium px-4"
                                 />
                             </div>
                         </div>
                     </div>
 
-                    {/* Footer */}
-                    <div className="px-6 pb-8 pt-2">
+                    {/* Footer - Apple Button (Safe Area) */}
+                    <div className="px-5 sm:px-6 pb-8 sm:pb-6 pt-2">
                         <motion.button
                             whileTap={{ scale: banco.trim() ? 0.97 : 1 }}
                             disabled={!banco.trim()}
                             onClick={handleAddConta}
                             className={cn(
-                                "w-full flex items-center justify-center h-14 rounded-[20px] text-[17px] font-semibold tracking-tight transition-all",
+                                "w-full flex items-center justify-center h-[56px] sm:h-[52px] rounded-[20px] text-[17px] font-semibold tracking-tight transition-all",
                                 banco.trim()
                                     ? "bg-[#007AFF] text-white shadow-md shadow-[#007AFF]/25"
                                     : "bg-muted text-muted-foreground opacity-50 cursor-not-allowed"

@@ -32,11 +32,13 @@ interface MovimentacaoConta {
     createdAt: string
 }
 
-/* ─── UUID polyfill (crypto.randomUUID not available on iOS < 15.4) ─── */
+/* ─── UUID polyfill (crypto.randomUUID not available or crashing on iOS < 15.4 / non-https) ─── */
 function uuid(): string {
-    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-        return crypto.randomUUID()
-    }
+    try {
+        if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+            return crypto.randomUUID()
+        }
+    } catch (e) { /* fallback */ }
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
         const r = Math.random() * 16 | 0
         return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16)
@@ -153,11 +155,11 @@ export function ContaDetailPage() {
 
     const grouped = useMemo(() => {
         const sorted = [...movs].sort((a, b) => {
-            const dA = a.data || ''
-            const dB = b.data || ''
+            const dA = String(a?.data || '')
+            const dB = String(b?.data || '')
             if (dB !== dA) return dB.localeCompare(dA)
-            const cA = a.createdAt || ''
-            const cB = b.createdAt || ''
+            const cA = String(a?.createdAt || '')
+            const cB = String(b?.createdAt || '')
             return cB.localeCompare(cA)
         })
         const order = ['Hoje', 'Esta Semana', 'Anteriores']
@@ -189,10 +191,12 @@ export function ContaDetailPage() {
         // 1. Atualizar Saldo
         setContasAll(prevContas => prevContas.map(c => {
             if (c.id !== conta.id) return c
+            const prevCaixa = Number(c.valorCaixa) || 0
+            const prevAplicado = Number(c.valorAplicado) || 0
             return {
                 ...c,
-                valorCaixa: isCaixa ? c.valorCaixa + (isEntrada ? v : -v) : c.valorCaixa,
-                valorAplicado: !isCaixa ? c.valorAplicado + (isEntrada ? v : -v) : c.valorAplicado
+                valorCaixa: isCaixa ? prevCaixa + (isEntrada ? v : -v) : prevCaixa,
+                valorAplicado: !isCaixa ? prevAplicado + (isEntrada ? v : -v) : prevAplicado
             }
         }))
 
@@ -214,10 +218,12 @@ export function ContaDetailPage() {
         // Estorno Lógico Inverso do Saldo
         setContasAll(prevContas => prevContas.map(c => {
             if (c.id !== conta.id) return c
+            const prevCaixa = Number(c.valorCaixa) || 0
+            const prevAplicado = Number(c.valorAplicado) || 0
             return {
                 ...c,
-                valorCaixa: isCaixa ? c.valorCaixa + (isEntrada ? -mov.valor : mov.valor) : c.valorCaixa,
-                valorAplicado: !isCaixa ? c.valorAplicado + (isEntrada ? -mov.valor : mov.valor) : c.valorAplicado
+                valorCaixa: isCaixa ? prevCaixa + (isEntrada ? -mov.valor : mov.valor) : prevCaixa,
+                valorAplicado: !isCaixa ? prevAplicado + (isEntrada ? -mov.valor : mov.valor) : prevAplicado
             }
         }))
 
@@ -378,11 +384,11 @@ export function ContaDetailPage() {
                                                             <Icon className="h-5 w-5" style={{ color: tint }} />
                                                         </span>
                                                         <div className="min-w-0 flex-1">
-                                                            <p className="text-[16px] md:text-[17px] font-semibold tracking-tight truncate leading-snug">
+                                                            <p className="text-[16px] md:text-[17px] font-semibold tracking-tight leading-snug break-words">
                                                                 {mov.motivo}
                                                             </p>
                                                             <p className="text-[13px] font-medium text-muted-foreground mt-0.5 opacity-80">
-                                                                {typeLbl} <span className="mx-1 text-border/50">•</span> {scLbl}
+                                                                {typeLbl} <span className="mx-1 text-border/50">•</span> {scLbl === 'Aplicado' ? 'Aplicação' : scLbl}
                                                             </p>
                                                         </div>
                                                         <div className="flex items-center gap-3 md:gap-4 flex-shrink-0">
@@ -421,13 +427,13 @@ export function ContaDetailPage() {
                 <DialogContent className="max-w-[90vw] sm:max-w-[420px] rounded-[28px] p-0 gap-0 overflow-hidden shadow-2xl border border-white/10 bg-background/85 backdrop-blur-2xl dark:bg-zinc-900/80">
 
                     {/* Header Premium Apple */}
-                    <DialogHeader className="px-6 pt-8 pb-6 relative z-10 border-b border-border/10">
+                    <DialogHeader className="px-5 sm:px-6 pt-7 sm:pt-8 pb-5 sm:pb-6 relative z-10 border-b border-border/10">
                         <motion.button
                             whileTap={{ scale: 0.9 }}
                             onClick={() => { setOpen(false); reset() }}
-                            className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 transition-colors"
+                            className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 transition-colors"
                         >
-                            <X className="h-4 w-4 text-muted-foreground" />
+                            <X className="h-[18px] w-[18px] text-muted-foreground" />
                         </motion.button>
 
                         <div className="flex flex-col items-center justify-center text-center gap-3">
@@ -445,7 +451,7 @@ export function ContaDetailPage() {
                     </DialogHeader>
 
                     {/* Corpos Formulário - Apple Form Style */}
-                    <div className="px-6 py-7 space-y-7 bg-black/[0.02] dark:bg-white/[0.02]">
+                    <div className="px-5 sm:px-6 py-6 sm:py-7 space-y-6 sm:space-y-7 bg-black/[0.02] dark:bg-white/[0.02]">
 
                         {/* 1 — Tipo */}
                         <div className="space-y-2.5">
@@ -475,7 +481,7 @@ export function ContaDetailPage() {
                                 </SegBtn>
                                 <SegBtn active={subconta === 'APLICADO'} color="#007AFF" onClick={() => setSubconta('APLICADO')} layoutId="conta-bg">
                                     <div className="flex items-center gap-2">
-                                        <FileText className="h-4 w-4" />Aplicado
+                                        <FileText className="h-4 w-4" />Aplicação
                                     </div>
                                 </SegBtn>
                             </div>
@@ -510,14 +516,14 @@ export function ContaDetailPage() {
 
                     </div>
 
-                    {/* Footer - Apple Large Buttons */}
-                    <div className="flex gap-3 px-6 pb-7 pt-5 relative before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-border/20 before:to-transparent">
-                        <Button variant="outline" className="flex-1 h-[54px] rounded-[18px] text-[16px] font-semibold bg-white/50 dark:bg-black/20 backdrop-blur shadow-sm border-black/5 dark:border-white/5 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                    {/* Footer - Apple Large Buttons (Safe Area padding on Mobile) */}
+                    <div className="flex gap-3 px-5 sm:px-6 pb-8 sm:pb-7 pt-5 relative before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-border/20 before:to-transparent">
+                        <Button variant="outline" className="flex-1 h-[56px] rounded-[18px] text-[16px] font-semibold bg-white/50 dark:bg-black/20 backdrop-blur shadow-sm border-black/5 dark:border-white/5 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
                             onClick={() => { setOpen(false); reset() }}>
                             Cancelar
                         </Button>
                         <Button
-                            className="flex-1 h-[54px] rounded-[18px] text-[16px] font-bold text-white shadow-md shadow-black/10 hover:opacity-90 transition-all cursor-pointer active:scale-[0.96] disabled:active:scale-100 disabled:opacity-50"
+                            className="flex-1 h-[56px] rounded-[18px] text-[16px] font-bold text-white shadow-md shadow-black/10 hover:opacity-90 transition-all cursor-pointer active:scale-[0.96] disabled:active:scale-100 disabled:opacity-50"
                             disabled={!motivo.trim() || !parseCurrency(valor)}
                             onClick={handleAdd}
                             style={{

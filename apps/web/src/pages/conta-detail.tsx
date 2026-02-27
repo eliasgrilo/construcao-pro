@@ -98,6 +98,12 @@ const TIPO_CFG: Record<TipoMov, { label: string; btnLabel: string; Icon: React.E
     TRANSFERENCIA: { label: 'Transferir', btnLabel: 'Transferir',   Icon: ArrowLeftRight, color: '#007AFF', iconBg: '#007AFF18' },
 }
 
+/* subconta display label — "APLICADO" → "Aplicações" everywhere */
+const SUBCONTA_LABEL: Record<'CAIXA' | 'APLICADO', string> = {
+    CAIXA: 'Em Caixa',
+    APLICADO: 'Aplicações',
+}
+
 /* ─── Ring ─── */
 function Ring({ percent, size = 88, stroke = 8, color }: { percent: number; size?: number; stroke?: number; color: string }) {
     const r = (size - stroke) / 2
@@ -404,7 +410,7 @@ export function ContaDetailPage() {
                                 <span className="flex h-5 w-5 items-center justify-center rounded-[6px] flex-shrink-0" style={{ backgroundColor: '#007AFF14' }}>
                                     <FileText className="h-[14px] w-[14px]" style={{ color: '#007AFF' }} />
                                 </span>
-                                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">Aplicado</p>
+                                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">Aplicações</p>
                             </div>
                             <p className="text-[18px] font-bold tabular-nums tracking-tight" style={{ color: '#007AFF' }}>{formatCurrency(conta.valorAplicado)}</p>
                         </div>
@@ -457,17 +463,17 @@ export function ContaDetailPage() {
                                                 const typeLbl = isT ? 'Transferência' : isE ? 'Entrada' : 'Saída'
                                                 const MovIcon = isT ? ArrowLeftRight : isE ? ArrowDownRight : ArrowUpRight
                                                 const sc = mov.subconta ?? 'CAIXA'
-                                                const scLbl = sc === 'CAIXA' ? 'Caixa' : 'Aplicado'
+                                                const scLbl = SUBCONTA_LABEL[sc]
 
                                                 const subInfo = isT
                                                     ? (() => {
                                                         if (mov.transferenciaDestinoId === 'SWITCH' || !mov.transferenciaDestinoId) {
-                                                            return `${scLbl} → ${sc === 'CAIXA' ? 'Aplicado' : 'Caixa'}`
+                                                            return `${scLbl} → ${sc === 'CAIXA' ? 'Aplicações' : 'Em Caixa'}`
                                                         }
                                                         const dest = contasAll.find(c => c.id === mov.transferenciaDestinoId)
                                                         return `→ ${dest?.banco ?? 'Outra conta'}`
                                                     })()
-                                                    : (scLbl === 'Aplicado' ? 'Aplicação' : scLbl)
+                                                    : scLbl
 
                                                 return (
                                                     <motion.div key={mov.id} layout
@@ -602,7 +608,7 @@ export function ContaDetailPage() {
                                             <Wallet className="h-3.5 w-3.5" /><span>Em Caixa</span>
                                         </SegBtn>
                                         <SegBtn active={subconta === 'APLICADO'} color="#007AFF" onClick={() => setSubconta('APLICADO')} layoutId="sc-bg">
-                                            <FileText className="h-3.5 w-3.5" /><span>Aplicado</span>
+                                            <FileText className="h-3.5 w-3.5" /><span>Aplicações</span>
                                         </SegBtn>
                                     </div>
                                 </motion.div>
@@ -612,16 +618,28 @@ export function ContaDetailPage() {
                                     exit={{ opacity: 0, y: -5 }} transition={{ duration: 0.18 }}
                                     className="space-y-4">
 
-                                    {/* De */}
+                                    {/* De — DestinoCard com saldo visível */}
                                     <div className="space-y-2">
                                         <Label className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-widest pl-0.5">De</Label>
-                                        <div className="flex gap-1 p-1 rounded-[14px] bg-black/[0.05] dark:bg-white/[0.08] border border-black/[0.04] dark:border-white/[0.05]">
-                                            <SegBtn active={subconta === 'CAIXA'} color="#34C759" onClick={() => setSubconta('CAIXA')} layoutId="orig-bg">
-                                                <Wallet className="h-3.5 w-3.5" /><span>Em Caixa</span>
-                                            </SegBtn>
-                                            <SegBtn active={subconta === 'APLICADO'} color="#007AFF" onClick={() => setSubconta('APLICADO')} layoutId="orig-bg">
-                                                <FileText className="h-3.5 w-3.5" /><span>Aplicado</span>
-                                            </SegBtn>
+                                        <div className="space-y-1.5">
+                                            <DestinoCard
+                                                selected={subconta === 'CAIXA'}
+                                                onSelect={() => setSubconta('CAIXA')}
+                                                icon={Wallet}
+                                                color="#34C759"
+                                                iconBg="#34C75914"
+                                                title="Em Caixa"
+                                                subtitle={`Disponível · ${formatCurrency(Number(conta.valorCaixa) || 0)}`}
+                                            />
+                                            <DestinoCard
+                                                selected={subconta === 'APLICADO'}
+                                                onSelect={() => setSubconta('APLICADO')}
+                                                icon={FileText}
+                                                color="#007AFF"
+                                                iconBg="#007AFF14"
+                                                title="Aplicações"
+                                                subtitle={`Disponível · ${formatCurrency(Number(conta.valorAplicado) || 0)}`}
+                                            />
                                         </div>
                                     </div>
 
@@ -629,15 +647,19 @@ export function ContaDetailPage() {
                                     <div className="space-y-2">
                                         <Label className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-widest pl-0.5">Para</Label>
                                         <div className="space-y-1.5">
-                                            {/* Troca interna (para outra subconta) */}
+                                            {/* Troca interna → outra subconta da mesma conta */}
                                             <DestinoCard
                                                 selected={transferenciaDestino === 'SWITCH'}
                                                 onSelect={() => setTransferenciaDestino('SWITCH')}
                                                 icon={subconta === 'CAIXA' ? FileText : Wallet}
                                                 color={subconta === 'CAIXA' ? '#007AFF' : '#34C759'}
                                                 iconBg={subconta === 'CAIXA' ? '#007AFF14' : '#34C75914'}
-                                                title={subconta === 'CAIXA' ? 'Aplicado' : 'Em Caixa'}
-                                                subtitle={`Nesta conta · ${conta.banco}`}
+                                                title={subconta === 'CAIXA' ? 'Aplicações' : 'Em Caixa'}
+                                                subtitle={`Saldo atual · ${formatCurrency(
+                                                    subconta === 'CAIXA'
+                                                        ? (Number(conta.valorAplicado) || 0)
+                                                        : (Number(conta.valorCaixa) || 0)
+                                                )}`}
                                             />
                                             {/* Outras contas */}
                                             {outrasContas.map(c => (
@@ -649,7 +671,7 @@ export function ContaDetailPage() {
                                                     color="#AF52DE"
                                                     iconBg="#AF52DE14"
                                                     title={c.banco}
-                                                    subtitle={`Em Caixa: ${formatCurrency(Number(c.valorCaixa) || 0)}`}
+                                                    subtitle={`Em Caixa · ${formatCurrency(Number(c.valorCaixa) || 0)}`}
                                                 />
                                             ))}
                                             {outrasContas.length === 0 && (
@@ -673,7 +695,7 @@ export function ContaDetailPage() {
                                 placeholder="0,00"
                                 value={valor}
                                 onChange={e => setValor(e.target.value)}
-                                className="h-[54px] rounded-2xl text-[18px] px-4 font-bold bg-background/50 border-black/10 dark:border-white/10 shadow-sm focus-visible:ring-1 focus-visible:ring-primary/40 transition-all"
+                                className="h-[54px] rounded-2xl text-[18px] font-bold bg-black/[0.03] dark:bg-white/[0.03] border-black/[0.06] dark:border-white/[0.06] shadow-sm focus-visible:ring-1 focus-visible:ring-primary/40 transition-all"
                             />
                         </div>
 

@@ -161,7 +161,7 @@ export function FinanceiroPage() {
                     material: { nome: m.motivo, codigo: 'FINANCEIRO' },
                     quantidade: 1,
                     preco_unitario: m.valor,
-                    almoxarifado: { nome: `Banco: ${c.banco}`, obra: { nome: m.subconta === 'CAIXA' ? 'Caixa Principal' : 'Aplicado' } },
+                    almoxarifado: { nome: `Banco: ${c.banco}`, obra: { nome: m.subconta === 'CAIXA' ? 'Caixa Principal' : 'Aplicações' } },
                     updated_at: m.createdAt,
                     created_at: m.createdAt || (m.data ? new Date(m.data).toISOString() : new Date().toISOString()),
                     isFinancial: true
@@ -386,7 +386,7 @@ export function FinanceiroPage() {
                                             {formatCurrency(total)}
                                         </p>
 
-                                        {/* Em caixa / Aplicado breakdown */}
+                                        {/* Em Caixa / Aplicações breakdown */}
                                         <div className="flex items-stretch gap-3 mt-4 pt-4 border-t border-border/30">
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-1.5 mb-1">
@@ -407,7 +407,7 @@ export function FinanceiroPage() {
                                                         style={{ backgroundColor: '#007AFF14' }}>
                                                         <FileText className="h-3 w-3" style={{ color: '#007AFF' }} />
                                                     </span>
-                                                    <p className="text-[11px] text-muted-foreground">Aplicado</p>
+                                                    <p className="text-[11px] text-muted-foreground">Aplicações</p>
                                                 </div>
                                                 <p className="text-[14px] font-semibold tabular-nums leading-none" style={{ color: '#007AFF' }}>
                                                     {formatCurrency(Number(conta.valorAplicado) || 0)}
@@ -623,21 +623,21 @@ export function FinanceiroPage() {
                         {/* Valores */}
                         <div className="grid grid-cols-2 gap-3 sm:gap-4">
                             <div className="space-y-2">
-                                <Label className="text-[13px] font-medium uppercase tracking-wider ml-1" style={{ color: '#34C759' }}>Saldo Caixa</Label>
+                                <Label className="text-[13px] font-medium uppercase tracking-wider ml-1" style={{ color: '#34C759' }}>Em Caixa</Label>
                                 <CurrencyInput
                                     placeholder="0,00"
                                     value={valorCaixa}
                                     onChange={e => setValorCaixa(e.target.value)}
-                                    className="h-14 sm:h-[52px] rounded-2xl text-[16px] bg-[#34C75908] border-[#34C75920] focus-visible:ring-1 focus-visible:ring-[#34C759] focus-visible:bg-[#34C75910] placeholder:text-[#34C759]/40 transition-all font-medium px-4"
+                                    className="h-14 sm:h-[52px] rounded-2xl text-[16px] bg-[#34C75908] border-[#34C75920] focus-visible:ring-1 focus-visible:ring-[#34C759] focus-visible:bg-[#34C75910] placeholder:text-[#34C759]/40 transition-all font-medium"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-[13px] font-medium uppercase tracking-wider ml-1" style={{ color: '#007AFF' }}>Aplicado</Label>
+                                <Label className="text-[13px] font-medium uppercase tracking-wider ml-1" style={{ color: '#007AFF' }}>Aplicações</Label>
                                 <CurrencyInput
                                     placeholder="0,00"
                                     value={valorAplicado}
                                     onChange={e => setValorAplicado(e.target.value)}
-                                    className="h-14 sm:h-[52px] rounded-2xl text-[16px] bg-[#007AFF08] border-[#007AFF20] focus-visible:ring-1 focus-visible:ring-[#007AFF] focus-visible:bg-[#007AFF10] placeholder:text-[#007AFF]/40 transition-all font-medium px-4"
+                                    className="h-14 sm:h-[52px] rounded-2xl text-[16px] bg-[#007AFF08] border-[#007AFF20] focus-visible:ring-1 focus-visible:ring-[#007AFF] focus-visible:bg-[#007AFF10] placeholder:text-[#007AFF]/40 transition-all font-medium"
                                 />
                             </div>
                         </div>

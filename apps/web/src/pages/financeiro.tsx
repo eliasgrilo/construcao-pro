@@ -139,15 +139,15 @@ export function FinanceiroPage() {
   const [banco, setBanco] = useState('')
   const [agencia, setAgencia] = useState('')
   const [numeroConta, setNumeroConta] = useState('')
-  const [valorCaixa, setValorCaixa] = useState('')
-  const [valorAplicado, setValorAplicado] = useState('')
+  const [valorInicial, setValorInicial] = useState('')
+  const [subcontaNova, setSubcontaNova] = useState<'CAIXA' | 'APLICADO'>('CAIXA')
 
   const resetForm = () => {
     setBanco('')
     setAgencia('')
     setNumeroConta('')
-    setValorCaixa('')
-    setValorAplicado('')
+    setValorInicial('')
+    setSubcontaNova('CAIXA')
   }
 
   const handleOpenModal = () => {
@@ -157,38 +157,24 @@ export function FinanceiroPage() {
 
   const handleAddConta = async () => {
     if (!banco.trim()) return
-    const vCaixa = parseCurrency(valorCaixa)
-    const vAplicado = parseCurrency(valorAplicado)
+    const v = parseCurrency(valorInicial)
     const novaConta = await createConta.mutateAsync({
       banco: banco.trim(),
       agencia: agencia.trim(),
       numero_conta: numeroConta.trim(),
-      valor_caixa: vCaixa,
-      valor_aplicado: vAplicado,
+      valor_caixa: subcontaNova === 'CAIXA' ? v : 0,
+      valor_aplicado: subcontaNova === 'APLICADO' ? v : 0,
     })
 
-    const todayStr = new Date().toISOString().split('T')[0]
-
-    if (vCaixa > 0) {
+    if (v > 0) {
+      const today = new Date().toISOString().split('T')[0]
       await createMov.mutateAsync({
         conta_id: novaConta.id,
         tipo: 'ENTRADA',
-        subconta: 'CAIXA',
-        motivo: 'Saldo Inicial (Caixa)',
-        valor: vCaixa,
-        data: todayStr,
-        transferencia_destino_id: null,
-      })
-    }
-
-    if (vAplicado > 0) {
-      await createMov.mutateAsync({
-        conta_id: novaConta.id,
-        tipo: 'ENTRADA',
-        subconta: 'APLICADO',
-        motivo: 'Saldo Inicial (Aplicações)',
-        valor: vAplicado,
-        data: todayStr,
+        subconta: subcontaNova,
+        motivo: `Saldo Inicial (${subcontaNova === 'CAIXA' ? 'Em Caixa' : 'Aplicações'})`,
+        valor: v,
+        data: today,
         transferencia_destino_id: null,
       })
     }
@@ -788,40 +774,77 @@ export function FinanceiroPage() {
               </div>
             </div>
 
-            {/* Grupo 2: saldo inicial */}
+            {/* Grupo 2: saldo inicial — subconta picker + valor único */}
             <div className="rounded-[14px] overflow-hidden bg-white dark:bg-white/[0.07]">
-              {/* Em Caixa */}
-              <div className="flex items-center min-h-[52px] px-4 gap-3">
-                <span className="text-[16px] font-semibold flex-shrink-0" style={{ color: '#34C759' }}>
-                  Em Caixa
-                </span>
-                <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
-                  <span className="text-[14px] flex-shrink-0 font-medium text-foreground/35">R$</span>
-                  <input
-                    value={valorCaixa}
-                    onChange={(e) => setValorCaixa(e.target.value.replace(/[^\d,.]/g, ''))}
-                    placeholder="0,00"
-                    inputMode="decimal"
-                    className="text-[16px] text-right bg-transparent outline-none tabular-nums font-semibold min-w-0 w-[128px] placeholder:text-black/20 dark:placeholder:text-white/20"
-                  />
+              {/* Segmented control — Em Caixa | Aplicações */}
+              <div className="px-3 py-[10px]">
+                <div className="flex gap-0.5 p-[3px] rounded-[10px] bg-black/[0.06] dark:bg-white/[0.08]">
+                  {/* Em Caixa */}
+                  <motion.button
+                    type="button"
+                    whileTap={{ scale: 0.96 }}
+                    onClick={() => setSubcontaNova('CAIXA')}
+                    className={cn(
+                      'relative flex-1 flex items-center justify-center gap-1.5 rounded-[8px] py-[9px] text-[14px] font-medium transition-colors z-10',
+                      subcontaNova !== 'CAIXA' && 'text-foreground/40',
+                    )}
+                    style={{ color: subcontaNova === 'CAIXA' ? '#34C759' : undefined }}
+                  >
+                    {subcontaNova === 'CAIXA' && (
+                      <motion.div
+                        layoutId="nova-conta-sc"
+                        className="absolute inset-0 bg-white dark:bg-white/[0.14] rounded-[8px] shadow-sm -z-10"
+                        transition={{ type: 'spring', bounce: 0.18, duration: 0.36 }}
+                      />
+                    )}
+                    <Wallet className="h-3.5 w-3.5 flex-shrink-0" />
+                    <span>Em Caixa</span>
+                  </motion.button>
+
+                  {/* Aplicações */}
+                  <motion.button
+                    type="button"
+                    whileTap={{ scale: 0.96 }}
+                    onClick={() => setSubcontaNova('APLICADO')}
+                    className={cn(
+                      'relative flex-1 flex items-center justify-center gap-1.5 rounded-[8px] py-[9px] text-[14px] font-medium transition-colors z-10',
+                      subcontaNova !== 'APLICADO' && 'text-foreground/40',
+                    )}
+                    style={{ color: subcontaNova === 'APLICADO' ? '#007AFF' : undefined }}
+                  >
+                    {subcontaNova === 'APLICADO' && (
+                      <motion.div
+                        layoutId="nova-conta-sc"
+                        className="absolute inset-0 bg-white dark:bg-white/[0.14] rounded-[8px] shadow-sm -z-10"
+                        transition={{ type: 'spring', bounce: 0.18, duration: 0.36 }}
+                      />
+                    )}
+                    <FileText className="h-3.5 w-3.5 flex-shrink-0" />
+                    <span>Aplicações</span>
+                  </motion.button>
                 </div>
               </div>
 
-              <div className="h-px ml-4 bg-black/[0.07] dark:bg-white/[0.07]" />
+              <div className="h-px mx-4 bg-black/[0.07] dark:bg-white/[0.07]" />
 
-              {/* Aplicações */}
+              {/* Valor único alinhado à direita */}
               <div className="flex items-center min-h-[52px] px-4 gap-3">
-                <span className="text-[16px] font-semibold flex-shrink-0" style={{ color: '#007AFF' }}>
-                  Aplicações
+                <span className="text-[16px] font-medium flex-shrink-0 text-foreground/55">
+                  Saldo Inicial
                 </span>
                 <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
-                  <span className="text-[14px] flex-shrink-0 font-medium text-foreground/35">R$</span>
+                  <span
+                    className="text-[14px] flex-shrink-0 font-semibold"
+                    style={{ color: subcontaNova === 'CAIXA' ? '#34C75980' : '#007AFF80' }}
+                  >
+                    R$
+                  </span>
                   <input
-                    value={valorAplicado}
-                    onChange={(e) => setValorAplicado(e.target.value.replace(/[^\d,.]/g, ''))}
+                    value={valorInicial}
+                    onChange={(e) => setValorInicial(e.target.value.replace(/[^\d,.]/g, ''))}
                     placeholder="0,00"
                     inputMode="decimal"
-                    className="text-[16px] text-right bg-transparent outline-none tabular-nums font-semibold min-w-0 w-[128px] placeholder:text-black/20 dark:placeholder:text-white/20"
+                    className="text-[16px] text-right bg-transparent outline-none tabular-nums font-semibold min-w-0 w-[130px] placeholder:text-black/20 dark:placeholder:text-white/20"
                   />
                 </div>
               </div>

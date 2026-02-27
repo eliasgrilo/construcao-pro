@@ -1,8 +1,6 @@
 import { Button } from '@/components/ui/button'
-import { CurrencyInput, parseCurrency } from '@/components/ui/currency-input'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { parseCurrency } from '@/components/ui/currency-input'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { cn, formatCurrency } from '@/lib/utils'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -766,7 +764,7 @@ export function ContaDetailPage() {
       </motion.div>
 
       {/* ══════════════════════════════════
-                MODAL — NOVA MOVIMENTAÇÃO
+                MODAL — NOVA MOVIMENTAÇÃO  (iOS sheet)
             ══════════════════════════════════ */}
       <Dialog
         open={open}
@@ -775,131 +773,152 @@ export function ContaDetailPage() {
           if (!v) reset()
         }}
       >
-        <DialogContent className="p-0 sm:max-w-[440px] sm:rounded-[28px] border-white/10 bg-background/95 backdrop-blur-2xl dark:bg-zinc-900/90">
-          {/* ── Header ── */}
-          <DialogHeader className="px-5 sm:px-6 pt-6 pb-5 relative border-b border-border/10">
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              onClick={() => {
-                setOpen(false)
-                reset()
-              }}
-              className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 transition-colors z-10"
-            >
-              <X className="h-4 w-4 text-muted-foreground" />
-            </motion.button>
-            <div className="flex items-center gap-3.5">
-              <AnimatePresence mode="wait">
-                <motion.span
-                  key={tipo}
-                  initial={{ scale: 0.7, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.7, opacity: 0 }}
-                  transition={{ type: 'spring', bounce: 0.3, duration: 0.32 }}
-                  className="flex h-12 w-12 items-center justify-center rounded-[16px] flex-shrink-0"
-                  style={{ backgroundColor: tipoCfg.iconBg }}
-                >
-                  <TipoCfgIcon className="h-6 w-6" style={{ color: tipoCfg.color }} />
-                </motion.span>
-              </AnimatePresence>
-              <div>
-                <DialogTitle className="text-[20px] sm:text-[21px] font-bold tracking-tight leading-none">
-                  Nova Movimentação
-                </DialogTitle>
-                <p className="text-[13px] text-muted-foreground mt-1">{conta.banco}</p>
-              </div>
+        <DialogContent className="p-0 gap-0 border-0 dark:border dark:border-white/[0.07] sm:max-w-[420px] sm:rounded-[28px] bg-[#F2F2F7] dark:bg-[#1C1C1E] overflow-hidden">
+          {/* ── Cabeçalho: ícone animado + título + X ── */}
+          <div className="relative flex items-center px-5 pt-5 pb-4 gap-3.5">
+            <AnimatePresence mode="wait">
+              <motion.span
+                key={tipo}
+                initial={{ scale: 0.65, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.65, opacity: 0 }}
+                transition={{ type: 'spring', bounce: 0.35, duration: 0.3 }}
+                className="flex h-[46px] w-[46px] items-center justify-center rounded-[14px] flex-shrink-0"
+                style={{ backgroundColor: tipoCfg.iconBg }}
+              >
+                <TipoCfgIcon className="h-[22px] w-[22px]" style={{ color: tipoCfg.color }} />
+              </motion.span>
+            </AnimatePresence>
+            <div className="flex-1 min-w-0">
+              <DialogTitle className="text-[17px] font-semibold tracking-tight leading-none">
+                Nova Movimentação
+              </DialogTitle>
+              <p className="text-[13px] text-foreground/45 mt-1 truncate">{conta.banco}</p>
             </div>
-          </DialogHeader>
+            <motion.button
+              whileTap={{ scale: 0.86 }}
+              onClick={() => { setOpen(false); reset() }}
+              className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-black/[0.08] dark:bg-white/[0.12] hover:bg-black/[0.13] dark:hover:bg-white/[0.18] transition-colors flex-shrink-0"
+            >
+              <X className="h-[14px] w-[14px] text-foreground/60" />
+            </motion.button>
+          </div>
 
           {/* ── Form ── */}
-          <div className="px-5 sm:px-6 pt-5 pb-3 space-y-5">
-            {/* 1 — Tipo (3 opções — igual obras) */}
-            <div className="space-y-2">
-              <Label className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-widest pl-0.5">
-                Tipo de Operação
-              </Label>
-              <div className="flex gap-1 p-1 rounded-[14px] bg-black/[0.05] dark:bg-white/[0.08] border border-black/[0.04] dark:border-white/[0.05]">
-                {(['ENTRADA', 'SAIDA', 'TRANSFERENCIA'] as TipoMov[]).map((t) => {
-                  const cfg = TIPO_CFG[t]
-                  const active = tipo === t
-                  const CfgIcon = cfg.Icon
-                  return (
-                    <motion.button
-                      key={t}
-                      type="button"
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => setTipo(t)}
-                      className={cn(
-                        'relative flex-1 flex items-center justify-center gap-1.5 rounded-[10px] py-2.5 text-[13px] font-medium transition-colors z-10',
-                        active ? '' : 'text-muted-foreground hover:text-foreground/70',
-                      )}
-                      style={{ color: active ? cfg.color : undefined }}
-                    >
-                      {active && (
-                        <motion.div
-                          layoutId="tipo-pill-3"
-                          className="absolute inset-0 bg-card rounded-[10px] shadow-sm border border-black/[0.06] dark:border-white/[0.06] -z-10"
-                          transition={{ type: 'spring', bounce: 0.15, duration: 0.38 }}
-                        />
-                      )}
-                      <CfgIcon className="h-3.5 w-3.5 flex-shrink-0" />
-                      <span>{cfg.label}</span>
-                    </motion.button>
-                  )
-                })}
+          <div className="px-4 space-y-[10px] pb-[10px]">
+
+            {/* 1 — Tipo: Entrada | Saída | Transferência */}
+            <div className="rounded-[14px] overflow-hidden bg-white dark:bg-white/[0.07]">
+              <div className="px-3 py-[10px]">
+                <div className="flex gap-0.5 p-[3px] rounded-[10px] bg-black/[0.06] dark:bg-white/[0.08]">
+                  {(['ENTRADA', 'SAIDA', 'TRANSFERENCIA'] as TipoMov[]).map((t) => {
+                    const cfg = TIPO_CFG[t]
+                    const active = tipo === t
+                    const CfgIcon = cfg.Icon
+                    return (
+                      <motion.button
+                        key={t}
+                        type="button"
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setTipo(t)}
+                        className={cn(
+                          'relative flex-1 flex items-center justify-center gap-1.5 rounded-[8px] py-[9px] text-[13px] font-medium transition-colors z-10',
+                          active ? '' : 'text-foreground/40',
+                        )}
+                        style={{ color: active ? cfg.color : undefined }}
+                      >
+                        {active && (
+                          <motion.div
+                            layoutId="tipo-pill-ios"
+                            className="absolute inset-0 bg-white dark:bg-white/[0.14] rounded-[8px] shadow-sm -z-10"
+                            transition={{ type: 'spring', bounce: 0.15, duration: 0.36 }}
+                          />
+                        )}
+                        <CfgIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span>{cfg.label}</span>
+                      </motion.button>
+                    )
+                  })}
+                </div>
               </div>
             </div>
 
-            {/* 2 — Conta / Transferência (condicional) */}
+            {/* 2 — Subconta / Destino de transferência */}
             <AnimatePresence mode="wait">
               {tipo !== 'TRANSFERENCIA' ? (
                 <motion.div
-                  key="conta-normal"
-                  initial={{ opacity: 0, y: 5 }}
+                  key="subconta-normal"
+                  initial={{ opacity: 0, y: 4 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -5 }}
-                  transition={{ duration: 0.18 }}
-                  className="space-y-2"
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.16 }}
+                  className="rounded-[14px] overflow-hidden bg-white dark:bg-white/[0.07]"
                 >
-                  <Label className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-widest pl-0.5">
-                    {tipo === 'ENTRADA' ? 'Conta de Destino' : 'Conta de Origem'}
-                  </Label>
-                  <div className="flex gap-1 p-1 rounded-[14px] bg-black/[0.05] dark:bg-white/[0.08] border border-black/[0.04] dark:border-white/[0.05]">
-                    <SegBtn
-                      active={subconta === 'CAIXA'}
-                      color="#34C759"
-                      onClick={() => setSubconta('CAIXA')}
-                      layoutId="sc-bg"
-                    >
-                      <Wallet className="h-3.5 w-3.5" />
-                      <span>Em Caixa</span>
-                    </SegBtn>
-                    <SegBtn
-                      active={subconta === 'APLICADO'}
-                      color="#007AFF"
-                      onClick={() => setSubconta('APLICADO')}
-                      layoutId="sc-bg"
-                    >
-                      <FileText className="h-3.5 w-3.5" />
-                      <span>Aplicações</span>
-                    </SegBtn>
+                  <div className="px-4 pt-3 pb-1">
+                    <p className="text-[11px] font-semibold text-foreground/40 uppercase tracking-widest">
+                      {tipo === 'ENTRADA' ? 'Destino' : 'Origem'}
+                    </p>
+                  </div>
+                  <div className="px-3 pb-[10px]">
+                    <div className="flex gap-0.5 p-[3px] rounded-[10px] bg-black/[0.06] dark:bg-white/[0.08]">
+                      <motion.button
+                        type="button"
+                        whileTap={{ scale: 0.96 }}
+                        onClick={() => setSubconta('CAIXA')}
+                        className={cn(
+                          'relative flex-1 flex items-center justify-center gap-1.5 rounded-[8px] py-[9px] text-[14px] font-medium transition-colors z-10',
+                          subconta !== 'CAIXA' && 'text-foreground/40',
+                        )}
+                        style={{ color: subconta === 'CAIXA' ? '#34C759' : undefined }}
+                      >
+                        {subconta === 'CAIXA' && (
+                          <motion.div
+                            layoutId="sc-ios"
+                            className="absolute inset-0 bg-white dark:bg-white/[0.14] rounded-[8px] shadow-sm -z-10"
+                            transition={{ type: 'spring', bounce: 0.18, duration: 0.36 }}
+                          />
+                        )}
+                        <Wallet className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span>Em Caixa</span>
+                      </motion.button>
+                      <motion.button
+                        type="button"
+                        whileTap={{ scale: 0.96 }}
+                        onClick={() => setSubconta('APLICADO')}
+                        className={cn(
+                          'relative flex-1 flex items-center justify-center gap-1.5 rounded-[8px] py-[9px] text-[14px] font-medium transition-colors z-10',
+                          subconta !== 'APLICADO' && 'text-foreground/40',
+                        )}
+                        style={{ color: subconta === 'APLICADO' ? '#007AFF' : undefined }}
+                      >
+                        {subconta === 'APLICADO' && (
+                          <motion.div
+                            layoutId="sc-ios"
+                            className="absolute inset-0 bg-white dark:bg-white/[0.14] rounded-[8px] shadow-sm -z-10"
+                            transition={{ type: 'spring', bounce: 0.18, duration: 0.36 }}
+                          />
+                        )}
+                        <FileText className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span>Aplicações</span>
+                      </motion.button>
+                    </div>
                   </div>
                 </motion.div>
               ) : (
                 <motion.div
-                  key="transf-section"
-                  initial={{ opacity: 0, y: 5 }}
+                  key="transf-ios"
+                  initial={{ opacity: 0, y: 4 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -5 }}
-                  transition={{ duration: 0.18 }}
-                  className="space-y-4"
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.16 }}
+                  className="space-y-[10px]"
                 >
-                  {/* De — DestinoCard com saldo visível */}
-                  <div className="space-y-2">
-                    <Label className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-widest pl-0.5">
-                      De
-                    </Label>
-                    <div className="space-y-1.5">
+                  {/* De */}
+                  <div className="rounded-[14px] overflow-hidden bg-white dark:bg-white/[0.07]">
+                    <div className="px-4 pt-3 pb-2">
+                      <p className="text-[11px] font-semibold text-foreground/40 uppercase tracking-widest">De</p>
+                    </div>
+                    <div className="px-3 pb-3 space-y-1.5">
                       <DestinoCard
                         selected={subconta === 'CAIXA'}
                         onSelect={() => setSubconta('CAIXA')}
@@ -920,14 +939,12 @@ export function ContaDetailPage() {
                       />
                     </div>
                   </div>
-
                   {/* Para */}
-                  <div className="space-y-2">
-                    <Label className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-widest pl-0.5">
-                      Para
-                    </Label>
-                    <div className="space-y-1.5">
-                      {/* Troca interna → outra subconta da mesma conta */}
+                  <div className="rounded-[14px] overflow-hidden bg-white dark:bg-white/[0.07]">
+                    <div className="px-4 pt-3 pb-2">
+                      <p className="text-[11px] font-semibold text-foreground/40 uppercase tracking-widest">Para</p>
+                    </div>
+                    <div className="px-3 pb-3 space-y-1.5">
                       <DestinoCard
                         selected={transferenciaDestino === 'SWITCH'}
                         onSelect={() => setTransferenciaDestino('SWITCH')}
@@ -941,7 +958,6 @@ export function ContaDetailPage() {
                             : Number(conta.valorCaixa) || 0,
                         )}`}
                       />
-                      {/* Outras contas */}
                       {outrasContas.map((c) => (
                         <DestinoCard
                           key={c.id}
@@ -955,7 +971,7 @@ export function ContaDetailPage() {
                         />
                       ))}
                       {outrasContas.length === 0 && (
-                        <p className="text-[12px] text-muted-foreground text-center py-2 opacity-60">
+                        <p className="text-[12px] text-foreground/40 text-center py-2">
                           Cadastre outras contas para transferir entre elas
                         </p>
                       )}
@@ -965,64 +981,73 @@ export function ContaDetailPage() {
               )}
             </AnimatePresence>
 
-            {/* 3 — Valor (acima de Descrição) */}
-            <div className="space-y-2">
-              <Label
-                className="text-[11px] font-semibold uppercase tracking-widest pl-0.5"
-                style={{ color: tipoCfg.color }}
-              >
-                Valor da Operação
-              </Label>
-              <CurrencyInput
-                placeholder="0,00"
-                value={valor}
-                onChange={(e) => setValor(e.target.value)}
-                className="h-[54px] rounded-2xl text-[18px] font-bold bg-black/[0.03] dark:bg-white/[0.03] border-black/[0.06] dark:border-white/[0.06] shadow-sm focus-visible:ring-1 focus-visible:ring-primary/40 transition-all"
-              />
-            </div>
+            {/* 3 — Valor + Descrição num único grupo */}
+            <div className="rounded-[14px] overflow-hidden bg-white dark:bg-white/[0.07]">
+              {/* Valor */}
+              <div className="flex items-center min-h-[52px] px-4 gap-3">
+                <span className="text-[16px] font-medium flex-shrink-0 text-foreground/55">
+                  Valor
+                </span>
+                <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
+                  <span
+                    className="text-[14px] flex-shrink-0 font-semibold"
+                    style={{ color: `${tipoCfg.color}80` }}
+                  >
+                    R$
+                  </span>
+                  <input
+                    value={valor}
+                    onChange={(e) => setValor(e.target.value.replace(/[^\d,.]/g, ''))}
+                    placeholder="0,00"
+                    inputMode="decimal"
+                    className="text-[18px] text-right bg-transparent outline-none tabular-nums font-bold min-w-0 w-[140px] placeholder:text-black/20 dark:placeholder:text-white/20"
+                  />
+                </div>
+              </div>
 
-            {/* 4 — Descrição */}
-            <div className="space-y-2">
-              <Label className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-widest pl-0.5">
-                Descrição
-              </Label>
-              <Input
-                placeholder={
-                  tipo === 'ENTRADA'
-                    ? 'Ex: Depósito, Receita…'
-                    : tipo === 'SAIDA'
-                      ? 'Ex: Pagamento, Despesa…'
-                      : 'Ex: Reserva, Aplicação…'
-                }
-                value={motivo}
-                onChange={(e) => setMotivo(e.target.value)}
-                className="h-[54px] rounded-2xl text-[16px] px-4 font-medium bg-background/50 border-black/10 dark:border-white/10 shadow-sm focus-visible:ring-1 focus-visible:ring-primary/40 transition-all"
-              />
+              <div className="h-px mx-4 bg-black/[0.07] dark:bg-white/[0.07]" />
+
+              {/* Descrição */}
+              <div className="flex items-center min-h-[52px] px-4 gap-3">
+                <span className="text-[16px] font-medium flex-shrink-0 text-foreground/55">
+                  Descrição
+                </span>
+                <input
+                  value={motivo}
+                  onChange={(e) => setMotivo(e.target.value)}
+                  placeholder={
+                    tipo === 'ENTRADA'
+                      ? 'Depósito, Receita…'
+                      : tipo === 'SAIDA'
+                        ? 'Pagamento, Despesa…'
+                        : 'Reserva, Aplicação…'
+                  }
+                  className="flex-1 text-[16px] text-right bg-transparent outline-none min-w-0 placeholder:text-black/20 dark:placeholder:text-white/20"
+                />
+              </div>
             </div>
           </div>
 
-          {/* ── Footer ── */}
-          <div className="flex gap-2.5 px-5 sm:px-6 pb-8 sm:pb-6 pt-4">
-            <Button
-              variant="outline"
-              className="flex-1 h-[54px] rounded-[18px] text-[15px] font-semibold bg-white/50 dark:bg-black/20 border-black/5 dark:border-white/5 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
-              onClick={() => {
-                setOpen(false)
-                reset()
-              }}
-            >
-              Cancelar
-            </Button>
-            <Button
-              className="flex-1 h-[54px] rounded-[18px] text-[15px] font-bold text-white shadow-sm hover:opacity-90 transition-all active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100"
+          {/* ── CTA ── */}
+          <div className="px-4 pt-2 pb-8 sm:pb-6">
+            <motion.button
+              whileTap={{ scale: motivo.trim() && parseCurrency(valor) ? 0.97 : 1 }}
               disabled={!motivo.trim() || !parseCurrency(valor)}
               onClick={handleAdd}
-              style={{
-                backgroundColor: motivo.trim() && parseCurrency(valor) ? tipoCfg.color : '#8E8E93',
-              }}
+              className={cn(
+                'w-full flex items-center justify-center h-[54px] rounded-[14px] text-[17px] font-semibold tracking-tight transition-all',
+                motivo.trim() && parseCurrency(valor)
+                  ? 'text-white'
+                  : 'bg-black/[0.07] dark:bg-white/[0.07] text-foreground/25 cursor-not-allowed',
+              )}
+              style={
+                motivo.trim() && parseCurrency(valor)
+                  ? { backgroundColor: tipoCfg.color }
+                  : undefined
+              }
             >
               {tipoCfg.btnLabel}
-            </Button>
+            </motion.button>
           </div>
         </DialogContent>
       </Dialog>

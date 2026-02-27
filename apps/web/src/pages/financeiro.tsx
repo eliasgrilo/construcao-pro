@@ -187,7 +187,7 @@ export function FinanceiroPage() {
 
     /* ─── Helpers ─── */
     const contaSubLabel = (c: Conta) =>
-        [c.agencia ? `Ag. ${c.agencia}` : '', c.numeroConta].filter(Boolean).join(' · ')
+        [c.agencia ? `Ag. ${c.agencia}` : '', c.numeroConta ? `CC. ${c.numeroConta}` : ''].filter(Boolean).join('  ·  ')
 
     return (
         <div className="pb-20 pt-8 md:pt-10">

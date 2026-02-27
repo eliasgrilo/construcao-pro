@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label'
 import {
   type FinanceiroConta,
   useCreateFinanceiroConta,
+  useCreateFinanceiroMovimentacao,
   useDashboardCustoPorObra,
   useDashboardStats,
   useDeleteFinanceiroConta,
@@ -120,6 +121,7 @@ export function FinanceiroPage() {
   const { data: contas = [], isLoading: contasLoading } = useFinanceiroContas()
   const createConta = useCreateFinanceiroConta()
   const deleteConta = useDeleteFinanceiroConta()
+  const createMov = useCreateFinanceiroMovimentacao()
 
   const s = stats
   const movs = recentMovs || []
@@ -159,13 +161,42 @@ export function FinanceiroPage() {
 
   const handleAddConta = async () => {
     if (!banco.trim()) return
-    await createConta.mutateAsync({
+    const vCaixa = parseCurrency(valorCaixa)
+    const vAplicado = parseCurrency(valorAplicado)
+    const novaConta = await createConta.mutateAsync({
       banco: banco.trim(),
       agencia: agencia.trim(),
       numero_conta: numeroConta.trim(),
-      valor_caixa: parseCurrency(valorCaixa),
-      valor_aplicado: parseCurrency(valorAplicado),
+      valor_caixa: vCaixa,
+      valor_aplicado: vAplicado,
     })
+
+    const todayStr = new Date().toISOString().split('T')[0]
+
+    if (vCaixa > 0) {
+      await createMov.mutateAsync({
+        conta_id: novaConta.id,
+        tipo: 'ENTRADA',
+        subconta: 'CAIXA',
+        motivo: 'Saldo Inicial (Caixa)',
+        valor: vCaixa,
+        data: todayStr,
+        transferencia_destino_id: null,
+      })
+    }
+
+    if (vAplicado > 0) {
+      await createMov.mutateAsync({
+        conta_id: novaConta.id,
+        tipo: 'ENTRADA',
+        subconta: 'APLICADO',
+        motivo: 'Saldo Inicial (Aplicações)',
+        valor: vAplicado,
+        data: todayStr,
+        transferencia_destino_id: null,
+      })
+    }
+
     setModalOpen(false)
     resetForm()
   }

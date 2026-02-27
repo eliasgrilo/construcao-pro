@@ -773,9 +773,9 @@ export function ContaDetailPage() {
           if (!v) reset()
         }}
       >
-        <DialogContent className="p-0 gap-0 border-0 dark:border dark:border-white/[0.07] sm:max-w-[420px] sm:rounded-[28px] bg-[#F2F2F7] dark:bg-[#1C1C1E] overflow-hidden">
-          {/* ── Cabeçalho: ícone animado + título + X ── */}
-          <div className="relative flex items-center px-5 pt-5 pb-4 gap-3.5">
+        <DialogContent className="p-0 gap-0 border-0 dark:border dark:border-white/[0.07] sm:max-w-[420px] sm:rounded-[28px] bg-[#F2F2F7] dark:bg-[#1C1C1E] flex flex-col overflow-y-hidden">
+          {/* ── Cabeçalho fixo: ícone animado + título + X ── */}
+          <div className="flex-shrink-0 relative flex items-center px-5 pt-5 pb-4 gap-3.5">
             <AnimatePresence mode="wait">
               <motion.span
                 key={tipo}
@@ -804,8 +804,8 @@ export function ContaDetailPage() {
             </motion.button>
           </div>
 
-          {/* ── Form ── */}
-          <div className="px-4 space-y-[10px] pb-[10px]">
+          {/* ── Form — área rolável ── */}
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 space-y-[10px] pb-3">
 
             {/* 1 — Tipo: Entrada | Saída | Transferência */}
             <div className="rounded-[14px] overflow-hidden bg-white dark:bg-white/[0.07]">
@@ -1028,8 +1028,8 @@ export function ContaDetailPage() {
             </div>
           </div>
 
-          {/* ── CTA ── */}
-          <div className="px-4 pt-2 pb-8 sm:pb-6">
+          {/* ── CTA fixo no rodapé ── */}
+          <div className="flex-shrink-0 px-4 pt-3 pb-8 sm:pb-6 bg-[#F2F2F7] dark:bg-[#1C1C1E] border-t border-black/[0.05] dark:border-white/[0.05]">
             <motion.button
               whileTap={{ scale: motivo.trim() && parseCurrency(valor) ? 0.97 : 1 }}
               disabled={!motivo.trim() || !parseCurrency(valor)}

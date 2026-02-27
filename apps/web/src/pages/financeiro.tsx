@@ -105,7 +105,7 @@ const tipos: Record<string, { label: string; icon: typeof ArrowLeftRight; tint: 
 
 /* ─── Modal className — iOS system sheet ─── */
 const modalCn =
-  'p-0 gap-0 border-0 dark:border dark:border-white/[0.07] sm:max-w-[390px] sm:rounded-[28px] bg-[#F2F2F7] dark:bg-[#1C1C1E] overflow-hidden'
+  'p-0 gap-0 border-0 dark:border dark:border-white/[0.07] sm:max-w-[390px] sm:rounded-[28px] bg-[#F2F2F7] dark:bg-[#1C1C1E] flex flex-col overflow-y-hidden'
 
 export function FinanceiroPage() {
   const navigate = useNavigate()
@@ -692,8 +692,8 @@ export function FinanceiroPage() {
         }}
       >
         <DialogContent className={modalCn}>
-          {/* ── Cabeçalho: título centrado + botão fechar ── */}
-          <div className="relative flex items-center justify-center px-5 pt-4 pb-2">
+          {/* ── Cabeçalho fixo: título centrado + botão fechar ── */}
+          <div className="flex-shrink-0 relative flex items-center justify-center px-5 pt-4 pb-2">
             <DialogTitle className="text-[17px] font-semibold tracking-tight">
               Nova Conta
             </DialogTitle>
@@ -709,8 +709,8 @@ export function FinanceiroPage() {
             </motion.button>
           </div>
 
-          {/* ── Ícone + subtítulo ── */}
-          <div className="flex flex-col items-center pt-4 pb-7">
+          {/* ── Ícone + subtítulo (parte do header fixo) ── */}
+          <div className="flex-shrink-0 flex flex-col items-center pt-4 pb-7">
             <div
               className="flex h-[64px] w-[64px] items-center justify-center rounded-[20px] mb-3 flex-shrink-0"
               style={{
@@ -723,8 +723,8 @@ export function FinanceiroPage() {
             <p className="text-[13px] text-foreground/40">Dados da conta bancária</p>
           </div>
 
-          {/* ── Formulário agrupado — estilo iOS Settings ── */}
-          <div className="px-4 space-y-[10px] pb-3">
+          {/* ── Formulário agrupado — área rolável ── */}
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 space-y-[10px] pb-3">
             {/* Grupo 1: informações do banco */}
             <div className="rounded-[14px] overflow-hidden bg-white dark:bg-white/[0.07]">
               {/* Banco */}
@@ -851,8 +851,8 @@ export function FinanceiroPage() {
             </div>
           </div>
 
-          {/* ── CTA ── */}
-          <div className="px-4 pt-2 pb-8 sm:pb-6">
+          {/* ── CTA fixo no rodapé ── */}
+          <div className="flex-shrink-0 px-4 pt-3 pb-8 sm:pb-6 bg-[#F2F2F7] dark:bg-[#1C1C1E] border-t border-black/[0.05] dark:border-white/[0.05]">
             <motion.button
               whileTap={{ scale: banco.trim() ? 0.97 : 1 }}
               disabled={!banco.trim() || createConta.isPending}

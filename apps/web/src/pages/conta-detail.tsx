@@ -424,7 +424,7 @@ export function ContaDetailPage() {
 
             {/* ══════ MODAL PREMIUM APPLE ══════ */}
             <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset() }}>
-                <DialogContent className="max-w-[90vw] sm:max-w-[420px] rounded-[28px] p-0 gap-0 shadow-2xl border border-white/10 bg-background/85 backdrop-blur-2xl dark:bg-zinc-900/80 flex flex-col max-h-[90dvh] overflow-hidden">
+                <DialogContent className="p-0 sm:max-w-[420px] sm:rounded-[28px] border-white/10 bg-background/85 backdrop-blur-2xl dark:bg-zinc-900/80">
 
                     {/* Header Premium Apple */}
                     <DialogHeader className="px-5 sm:px-6 pt-7 sm:pt-8 pb-5 sm:pb-6 relative z-10 border-b border-border/10">
@@ -451,7 +451,7 @@ export function ContaDetailPage() {
                     </DialogHeader>
 
                     {/* Corpos Formulário - Apple Form Style */}
-                    <div className="px-5 sm:px-6 py-6 sm:py-7 space-y-6 sm:space-y-7 bg-black/[0.02] dark:bg-white/[0.02] overflow-y-auto flex-1">
+                    <div className="px-5 sm:px-6 py-6 sm:py-7 space-y-6 sm:space-y-7 bg-black/[0.02] dark:bg-white/[0.02]">
 
                         {/* 1 — Tipo */}
                         <div className="space-y-2.5">

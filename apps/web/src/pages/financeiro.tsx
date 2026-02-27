@@ -318,7 +318,7 @@ export function FinanceiroPage() {
               {formatCurrency(s?.custoTotal ?? 0)}
             </p>
             <p className="text-[12px] md:text-[13px] text-muted-foreground leading-tight truncate">
-              de {formatCurrency(s?.orcamentoTotal ?? 0)} em orçamento
+              de {formatCurrency(s?.orcamentoTotal ?? 0)}
             </p>
           </div>
         </motion.div>

@@ -124,10 +124,8 @@ export function ContaDetailPage() {
     const [movs, setMovs] = useState<MovimentacaoConta[]>(() => loadMovs(contaId))
     useEffect(() => { saveMovs(contaId, movs) }, [contaId, movs])
 
-    const totalEntradas = useMemo(() => movs.filter(m => m.tipo === 'ENTRADA').reduce((s, m) => s + m.valor, 0), [movs])
-    const totalSaidas   = useMemo(() => movs.filter(m => m.tipo === 'SAIDA').reduce((s, m) => s + m.valor, 0), [movs])
     const baseTotal  = (conta?.valorCaixa ?? 0) + (conta?.valorAplicado ?? 0)
-    const saldoAtual = baseTotal + totalEntradas - totalSaidas
+    const saldoAtual = baseTotal   // caixa + aplicado
     const caixaPct   = baseTotal > 0 ? Math.round(((conta?.valorCaixa ?? 0) / baseTotal) * 100) : 0
 
     const grouped = useMemo(() => {
@@ -177,7 +175,6 @@ export function ContaDetailPage() {
     )
 
     const subLabel = [conta.agencia ? `Ag. ${conta.agencia}` : '', conta.numeroConta].filter(Boolean).join(' · ')
-    const diffMovs = totalEntradas - totalSaidas
 
     /* ══════ RENDER ══════ */
     return (
@@ -230,11 +227,6 @@ export function ContaDetailPage() {
                             <p className="text-[28px] md:text-[36px] font-bold tabular-nums tracking-tight leading-none">
                                 {formatCurrency(saldoAtual)}
                             </p>
-                            {diffMovs !== 0 && (
-                                <p className={cn('text-[13px] tabular-nums mt-1.5 font-medium', diffMovs >= 0 ? 'text-[#34C759]' : 'text-[#FF3B30]')}>
-                                    {diffMovs >= 0 ? '+' : ''}{formatCurrency(diffMovs)} em movimentações
-                                </p>
-                            )}
                         </div>
                     </div>
 
@@ -322,7 +314,7 @@ export function ContaDetailPage() {
                                                         </span>
                                                         <div className="min-w-0 flex-1">
                                                             <div className="flex items-center gap-2">
-                                                                <p className="text-[15px] font-medium leading-snug truncate">{mov.motivo}</p>
+                                                                <p className="text-[15px] font-medium leading-snug">{mov.motivo}</p>
                                                                 <span className="flex-shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
                                                                     style={{ backgroundColor: `${scClr}18`, color: scClr }}>
                                                                     {scLbl}

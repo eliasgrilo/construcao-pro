@@ -1,11 +1,10 @@
 import { DataTable } from '@/components/data-table'
 import { Badge } from '@/components/ui/badge'
-import { useMovimentacoes } from '@/hooks/use-supabase'
+import { useAllFinanceiroMovimentacoes, useMovimentacoes } from '@/hooks/use-supabase'
 import { formatCurrency, formatDate, formatNumber } from '@/lib/utils'
 import type { ColumnDef } from '@tanstack/react-table'
 import { ArrowDownRight, ArrowLeftRight, ArrowUpRight } from 'lucide-react'
-
-import { useEffect, useState } from 'react'
+import { useMemo } from 'react'
 
 const tipoConfig: Record<
   string,
@@ -30,52 +29,38 @@ const statusAprovacao: Record<
   PENDENTE: { label: 'Pendente', variant: 'warning' },
 }
 
-/* ─── Extract LocalStorage Financial Movements ─── */
-function getGlobalFinancialMovs() {
-  try {
-    const contas = JSON.parse(localStorage.getItem('financeiro_contas_v1') || '[]')
-    let allMovs: any[] = []
-    for (const c of contas) {
-      const movs = JSON.parse(localStorage.getItem(`financeiro_mov_${c.id}`) || '[]')
-      const mapped = movs.map((m: any) => ({
-        id: m.id,
-        tipo: m.tipo,
-        material: { nome: m.motivo, codigo: 'FINANCEIRO' },
-        quantidade: 1,
-        preco_unitario: m.valor,
-        almoxarifado: {
-          nome: `Banco: ${c.banco}`,
-          obra: { nome: m.subconta === 'CAIXA' ? 'Caixa Principal' : 'Aplicado' },
-        },
-        updated_at: m.createdAt,
-        created_at:
-          m.createdAt || (m.data ? new Date(m.data).toISOString() : new Date().toISOString()),
-        isFinancial: true,
-      }))
-      allMovs = [...allMovs, ...mapped]
-    }
-    return allMovs
-  } catch {
-    return []
-  }
-}
-
 export function MovimentacoesPage() {
-  const { data: movsData, isLoading } = useMovimentacoes()
-  const [unifiedData, setUnifiedData] = useState<any[]>([])
+  const { data: movsData, isLoading: isLoadingMovs } = useMovimentacoes()
+  const { data: finMovsData, isLoading: isLoadingFin } = useAllFinanceiroMovimentacoes()
 
-  useEffect(() => {
-    if (!isLoading) {
-      const localMovs = getGlobalFinancialMovs()
-      const sbData = movsData || []
-      const combined = [...sbData, ...localMovs].sort((a, b) => {
-        const dA = new Date(a.created_at).getTime()
-        const dB = new Date(b.created_at).getTime()
-        return dB - dA
-      })
-      setUnifiedData(combined)
-    }
-  }, [movsData, isLoading])
+  const isLoading = isLoadingMovs || isLoadingFin
+
+  const unifiedData = useMemo(() => {
+    const sbData = movsData || []
+
+    // Map financeiro_movimentacoes rows to the same shape the table expects
+    const financialMovs = (finMovsData || []).map((m: any) => ({
+      id: m.id,
+      tipo: m.tipo,
+      material: { nome: m.motivo, codigo: 'FINANCEIRO' },
+      quantidade: 1,
+      preco_unitario: m.valor,
+      almoxarifado: {
+        nome: `Banco: ${m.financeiro_contas?.banco ?? ''}`,
+        obra: { nome: m.subconta === 'CAIXA' ? 'Em Caixa' : 'Aplicações' },
+      },
+      updated_at: m.created_at,
+      created_at:
+        m.created_at || (m.data ? new Date(m.data).toISOString() : new Date().toISOString()),
+      isFinancial: true,
+    }))
+
+    return [...sbData, ...financialMovs].sort((a, b) => {
+      const dA = new Date(a.created_at).getTime()
+      const dB = new Date(b.created_at).getTime()
+      return dB - dA
+    })
+  }, [movsData, finMovsData])
 
   const columns: ColumnDef<any>[] = [
     {
@@ -133,7 +118,6 @@ export function MovimentacoesPage() {
         const q = row.original.quantidade ?? 0
         const total = p * q
         if (total <= 0) return <span className="text-muted-foreground">—</span>
-        const cfg = tipoConfig[row.original.tipo] || tipoConfig.ENTRADA
         return (
           <span
             className={`text-[13px] font-semibold tabular-nums ${row.original.tipo === 'SAIDA' ? 'text-destructive' : 'text-green-600 dark:text-green-400'}`}

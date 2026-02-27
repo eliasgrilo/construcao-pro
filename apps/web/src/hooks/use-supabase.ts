@@ -829,6 +829,7 @@ export function useCreateFinanceiroMovimentacao() {
     },
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['financeiro', 'movimentacoes', vars.conta_id] })
+      qc.invalidateQueries({ queryKey: ['financeiro', 'movimentacoes', 'all'] })
       qc.invalidateQueries({ queryKey: ['financeiro', 'contas'] })
     },
   })
@@ -847,7 +848,23 @@ export function useDeleteFinanceiroMovimentacao() {
     },
     onSuccess: (contaId) => {
       qc.invalidateQueries({ queryKey: ['financeiro', 'movimentacoes', contaId] })
+      qc.invalidateQueries({ queryKey: ['financeiro', 'movimentacoes', 'all'] })
       qc.invalidateQueries({ queryKey: ['financeiro', 'contas'] })
+    },
+  })
+}
+
+/** Todas as movimentações financeiras com a conta relacionada embutida. */
+export function useAllFinanceiroMovimentacoes() {
+  return useQuery({
+    queryKey: ['financeiro', 'movimentacoes', 'all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('financeiro_movimentacoes' as any)
+        .select('*, financeiro_contas(*)')
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return (data || []) as any[]
     },
   })
 }

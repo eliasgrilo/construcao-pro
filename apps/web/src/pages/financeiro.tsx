@@ -220,9 +220,14 @@ export function FinanceiroPage() {
               <p className="text-[24px] md:text-[32px] font-bold tabular-nums tracking-tight leading-none">
                 {formatCurrency(s?.custoTotal ?? 0)}
               </p>
-              <p className="text-[14px] md:text-[15px] text-muted-foreground mt-1.5">
-                de {formatCurrency(s?.orcamentoTotal ?? 0)} em orçamento
-              </p>
+              {contasLoading ? (
+                <div className="h-[18px] w-28 rounded-md bg-muted/60 animate-pulse mt-1.5" />
+              ) : (
+                <p className="text-[14px] md:text-[15px] text-muted-foreground mt-1.5 tabular-nums">
+                  {formatCurrency(totalCaixa + totalAplicado)}
+                  <span className="ml-1 text-muted-foreground/55">disponível em contas</span>
+                </p>
+              )}
 
               {/* Saldo consolidado em contas bancárias */}
               <div className="flex items-stretch gap-3 mt-4 pt-4 border-t border-border/20">

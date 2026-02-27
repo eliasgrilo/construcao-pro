@@ -1,14 +1,8 @@
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[]
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 export type Database = {
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: '14.1'
   }
   public: {
     Tables: {
@@ -36,11 +30,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "almoxarifados_obra_id_fkey"
-            columns: ["obra_id"]
+            foreignKeyName: 'almoxarifados_obra_id_fkey'
+            columns: ['obra_id']
             isOneToOne: false
-            referencedRelation: "obras"
-            referencedColumns: ["id"]
+            referencedRelation: 'obras'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -74,11 +68,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "audit_logs_usuario_id_fkey"
-            columns: ["usuario_id"]
+            foreignKeyName: 'audit_logs_usuario_id_fkey'
+            columns: ['usuario_id']
             isOneToOne: false
-            referencedRelation: "usuarios"
-            referencedColumns: ["id"]
+            referencedRelation: 'usuarios'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -87,21 +81,21 @@ export type Database = {
           created_at: string
           id: string
           nome: string
-          unidade: Database["public"]["Enums"]["unidade"]
+          unidade: Database['public']['Enums']['unidade']
           updated_at: string
         }
         Insert: {
           created_at?: string
           id?: string
           nome: string
-          unidade: Database["public"]["Enums"]["unidade"]
+          unidade: Database['public']['Enums']['unidade']
           updated_at?: string
         }
         Update: {
           created_at?: string
           id?: string
           nome?: string
-          unidade?: Database["public"]["Enums"]["unidade"]
+          unidade?: Database['public']['Enums']['unidade']
           updated_at?: string
         }
         Relationships: []
@@ -133,18 +127,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "estoques_almoxarifado_id_fkey"
-            columns: ["almoxarifado_id"]
+            foreignKeyName: 'estoques_almoxarifado_id_fkey'
+            columns: ['almoxarifado_id']
             isOneToOne: false
-            referencedRelation: "almoxarifados"
-            referencedColumns: ["id"]
+            referencedRelation: 'almoxarifados'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "estoques_material_id_fkey"
-            columns: ["material_id"]
+            foreignKeyName: 'estoques_material_id_fkey'
+            columns: ['material_id']
             isOneToOne: false
-            referencedRelation: "materiais"
-            referencedColumns: ["id"]
+            referencedRelation: 'materiais'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -226,18 +220,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "itens_nf_material_id_fkey"
-            columns: ["material_id"]
+            foreignKeyName: 'itens_nf_material_id_fkey'
+            columns: ['material_id']
             isOneToOne: false
-            referencedRelation: "materiais"
-            referencedColumns: ["id"]
+            referencedRelation: 'materiais'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "itens_nf_nf_id_fkey"
-            columns: ["nf_id"]
+            foreignKeyName: 'itens_nf_nf_id_fkey'
+            columns: ['nf_id']
             isOneToOne: false
-            referencedRelation: "notas_fiscais"
-            referencedColumns: ["id"]
+            referencedRelation: 'notas_fiscais'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -280,11 +274,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "materiais_categoria_id_fkey"
-            columns: ["categoria_id"]
+            foreignKeyName: 'materiais_categoria_id_fkey'
+            columns: ['categoria_id']
             isOneToOne: false
-            referencedRelation: "categorias"
-            referencedColumns: ["id"]
+            referencedRelation: 'categorias'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -301,10 +295,8 @@ export type Database = {
           observacao: string | null
           preco_unitario: number | null
           quantidade: number
-          status_transferencia:
-            | Database["public"]["Enums"]["status_transferencia"]
-            | null
-          tipo: Database["public"]["Enums"]["tipo_movimentacao"]
+          status_transferencia: Database['public']['Enums']['status_transferencia'] | null
+          tipo: Database['public']['Enums']['tipo_movimentacao']
           unidade: string | null
           usuario_id: string
         }
@@ -320,10 +312,8 @@ export type Database = {
           observacao?: string | null
           preco_unitario?: number | null
           quantidade: number
-          status_transferencia?:
-            | Database["public"]["Enums"]["status_transferencia"]
-            | null
-          tipo: Database["public"]["Enums"]["tipo_movimentacao"]
+          status_transferencia?: Database['public']['Enums']['status_transferencia'] | null
+          tipo: Database['public']['Enums']['tipo_movimentacao']
           unidade?: string | null
           usuario_id: string
         }
@@ -339,55 +329,53 @@ export type Database = {
           observacao?: string | null
           preco_unitario?: number | null
           quantidade?: number
-          status_transferencia?:
-            | Database["public"]["Enums"]["status_transferencia"]
-            | null
-          tipo?: Database["public"]["Enums"]["tipo_movimentacao"]
+          status_transferencia?: Database['public']['Enums']['status_transferencia'] | null
+          tipo?: Database['public']['Enums']['tipo_movimentacao']
           unidade?: string | null
           usuario_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "movimentacoes_almoxarifado_destino_id_fkey"
-            columns: ["almoxarifado_destino_id"]
+            foreignKeyName: 'movimentacoes_almoxarifado_destino_id_fkey'
+            columns: ['almoxarifado_destino_id']
             isOneToOne: false
-            referencedRelation: "almoxarifados"
-            referencedColumns: ["id"]
+            referencedRelation: 'almoxarifados'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "movimentacoes_almoxarifado_id_fkey"
-            columns: ["almoxarifado_id"]
+            foreignKeyName: 'movimentacoes_almoxarifado_id_fkey'
+            columns: ['almoxarifado_id']
             isOneToOne: false
-            referencedRelation: "almoxarifados"
-            referencedColumns: ["id"]
+            referencedRelation: 'almoxarifados'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "movimentacoes_fornecedor_id_fkey"
-            columns: ["fornecedor_id"]
+            foreignKeyName: 'movimentacoes_fornecedor_id_fkey'
+            columns: ['fornecedor_id']
             isOneToOne: false
-            referencedRelation: "fornecedores"
-            referencedColumns: ["id"]
+            referencedRelation: 'fornecedores'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "movimentacoes_material_id_fkey"
-            columns: ["material_id"]
+            foreignKeyName: 'movimentacoes_material_id_fkey'
+            columns: ['material_id']
             isOneToOne: false
-            referencedRelation: "materiais"
-            referencedColumns: ["id"]
+            referencedRelation: 'materiais'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "movimentacoes_nf_id_fkey"
-            columns: ["nf_id"]
+            foreignKeyName: 'movimentacoes_nf_id_fkey'
+            columns: ['nf_id']
             isOneToOne: false
-            referencedRelation: "notas_fiscais"
-            referencedColumns: ["id"]
+            referencedRelation: 'notas_fiscais'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "movimentacoes_usuario_id_fkey"
-            columns: ["usuario_id"]
+            foreignKeyName: 'movimentacoes_usuario_id_fkey'
+            columns: ['usuario_id']
             isOneToOne: false
-            referencedRelation: "usuarios"
-            referencedColumns: ["id"]
+            referencedRelation: 'usuarios'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -401,7 +389,7 @@ export type Database = {
           id: string
           numero: string
           serie: string
-          status: Database["public"]["Enums"]["status_nf"]
+          status: Database['public']['Enums']['status_nf']
           updated_at: string
           valor_total: number
           xml_url: string | null
@@ -415,7 +403,7 @@ export type Database = {
           id?: string
           numero: string
           serie: string
-          status?: Database["public"]["Enums"]["status_nf"]
+          status?: Database['public']['Enums']['status_nf']
           updated_at?: string
           valor_total: number
           xml_url?: string | null
@@ -429,7 +417,7 @@ export type Database = {
           id?: string
           numero?: string
           serie?: string
-          status?: Database["public"]["Enums"]["status_nf"]
+          status?: Database['public']['Enums']['status_nf']
           updated_at?: string
           valor_total?: number
           xml_url?: string | null
@@ -443,7 +431,7 @@ export type Database = {
           id: string
           nome: string
           orcamento: number
-          status: Database["public"]["Enums"]["status_obra"]
+          status: Database['public']['Enums']['status_obra']
           updated_at: string
           valor_terreno: number
           valor_burocracia: number
@@ -456,7 +444,7 @@ export type Database = {
           id?: string
           nome: string
           orcamento?: number
-          status?: Database["public"]["Enums"]["status_obra"]
+          status?: Database['public']['Enums']['status_obra']
           updated_at?: string
           valor_terreno?: number
           valor_burocracia?: number
@@ -469,7 +457,7 @@ export type Database = {
           id?: string
           nome?: string
           orcamento?: number
-          status?: Database["public"]["Enums"]["status_obra"]
+          status?: Database['public']['Enums']['status_obra']
           updated_at?: string
           valor_terreno?: number
           valor_burocracia?: number
@@ -496,18 +484,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "usuario_obras_obra_id_fkey"
-            columns: ["obra_id"]
+            foreignKeyName: 'usuario_obras_obra_id_fkey'
+            columns: ['obra_id']
             isOneToOne: false
-            referencedRelation: "obras"
-            referencedColumns: ["id"]
+            referencedRelation: 'obras'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "usuario_obras_usuario_id_fkey"
-            columns: ["usuario_id"]
+            foreignKeyName: 'usuario_obras_usuario_id_fkey'
+            columns: ['usuario_id']
             isOneToOne: false
-            referencedRelation: "usuarios"
-            referencedColumns: ["id"]
+            referencedRelation: 'usuarios'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -518,7 +506,7 @@ export type Database = {
           email: string
           id: string
           nome: string
-          role: Database["public"]["Enums"]["role"]
+          role: Database['public']['Enums']['role']
           updated_at: string
         }
         Insert: {
@@ -527,7 +515,7 @@ export type Database = {
           email: string
           id: string
           nome?: string
-          role?: Database["public"]["Enums"]["role"]
+          role?: Database['public']['Enums']['role']
           updated_at?: string
         }
         Update: {
@@ -536,7 +524,7 @@ export type Database = {
           email?: string
           id?: string
           nome?: string
-          role?: Database["public"]["Enums"]["role"]
+          role?: Database['public']['Enums']['role']
           updated_at?: string
         }
         Relationships: []
@@ -599,7 +587,10 @@ export type Database = {
       get_dashboard_stats: { Args: Record<PropertyKey, never>; Returns: Json }
       get_estoque_alertas: { Args: Record<PropertyKey, never>; Returns: Json }
       get_movimentacoes_recentes: { Args: { p_limit?: number }; Returns: Json }
-      get_my_role: { Args: Record<PropertyKey, never>; Returns: Database["public"]["Enums"]["role"] }
+      get_my_role: {
+        Args: Record<PropertyKey, never>
+        Returns: Database['public']['Enums']['role']
+      }
       get_obra_custos: { Args: { p_obra_id: string }; Returns: Json }
       has_obra_access: { Args: { p_obra_id: string }; Returns: boolean }
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean }
@@ -611,30 +602,26 @@ export type Database = {
       }
     }
     Enums: {
-      role: "ADMIN" | "GESTOR" | "ALMOXARIFE" | "VISUALIZADOR"
-      status_nf: "PENDENTE" | "PROCESSADA" | "VINCULADA" | "REJEITADA"
-      status_obra: "ATIVA" | "FINALIZADA" | "PAUSADA" | "VENDIDO" | "TERRENO"
-      status_transferencia:
-        | "PENDENTE"
-        | "APROVADA_NIVEL_1"
-        | "APROVADA"
-        | "REJEITADA"
-      tipo_movimentacao: "ENTRADA" | "SAIDA" | "TRANSFERENCIA"
+      role: 'ADMIN' | 'GESTOR' | 'ALMOXARIFE' | 'VISUALIZADOR'
+      status_nf: 'PENDENTE' | 'PROCESSADA' | 'VINCULADA' | 'REJEITADA'
+      status_obra: 'ATIVA' | 'FINALIZADA' | 'PAUSADA' | 'VENDIDO' | 'TERRENO'
+      status_transferencia: 'PENDENTE' | 'APROVADA_NIVEL_1' | 'APROVADA' | 'REJEITADA'
+      tipo_movimentacao: 'ENTRADA' | 'SAIDA' | 'TRANSFERENCIA'
       unidade:
-        | "UN"
-        | "KG"
-        | "M"
-        | "M2"
-        | "M3"
-        | "L"
-        | "CX"
-        | "PC"
-        | "SC"
-        | "TB"
-        | "GL"
-        | "FD"
-        | "RL"
-        | "PR"
+        | 'UN'
+        | 'KG'
+        | 'M'
+        | 'M2'
+        | 'M3'
+        | 'L'
+        | 'CX'
+        | 'PC'
+        | 'SC'
+        | 'TB'
+        | 'GL'
+        | 'FD'
+        | 'RL'
+        | 'PR'
     }
     CompositeTypes: {
       [_ in never]: never
@@ -642,33 +629,31 @@ export type Database = {
   }
 }
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+type DatabaseWithoutInternals = Omit<Database, '__InternalSupabase'>
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, 'public'>]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])[TableName] extends {
       Row: infer R
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
+    ? (DefaultSchema['Tables'] & DefaultSchema['Views'])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -677,23 +662,23 @@ export type Tables<
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
+    | keyof DefaultSchema['Tables']
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
+    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
         Insert: infer I
       }
       ? I
@@ -702,23 +687,23 @@ export type TablesInsert<
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
+    | keyof DefaultSchema['Tables']
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
+    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
         Update: infer U
       }
       ? U
@@ -727,17 +712,17 @@ export type TablesUpdate<
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
+    | keyof DefaultSchema['Enums']
     | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums']
     : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums'][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema['Enums']
+    ? DefaultSchema['Enums'][DefaultSchemaEnumNameOrOptions]
     : never

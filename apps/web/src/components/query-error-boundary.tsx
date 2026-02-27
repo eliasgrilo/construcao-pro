@@ -9,13 +9,7 @@ interface QueryErrorBoundaryProps {
 export function QueryErrorBoundary({ children }: QueryErrorBoundaryProps) {
   return (
     <QueryErrorResetBoundary>
-      {({ reset }) => (
-        <ErrorBoundary
-          onError={() => reset()}
-        >
-          {children}
-        </ErrorBoundary>
-      )}
+      {({ reset }) => <ErrorBoundary onError={() => reset()}>{children}</ErrorBoundary>}
     </QueryErrorResetBoundary>
   )
 }

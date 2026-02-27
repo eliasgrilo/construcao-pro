@@ -2,100 +2,101 @@
 
 /* ─── Apple Design System ──────────────────────────── */
 @theme {
-    --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter",
+    ui-sans-serif, system-ui, sans-serif;
 
-    /* Light — Apple System Colors */
-    --color-background: #f5f5f7;
-    --color-foreground: #1d1d1f;
-    --color-card: #ffffff;
-    --color-card-foreground: #1d1d1f;
-    --color-popover: #ffffff;
-    --color-popover-foreground: #1d1d1f;
-    --color-primary: #007AFF;
-    --color-primary-foreground: #ffffff;
-    --color-secondary: #f5f5f7;
-    --color-secondary-foreground: #1d1d1f;
-    --color-muted: #f5f5f7;
-    --color-muted-foreground: #86868b;
-    --color-accent: #f5f5f7;
-    --color-accent-foreground: #1d1d1f;
-    --color-destructive: #FF3B30;
-    --color-destructive-foreground: #ffffff;
-    --color-border: rgba(0, 0, 0, 0.08);
-    --color-input: rgba(0, 0, 0, 0.06);
-    --color-ring: #007AFF;
-    --color-success: #34C759;
-    --color-warning: #FF9500;
-    --color-info: #007AFF;
+  /* Light — Apple System Colors */
+  --color-background: #f5f5f7;
+  --color-foreground: #1d1d1f;
+  --color-card: #ffffff;
+  --color-card-foreground: #1d1d1f;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #1d1d1f;
+  --color-primary: #007aff;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f5f5f7;
+  --color-secondary-foreground: #1d1d1f;
+  --color-muted: #f5f5f7;
+  --color-muted-foreground: #86868b;
+  --color-accent: #f5f5f7;
+  --color-accent-foreground: #1d1d1f;
+  --color-destructive: #ff3b30;
+  --color-destructive-foreground: #ffffff;
+  --color-border: rgba(0, 0, 0, 0.08);
+  --color-input: rgba(0, 0, 0, 0.06);
+  --color-ring: #007aff;
+  --color-success: #34c759;
+  --color-warning: #ff9500;
+  --color-info: #007aff;
 
-    --color-sidebar: rgba(255, 255, 255, 0.80);
-    --color-sidebar-foreground: #1d1d1f;
-    --color-sidebar-border: rgba(0, 0, 0, 0.08);
-    --color-sidebar-accent: rgba(0, 0, 0, 0.04);
+  --color-sidebar: rgba(255, 255, 255, 0.8);
+  --color-sidebar-foreground: #1d1d1f;
+  --color-sidebar-border: rgba(0, 0, 0, 0.08);
+  --color-sidebar-accent: rgba(0, 0, 0, 0.04);
 
-    --radius-sm: 0.375rem;
-    --radius-md: 0.625rem;
-    --radius-lg: 0.875rem;
-    --radius-xl: 1rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1rem;
 }
 
 /* ─── Dark — Apple True Black ──────────────────────── */
 .dark {
-    --color-background: #000000;
-    --color-foreground: #f5f5f7;
-    --color-card: #1c1c1e;
-    --color-card-foreground: #f5f5f7;
-    --color-popover: #2c2c2e;
-    --color-popover-foreground: #f5f5f7;
-    --color-primary: #0A84FF;
-    --color-primary-foreground: #ffffff;
-    --color-secondary: #2c2c2e;
-    --color-secondary-foreground: #f5f5f7;
-    --color-muted: #2c2c2e;
-    --color-muted-foreground: #98989d;
-    --color-accent: #2c2c2e;
-    --color-accent-foreground: #f5f5f7;
-    --color-destructive: #FF453A;
-    --color-destructive-foreground: #ffffff;
-    --color-border: rgba(255, 255, 255, 0.10);
-    --color-input: rgba(255, 255, 255, 0.10);
-    --color-ring: #0A84FF;
-    --color-success: #30D158;
-    --color-warning: #FFD60A;
-    --color-info: #0A84FF;
+  --color-background: #000000;
+  --color-foreground: #f5f5f7;
+  --color-card: #1c1c1e;
+  --color-card-foreground: #f5f5f7;
+  --color-popover: #2c2c2e;
+  --color-popover-foreground: #f5f5f7;
+  --color-primary: #0a84ff;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #2c2c2e;
+  --color-secondary-foreground: #f5f5f7;
+  --color-muted: #2c2c2e;
+  --color-muted-foreground: #98989d;
+  --color-accent: #2c2c2e;
+  --color-accent-foreground: #f5f5f7;
+  --color-destructive: #ff453a;
+  --color-destructive-foreground: #ffffff;
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-input: rgba(255, 255, 255, 0.1);
+  --color-ring: #0a84ff;
+  --color-success: #30d158;
+  --color-warning: #ffd60a;
+  --color-info: #0a84ff;
 
-    --color-sidebar: rgba(28, 28, 30, 0.85);
-    --color-sidebar-foreground: #f5f5f7;
-    --color-sidebar-border: rgba(255, 255, 255, 0.08);
-    --color-sidebar-accent: rgba(255, 255, 255, 0.06);
+  --color-sidebar: rgba(28, 28, 30, 0.85);
+  --color-sidebar-foreground: #f5f5f7;
+  --color-sidebar-border: rgba(255, 255, 255, 0.08);
+  --color-sidebar-accent: rgba(255, 255, 255, 0.06);
 }
 
 /* ─── Base ─────────────────────────────────────────── */
 *,
 *::before,
 *::after {
-    border-color: var(--color-border);
+  border-color: var(--color-border);
 }
 
 html {
-    scroll-behavior: smooth;
-    -webkit-text-size-adjust: 100%;
-    -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-    font-family: var(--font-sans);
-    background-color: var(--color-background);
-    color: var(--color-foreground);
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    font-size: 15px;
-    line-height: 1.47059;
-    letter-spacing: -0.009em;
-    overflow-x: hidden;
-    overscroll-behavior-y: contain;
-    touch-action: manipulation;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+  font-family: var(--font-sans);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 15px;
+  line-height: 1.47059;
+  letter-spacing: -0.009em;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  touch-action: manipulation;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* ─── Typography ───────────────────────────────────── */
@@ -105,115 +106,120 @@ h3,
 h4,
 h5,
 h6 {
-    letter-spacing: -0.022em;
+  letter-spacing: -0.022em;
 }
 
 /* ─── Selection ────────────────────────────────────── */
 ::selection {
-    background: var(--color-primary);
-    color: white;
+  background: var(--color-primary);
+  color: white;
 }
 
 /* ─── Scrollbar ────────────────────────────────────── */
 ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-    background: transparent;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: rgba(128, 128, 128, 0.2);
-    border-radius: 999px;
+  background: rgba(128, 128, 128, 0.2);
+  border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: rgba(128, 128, 128, 0.4);
+  background: rgba(128, 128, 128, 0.4);
 }
 
 /* ─── Skeleton ─────────────────────────────────────── */
 @keyframes skeleton-shimmer {
-    0% {
-        background-position: 200% 0;
-    }
+  0% {
+    background-position: 200% 0;
+  }
 
-    100% {
-        background-position: -200% 0;
-    }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 .skeleton {
-    background: linear-gradient(110deg, var(--color-muted) 8%, rgba(128, 128, 128, 0.06) 18%, var(--color-muted) 33%);
-    background-size: 200% 100%;
-    animation: skeleton-shimmer 1.6s ease-in-out infinite;
-    border-radius: var(--radius-md);
+  background: linear-gradient(
+    110deg,
+    var(--color-muted) 8%,
+    rgba(128, 128, 128, 0.06) 18%,
+    var(--color-muted) 33%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+  border-radius: var(--radius-md);
 }
 
 /* ─── Glass — macOS Vibrancy ───────────────────────── */
 .glass {
-    background: var(--color-sidebar);
-    backdrop-filter: saturate(180%) blur(20px);
-    -webkit-backdrop-filter: saturate(180%) blur(20px);
+  background: var(--color-sidebar);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
 }
 
 /* ─── Focus ────────────────────────────────────────── */
 .focus-ring:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.25);
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.25);
 }
 
 /* ─── Page Transition ──────────────────────────────── */
 @keyframes page-enter {
-    from {
-        opacity: 0;
-        transform: translateY(6px);
-    }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
 
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .page-enter {
-    animation: page-enter 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  animation: page-enter 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 /* ─── Apple Card ───────────────────────────────────── */
 .apple-card {
-    background: var(--color-card);
-    border-radius: 16px;
-    transition: transform 0.15s ease, opacity 0.15s ease;
+  background: var(--color-card);
+  border-radius: 16px;
+  transition: transform 0.15s ease, opacity 0.15s ease;
 }
 
 .apple-card:active {
-    transform: scale(0.98);
-    opacity: 0.9;
+  transform: scale(0.98);
+  opacity: 0.9;
 }
 
 @media (prefers-color-scheme: light) {
-    .apple-card {
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
-    }
+  .apple-card {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+  }
 }
 
 .dark .apple-card {
-    box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.06), inset 0 0.5px 0 rgba(255, 255, 255, 0.04);
+  box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.06), inset 0 0.5px 0 rgba(255, 255, 255, 0.04);
 }
 
 /* ─── Tabular Nums ─────────────────────────────────── */
 .tabular-nums {
-    font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ─── Scrollbar Hide ───────────────────────────────── */
 .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .scrollbar-hide::-webkit-scrollbar {
-    display: none;
+  display: none;
 }

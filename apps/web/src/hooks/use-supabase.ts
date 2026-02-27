@@ -652,6 +652,165 @@ export function useDeleteFornecedor() {
 }
 
 // ═══════════════════════════════════════════════════════════
+// Financeiro — Contas e Movimentações (Supabase, cross-device)
+// ═══════════════════════════════════════════════════════════
+
+export interface FinanceiroConta {
+    id: string
+    banco: string
+    agencia: string
+    numero_conta: string
+    valor_caixa: number
+    valor_aplicado: number
+    created_at: string
+    updated_at: string
+}
+
+export interface FinanceiroMovimentacao {
+    id: string
+    conta_id: string
+    tipo: 'ENTRADA' | 'SAIDA' | 'TRANSFERENCIA'
+    subconta: 'CAIXA' | 'APLICADO'
+    motivo: string
+    valor: number
+    data: string
+    transferencia_destino_id: string | null
+    created_at: string
+}
+
+/* ── Contas ── */
+
+export function useFinanceiroContas() {
+    return useQuery({
+        queryKey: ['financeiro', 'contas'],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('financeiro_contas')
+                .select('*')
+                .order('created_at', { ascending: true })
+            if (error) throw error
+            return (data || []) as FinanceiroConta[]
+        },
+    })
+}
+
+export function useCreateFinanceiroConta() {
+    const qc = useQueryClient()
+    return useMutation({
+        mutationFn: async (body: {
+            banco: string
+            agencia: string
+            numero_conta: string
+            valor_caixa: number
+            valor_aplicado: number
+        }) => {
+            const { data, error } = await supabase
+                .from('financeiro_contas')
+                .insert(body)
+                .select()
+                .single()
+            if (error) throw error
+            return data as FinanceiroConta
+        },
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['financeiro', 'contas'] }),
+    })
+}
+
+export function useUpdateFinanceiroConta() {
+    const qc = useQueryClient()
+    return useMutation({
+        mutationFn: async ({ id, ...body }: Partial<FinanceiroConta> & { id: string }) => {
+            const { data, error } = await supabase
+                .from('financeiro_contas')
+                .update(body as any)
+                .eq('id', id)
+                .select()
+                .single()
+            if (error) throw error
+            return data as FinanceiroConta
+        },
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['financeiro', 'contas'] }),
+    })
+}
+
+export function useDeleteFinanceiroConta() {
+    const qc = useQueryClient()
+    return useMutation({
+        mutationFn: async (id: string) => {
+            const { error } = await supabase
+                .from('financeiro_contas')
+                .delete()
+                .eq('id', id)
+            if (error) throw error
+        },
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['financeiro', 'contas'] }),
+    })
+}
+
+/* ── Movimentações ── */
+
+export function useFinanceiroMovimentacoes(contaId: string) {
+    return useQuery({
+        queryKey: ['financeiro', 'movimentacoes', contaId],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('financeiro_movimentacoes')
+                .select('*')
+                .eq('conta_id', contaId)
+                .order('created_at', { ascending: false })
+            if (error) throw error
+            return (data || []) as FinanceiroMovimentacao[]
+        },
+        enabled: !!contaId,
+    })
+}
+
+export function useCreateFinanceiroMovimentacao() {
+    const qc = useQueryClient()
+    return useMutation({
+        mutationFn: async (body: {
+            conta_id: string
+            tipo: 'ENTRADA' | 'SAIDA' | 'TRANSFERENCIA'
+            subconta: 'CAIXA' | 'APLICADO'
+            motivo: string
+            valor: number
+            data: string
+            transferencia_destino_id?: string | null
+        }) => {
+            const { data, error } = await supabase
+                .from('financeiro_movimentacoes')
+                .insert(body)
+                .select()
+                .single()
+            if (error) throw error
+            return data as FinanceiroMovimentacao
+        },
+        onSuccess: (_data, vars) => {
+            qc.invalidateQueries({ queryKey: ['financeiro', 'movimentacoes', vars.conta_id] })
+            qc.invalidateQueries({ queryKey: ['financeiro', 'contas'] })
+        },
+    })
+}
+
+export function useDeleteFinanceiroMovimentacao() {
+    const qc = useQueryClient()
+    return useMutation({
+        mutationFn: async ({ id, contaId }: { id: string; contaId: string }) => {
+            const { error } = await supabase
+                .from('financeiro_movimentacoes')
+                .delete()
+                .eq('id', id)
+            if (error) throw error
+            return contaId
+        },
+        onSuccess: (contaId) => {
+            qc.invalidateQueries({ queryKey: ['financeiro', 'movimentacoes', contaId] })
+            qc.invalidateQueries({ queryKey: ['financeiro', 'contas'] })
+        },
+    })
+}
+
+// ═══════════════════════════════════════════════════════════
 // Notas Fiscais
 // ═══════════════════════════════════════════════════════════
 

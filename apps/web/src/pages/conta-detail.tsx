@@ -3,7 +3,8 @@ import { useParams, useNavigate } from '@tanstack/react-router'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
     ArrowLeft, Landmark, CreditCard, Wallet, FileText,
-    ArrowDownRight, ArrowUpRight, Plus, Trash2, Receipt, X,
+    ArrowDownRight, ArrowUpRight, ArrowLeftRight,
+    Plus, Trash2, Receipt, X, Check,
 } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
 import { CurrencyInput, parseCurrency } from '@/components/ui/currency-input'
@@ -22,14 +23,18 @@ interface Conta {
     valorAplicado: number
 }
 
+type TipoMov = 'ENTRADA' | 'SAIDA' | 'TRANSFERENCIA'
+
 interface MovimentacaoConta {
     id: string
-    tipo: 'ENTRADA' | 'SAIDA'
+    tipo: TipoMov
     subconta: 'CAIXA' | 'APLICADO'
     motivo: string
     valor: number
     data: string
     createdAt: string
+    /** 'SWITCH' = troca interna Caixa↔Aplicado · contaId = outra conta cadastrada */
+    transferenciaDestinoId?: string
 }
 
 /* ─── UUID polyfill (crypto.randomUUID not available or crashing on iOS < 15.4 / non-https) ─── */
@@ -86,6 +91,13 @@ const accents = [
     { bg: '#30B0C712', fg: '#30B0C7' }, { bg: '#FF634712', fg: '#FF6347' },
 ]
 
+/* ─── Tipo config ─── */
+const TIPO_CFG: Record<TipoMov, { label: string; btnLabel: string; Icon: React.ElementType; color: string; iconBg: string }> = {
+    ENTRADA:       { label: 'Entrada',    btnLabel: 'Confirmar',    Icon: ArrowDownRight, color: '#34C759', iconBg: '#34C75918' },
+    SAIDA:         { label: 'Saída',      btnLabel: 'Confirmar',    Icon: ArrowUpRight,   color: '#FF3B30', iconBg: '#FF3B3018' },
+    TRANSFERENCIA: { label: 'Transferir', btnLabel: 'Transferir',   Icon: ArrowLeftRight, color: '#007AFF', iconBg: '#007AFF18' },
+}
+
 /* ─── Ring ─── */
 function Ring({ percent, size = 88, stroke = 8, color }: { percent: number; size?: number; stroke?: number; color: string }) {
     const r = (size - stroke) / 2
@@ -103,31 +115,61 @@ function Ring({ percent, size = 88, stroke = 8, color }: { percent: number; size
     )
 }
 
-/* ─── Segmented button ─── */
+/* ─── Segmented button (2-option) ─── */
 function SegBtn({
     active, color, onClick, children, layoutId
 }: {
     active: boolean; color: string; onClick: () => void; children: React.ReactNode; layoutId: string
 }) {
     return (
-        <motion.button
-            type="button"
-            whileTap={{ scale: 0.96 }}
-            onClick={onClick}
+        <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={onClick}
             className={cn(
-                'relative flex items-center justify-center gap-1.5 rounded-[12px] text-[15px] font-medium transition-colors min-h-[46px] z-10',
+                'relative flex items-center justify-center gap-1.5 rounded-[10px] text-[13px] font-medium transition-colors min-h-[42px] z-10 flex-1',
                 active ? '' : 'text-muted-foreground hover:text-foreground',
             )}
-            style={{ color: active ? color : undefined }}
-        >
+            style={{ color: active ? color : undefined }}>
             {active && (
-                <motion.div
-                    layoutId={layoutId}
-                    className="absolute inset-0 bg-card rounded-[12px] shadow-sm border border-black/5 dark:border-white/5 -z-10"
-                    transition={{ type: "spring", bounce: 0.15, duration: 0.5 }}
-                />
+                <motion.div layoutId={layoutId}
+                    className="absolute inset-0 bg-card rounded-[10px] shadow-sm border border-black/5 dark:border-white/5 -z-10"
+                    transition={{ type: 'spring', bounce: 0.15, duration: 0.4 }} />
             )}
             {children}
+        </motion.button>
+    )
+}
+
+/* ─── Destino card (transfer destination) ─── */
+function DestinoCard({
+    selected, onSelect, icon: Icon, color, iconBg, title, subtitle,
+}: {
+    selected: boolean; onSelect: () => void
+    icon: React.ElementType; color: string; iconBg: string; title: string; subtitle: string
+}) {
+    return (
+        <motion.button whileTap={{ scale: 0.985 }} type="button" onClick={onSelect}
+            className={cn(
+                'w-full flex items-center gap-3 px-3.5 py-3 rounded-[14px] border text-left transition-all',
+                selected
+                    ? 'border-border/40 bg-card shadow-sm'
+                    : 'border-border/15 bg-black/[0.015] dark:bg-white/[0.025] hover:bg-black/[0.03] dark:hover:bg-white/[0.04]'
+            )}>
+            <span className="flex h-10 w-10 items-center justify-center rounded-[12px] flex-shrink-0"
+                style={{ backgroundColor: iconBg }}>
+                <Icon className="h-[18px] w-[18px]" style={{ color }} />
+            </span>
+            <div className="min-w-0 flex-1">
+                <p className="text-[15px] font-semibold leading-tight tracking-tight">{title}</p>
+                <p className="text-[12px] text-muted-foreground mt-0.5 truncate">{subtitle}</p>
+            </div>
+            <AnimatePresence>
+                {selected && (
+                    <motion.span initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0, opacity: 0 }}
+                        transition={{ type: 'spring', bounce: 0.3, duration: 0.3 }}>
+                        <Check className="h-4 w-4 flex-shrink-0" style={{ color }} />
+                    </motion.span>
+                )}
+            </AnimatePresence>
         </motion.button>
     )
 }
@@ -150,7 +192,7 @@ export function ContaDetailPage() {
     useEffect(() => { saveContas(contasAll) }, [contasAll])
 
     const baseTotal = (conta?.valorCaixa ?? 0) + (conta?.valorAplicado ?? 0)
-    const saldoAtual = baseTotal   // caixa + aplicado
+    const saldoAtual = baseTotal
     const caixaPct = baseTotal > 0 ? Math.round(((conta?.valorCaixa ?? 0) / baseTotal) * 100) : 0
 
     const grouped = useMemo(() => {
@@ -172,62 +214,110 @@ export function ContaDetailPage() {
         return order.filter(k => map.has(k)).map(k => ({ label: k, items: map.get(k)! }))
     }, [movs])
 
-    /* ─── Modal ─── */
+    /* ─── Outras contas (para destino de transferência) ─── */
+    const outrasContas = useMemo(() => contasAll.filter(c => c.id !== contaId), [contasAll, contaId])
+
+    /* ─── Modal state ─── */
     const [open, setOpen] = useState(false)
-    const [tipo, setTipo] = useState<'ENTRADA' | 'SAIDA'>('ENTRADA')
+    const [tipo, setTipo] = useState<TipoMov>('ENTRADA')
     const [valor, setValor] = useState('')
     const [subconta, setSubconta] = useState<'CAIXA' | 'APLICADO'>('CAIXA')
     const [motivo, setMotivo] = useState('')
+    const [transferenciaDestino, setTransferenciaDestino] = useState<string>('SWITCH')
 
-    function reset() { setTipo('ENTRADA'); setValor(''); setSubconta('CAIXA'); setMotivo('') }
+    function reset() {
+        setTipo('ENTRADA')
+        setValor('')
+        setSubconta('CAIXA')
+        setMotivo('')
+        setTransferenciaDestino('SWITCH')
+    }
 
+    /* ─── Adicionar movimentação ─── */
     function handleAdd() {
         const v = parseCurrency(valor)
         if (!motivo.trim() || !v || !conta) return
 
+        if (tipo === 'TRANSFERENCIA') {
+            const isCaixa = subconta === 'CAIXA'
+            if (transferenciaDestino === 'SWITCH') {
+                // Troca interna Caixa ↔ Aplicado
+                setContasAll(prev => prev.map(c => {
+                    if (c.id !== conta.id) return c
+                    const pC = Number(c.valorCaixa) || 0
+                    const pA = Number(c.valorAplicado) || 0
+                    return { ...c, valorCaixa: isCaixa ? pC - v : pC + v, valorAplicado: isCaixa ? pA + v : pA - v }
+                }))
+            } else {
+                // Transferência para outra conta (creditado em Em Caixa do destino)
+                setContasAll(prev => prev.map(c => {
+                    if (c.id === conta.id) {
+                        const pC = Number(c.valorCaixa) || 0
+                        const pA = Number(c.valorAplicado) || 0
+                        return { ...c, valorCaixa: isCaixa ? pC - v : pC, valorAplicado: !isCaixa ? pA - v : pA }
+                    }
+                    if (c.id === transferenciaDestino) {
+                        return { ...c, valorCaixa: (Number(c.valorCaixa) || 0) + v }
+                    }
+                    return c
+                }))
+            }
+            setMovs(prev => [{
+                id: uuid(), tipo: 'TRANSFERENCIA', subconta,
+                motivo: motivo.trim(), valor: v,
+                data: todayStr(), createdAt: new Date().toISOString(),
+                transferenciaDestinoId: transferenciaDestino,
+            }, ...prev])
+            setOpen(false); reset(); return
+        }
+
+        // ENTRADA / SAIDA
         const isEntrada = tipo === 'ENTRADA'
         const isCaixa = subconta === 'CAIXA'
-
-        // 1. Atualizar Saldo
-        setContasAll(prevContas => prevContas.map(c => {
+        setContasAll(prev => prev.map(c => {
             if (c.id !== conta.id) return c
-            const prevCaixa = Number(c.valorCaixa) || 0
-            const prevAplicado = Number(c.valorAplicado) || 0
-            return {
-                ...c,
-                valorCaixa: isCaixa ? prevCaixa + (isEntrada ? v : -v) : prevCaixa,
-                valorAplicado: !isCaixa ? prevAplicado + (isEntrada ? v : -v) : prevAplicado
-            }
+            const pC = Number(c.valorCaixa) || 0
+            const pA = Number(c.valorAplicado) || 0
+            return { ...c, valorCaixa: isCaixa ? pC + (isEntrada ? v : -v) : pC, valorAplicado: !isCaixa ? pA + (isEntrada ? v : -v) : pA }
         }))
-
-        // 2. Criar Transação
         setMovs(prev => [{
             id: uuid(), tipo, subconta,
             motivo: motivo.trim(), valor: v,
             data: todayStr(), createdAt: new Date().toISOString(),
         }, ...prev])
-        setOpen(false)
-        reset()
+        setOpen(false); reset()
     }
 
+    /* ─── Excluir movimentação (estorno) ─── */
     function handleDeleteMov(mov: MovimentacaoConta) {
         if (!conta) return
+        if (mov.tipo === 'TRANSFERENCIA') {
+            const isCaixa = mov.subconta === 'CAIXA'
+            const destId = mov.transferenciaDestinoId
+            setContasAll(prev => prev.map(c => {
+                if (c.id === conta.id) {
+                    const pC = Number(c.valorCaixa) || 0
+                    const pA = Number(c.valorAplicado) || 0
+                    if (destId === 'SWITCH' || !destId) {
+                        return { ...c, valorCaixa: isCaixa ? pC + mov.valor : pC - mov.valor, valorAplicado: isCaixa ? pA - mov.valor : pA + mov.valor }
+                    }
+                    return { ...c, valorCaixa: isCaixa ? pC + mov.valor : pC, valorAplicado: !isCaixa ? pA + mov.valor : pA }
+                }
+                if (destId && destId !== 'SWITCH' && c.id === destId) {
+                    return { ...c, valorCaixa: (Number(c.valorCaixa) || 0) - mov.valor }
+                }
+                return c
+            }))
+            setMovs(p => p.filter(m => m.id !== mov.id)); return
+        }
         const isEntrada = mov.tipo === 'ENTRADA'
         const isCaixa = mov.subconta === 'CAIXA'
-
-        // Estorno Lógico Inverso do Saldo
-        setContasAll(prevContas => prevContas.map(c => {
+        setContasAll(prev => prev.map(c => {
             if (c.id !== conta.id) return c
-            const prevCaixa = Number(c.valorCaixa) || 0
-            const prevAplicado = Number(c.valorAplicado) || 0
-            return {
-                ...c,
-                valorCaixa: isCaixa ? prevCaixa + (isEntrada ? -mov.valor : mov.valor) : prevCaixa,
-                valorAplicado: !isCaixa ? prevAplicado + (isEntrada ? -mov.valor : mov.valor) : prevAplicado
-            }
+            const pC = Number(c.valorCaixa) || 0
+            const pA = Number(c.valorAplicado) || 0
+            return { ...c, valorCaixa: isCaixa ? pC + (isEntrada ? -mov.valor : mov.valor) : pC, valorAplicado: !isCaixa ? pA + (isEntrada ? -mov.valor : mov.valor) : pA }
         }))
-
-        // Remove a movimentação da história
         setMovs(p => p.filter(m => m.id !== mov.id))
     }
 
@@ -243,6 +333,8 @@ export function ContaDetailPage() {
     )
 
     const subLabel = [conta.agencia ? `Ag. ${conta.agencia}` : '', conta.numeroConta].filter(Boolean).join(' · ')
+    const tipoCfg = TIPO_CFG[tipo]
+    const TipoCfgIcon = tipoCfg.Icon
 
     /* ══════ RENDER ══════ */
     return (
@@ -262,8 +354,7 @@ export function ContaDetailPage() {
             <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.05 }}
                 className="px-4 md:px-6 pt-3 pb-6">
                 <div className="flex items-center gap-4">
-                    <span className="flex h-14 w-14 items-center justify-center rounded-[16px] flex-shrink-0"
-                        style={{ backgroundColor: accent.bg }}>
+                    <span className="flex h-14 w-14 items-center justify-center rounded-[16px] flex-shrink-0" style={{ backgroundColor: accent.bg }}>
                         <Landmark className="h-7 w-7" style={{ color: accent.fg }} />
                     </span>
                     <div className="min-w-0">
@@ -297,8 +388,6 @@ export function ContaDetailPage() {
                             </p>
                         </div>
                     </div>
-
-                    {/* Caixa / Aplicado */}
                     <div className="flex gap-4 mt-5 pt-5 border-t border-border/10">
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5 mb-1.5">
@@ -337,14 +426,13 @@ export function ContaDetailPage() {
 
                 <AnimatePresence mode="popLayout">
                     {movs.length === 0 ? (
-                        <motion.div key="empty"
-                            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                        <motion.div key="empty" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                             className="flex flex-col items-center justify-center py-16 rounded-2xl border border-dashed border-border/50">
                             <span className="flex h-14 w-14 items-center justify-center rounded-2xl mb-4" style={{ backgroundColor: '#8E8E9314' }}>
                                 <Receipt className="h-7 w-7 text-muted-foreground/40" />
                             </span>
                             <p className="text-[17px] font-semibold">Sem movimentações</p>
-                            <p className="text-[14px] text-muted-foreground mt-1.5 text-center max-w-[200px]">Registre entradas e saídas desta conta</p>
+                            <p className="text-[14px] text-muted-foreground mt-1.5 text-center max-w-[200px]">Registre entradas, saídas e transferências</p>
                             <motion.button whileTap={{ scale: 0.95 }}
                                 onClick={() => { reset(); setOpen(true) }}
                                 className="mt-6 flex items-center gap-1.5 px-5 py-3 rounded-xl text-[15px] font-medium text-white"
@@ -355,8 +443,7 @@ export function ContaDetailPage() {
                     ) : (
                         <motion.div key="list" className="space-y-6">
                             {grouped.map((group, gi) => (
-                                <motion.div key={group.label}
-                                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                                <motion.div key={group.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.28, delay: gi * 0.06 }}>
                                     <p className="text-[12px] font-semibold text-muted-foreground uppercase tracking-widest mb-2 px-1">
                                         {group.label}
@@ -364,12 +451,24 @@ export function ContaDetailPage() {
                                     <div className="rounded-[24px] bg-card/60 backdrop-blur-md border border-border/40 shadow-sm overflow-hidden mb-6">
                                         <AnimatePresence initial={false}>
                                             {group.items.map((mov, i) => {
+                                                const isT = mov.tipo === 'TRANSFERENCIA'
                                                 const isE = mov.tipo === 'ENTRADA'
-                                                const tint = isE ? '#34C759' : '#FF3B30'
-                                                const typeLbl = isE ? 'Entrada' : 'Saída'
-                                                const Icon = isE ? ArrowDownRight : ArrowUpRight
+                                                const tint = isT ? '#007AFF' : isE ? '#34C759' : '#FF3B30'
+                                                const typeLbl = isT ? 'Transferência' : isE ? 'Entrada' : 'Saída'
+                                                const MovIcon = isT ? ArrowLeftRight : isE ? ArrowDownRight : ArrowUpRight
                                                 const sc = mov.subconta ?? 'CAIXA'
                                                 const scLbl = sc === 'CAIXA' ? 'Caixa' : 'Aplicado'
+
+                                                const subInfo = isT
+                                                    ? (() => {
+                                                        if (mov.transferenciaDestinoId === 'SWITCH' || !mov.transferenciaDestinoId) {
+                                                            return `${scLbl} → ${sc === 'CAIXA' ? 'Aplicado' : 'Caixa'}`
+                                                        }
+                                                        const dest = contasAll.find(c => c.id === mov.transferenciaDestinoId)
+                                                        return `→ ${dest?.banco ?? 'Outra conta'}`
+                                                    })()
+                                                    : (scLbl === 'Aplicado' ? 'Aplicação' : scLbl)
+
                                                 return (
                                                     <motion.div key={mov.id} layout
                                                         initial={{ opacity: 0, height: 0 }}
@@ -381,23 +480,22 @@ export function ContaDetailPage() {
                                                         )}>
                                                         <span className="flex h-11 w-11 items-center justify-center rounded-[14px] flex-shrink-0"
                                                             style={{ backgroundColor: `${tint}14` }}>
-                                                            <Icon className="h-5 w-5" style={{ color: tint }} />
+                                                            <MovIcon className="h-5 w-5" style={{ color: tint }} />
                                                         </span>
                                                         <div className="min-w-0 flex-1">
                                                             <p className="text-[16px] md:text-[17px] font-semibold tracking-tight leading-snug break-words">
                                                                 {mov.motivo}
                                                             </p>
                                                             <p className="text-[13px] font-medium text-muted-foreground mt-0.5 opacity-80">
-                                                                {typeLbl} <span className="mx-1 text-border/50">•</span> {scLbl === 'Aplicado' ? 'Aplicação' : scLbl}
+                                                                {typeLbl}
+                                                                {subInfo && <><span className="mx-1.5 text-border/50">·</span>{subInfo}</>}
                                                             </p>
                                                         </div>
                                                         <div className="flex items-center gap-3 md:gap-4 flex-shrink-0">
                                                             <div className="text-right">
-                                                                <p className={cn(
-                                                                    'text-[17px] font-bold tracking-tight tabular-nums',
-                                                                    isE ? 'text-[#34C759]' : 'text-foreground'
-                                                                )}>
-                                                                    {isE ? '+' : '−'}{formatCurrency(mov.valor)}
+                                                                <p className="text-[17px] font-bold tracking-tight tabular-nums"
+                                                                    style={{ color: isT ? '#007AFF' : isE ? '#34C759' : undefined }}>
+                                                                    {!isT && (isE ? '+' : '−')}{formatCurrency(mov.valor)}
                                                                 </p>
                                                                 <p className="text-[12px] font-medium text-muted-foreground tabular-nums opacity-60 mt-0.5">
                                                                     {formatDateTime(mov.createdAt)}
@@ -422,115 +520,196 @@ export function ContaDetailPage() {
                 </AnimatePresence>
             </motion.div>
 
-            {/* ══════ MODAL PREMIUM APPLE ══════ */}
+            {/* ══════════════════════════════════
+                MODAL — NOVA MOVIMENTAÇÃO
+            ══════════════════════════════════ */}
             <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset() }}>
-                <DialogContent className="p-0 sm:max-w-[420px] sm:rounded-[28px] border-white/10 bg-background/85 backdrop-blur-2xl dark:bg-zinc-900/80">
+                <DialogContent className="p-0 sm:max-w-[440px] sm:rounded-[28px] border-white/10 bg-background/95 backdrop-blur-2xl dark:bg-zinc-900/90">
 
-                    {/* Header Premium Apple */}
-                    <DialogHeader className="px-5 sm:px-6 pt-7 sm:pt-8 pb-5 sm:pb-6 relative z-10 border-b border-border/10">
-                        <motion.button
-                            whileTap={{ scale: 0.9 }}
+                    {/* ── Header ── */}
+                    <DialogHeader className="px-5 sm:px-6 pt-6 pb-5 relative border-b border-border/10">
+                        <motion.button whileTap={{ scale: 0.9 }}
                             onClick={() => { setOpen(false); reset() }}
-                            className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 transition-colors"
-                        >
-                            <X className="h-[18px] w-[18px] text-muted-foreground" />
+                            className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 transition-colors z-10">
+                            <X className="h-4 w-4 text-muted-foreground" />
                         </motion.button>
-
-                        <div className="flex flex-col items-center justify-center text-center gap-3">
-                            <span className="flex h-14 w-14 items-center justify-center rounded-[18px] shadow-sm flex-shrink-0"
-                                style={{ backgroundColor: tipo === 'ENTRADA' ? '#34C75918' : '#FF3B3018' }}>
-                                {tipo === 'ENTRADA'
-                                    ? <ArrowDownRight className="h-7 w-7" style={{ color: '#34C759' }} />
-                                    : <ArrowUpRight className="h-7 w-7" style={{ color: '#FF3B30' }} />}
-                            </span>
+                        <div className="flex items-center gap-3.5">
+                            <AnimatePresence mode="wait">
+                                <motion.span key={tipo}
+                                    initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                                    exit={{ scale: 0.7, opacity: 0 }}
+                                    transition={{ type: 'spring', bounce: 0.3, duration: 0.32 }}
+                                    className="flex h-12 w-12 items-center justify-center rounded-[16px] flex-shrink-0"
+                                    style={{ backgroundColor: tipoCfg.iconBg }}>
+                                    <TipoCfgIcon className="h-6 w-6" style={{ color: tipoCfg.color }} />
+                                </motion.span>
+                            </AnimatePresence>
                             <div>
-                                <DialogTitle className="text-[22px] font-semibold tracking-tight leading-none mb-1.5">Nova Movimentação</DialogTitle>
-                                <p className="text-[14px] text-muted-foreground">Registre os detalhes da transação</p>
+                                <DialogTitle className="text-[20px] sm:text-[21px] font-bold tracking-tight leading-none">
+                                    Nova Movimentação
+                                </DialogTitle>
+                                <p className="text-[13px] text-muted-foreground mt-1">{conta.banco}</p>
                             </div>
                         </div>
                     </DialogHeader>
 
-                    {/* Corpos Formulário - Apple Form Style */}
-                    <div className="px-5 sm:px-6 py-6 sm:py-7 space-y-6 sm:space-y-7 bg-black/[0.02] dark:bg-white/[0.02]">
+                    {/* ── Form ── */}
+                    <div className="px-5 sm:px-6 pt-5 pb-3 space-y-5">
 
-                        {/* 1 — Tipo */}
-                        <div className="space-y-2.5">
-                            <Label className="text-[12px] font-semibold text-muted-foreground/80 uppercase tracking-widest pl-1">Tipo de Operação</Label>
-                            <div className="grid grid-cols-2 gap-1.5 p-1.5 rounded-[16px] bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 shadow-inner relative">
-                                <SegBtn active={tipo === 'ENTRADA'} color="#34C759" onClick={() => setTipo('ENTRADA')} layoutId="tipo-bg">
-                                    <div className="flex items-center gap-2">
-                                        <ArrowDownRight className="h-4 w-4" />Entrada
-                                    </div>
-                                </SegBtn>
-                                <SegBtn active={tipo === 'SAIDA'} color="#FF3B30" onClick={() => setTipo('SAIDA')} layoutId="tipo-bg">
-                                    <div className="flex items-center gap-2">
-                                        <ArrowUpRight className="h-4 w-4" />Saída
-                                    </div>
-                                </SegBtn>
+                        {/* 1 — Tipo (3 opções — igual obras) */}
+                        <div className="space-y-2">
+                            <Label className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-widest pl-0.5">
+                                Tipo de Operação
+                            </Label>
+                            <div className="flex gap-1 p-1 rounded-[14px] bg-black/[0.05] dark:bg-white/[0.08] border border-black/[0.04] dark:border-white/[0.05]">
+                                {(['ENTRADA', 'SAIDA', 'TRANSFERENCIA'] as TipoMov[]).map(t => {
+                                    const cfg = TIPO_CFG[t]
+                                    const active = tipo === t
+                                    const CfgIcon = cfg.Icon
+                                    return (
+                                        <motion.button key={t} type="button" whileTap={{ scale: 0.95 }}
+                                            onClick={() => setTipo(t)}
+                                            className={cn(
+                                                'relative flex-1 flex items-center justify-center gap-1.5 rounded-[10px] py-2.5 text-[13px] font-medium transition-colors z-10',
+                                                active ? '' : 'text-muted-foreground hover:text-foreground/70',
+                                            )}
+                                            style={{ color: active ? cfg.color : undefined }}>
+                                            {active && (
+                                                <motion.div layoutId="tipo-pill-3"
+                                                    className="absolute inset-0 bg-card rounded-[10px] shadow-sm border border-black/[0.06] dark:border-white/[0.06] -z-10"
+                                                    transition={{ type: 'spring', bounce: 0.15, duration: 0.38 }} />
+                                            )}
+                                            <CfgIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                                            <span>{cfg.label}</span>
+                                        </motion.button>
+                                    )
+                                })}
                             </div>
                         </div>
 
-                        {/* 3 — Conta (Em Caixa / Aplicado) */}
-                        <div className="space-y-2.5">
-                            <Label className="text-[12px] font-semibold text-muted-foreground/80 uppercase tracking-widest pl-1">Conta de Destino</Label>
-                            <div className="grid grid-cols-2 gap-1.5 p-1.5 rounded-[16px] bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 shadow-inner relative">
-                                <SegBtn active={subconta === 'CAIXA'} color="#34C759" onClick={() => setSubconta('CAIXA')} layoutId="conta-bg">
-                                    <div className="flex items-center gap-2">
-                                        <Wallet className="h-4 w-4" />Caixa Principal
+                        {/* 2 — Conta / Transferência (condicional) */}
+                        <AnimatePresence mode="wait">
+                            {tipo !== 'TRANSFERENCIA' ? (
+                                <motion.div key="conta-normal"
+                                    initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -5 }} transition={{ duration: 0.18 }}
+                                    className="space-y-2">
+                                    <Label className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-widest pl-0.5">
+                                        {tipo === 'ENTRADA' ? 'Conta de Destino' : 'Conta de Origem'}
+                                    </Label>
+                                    <div className="flex gap-1 p-1 rounded-[14px] bg-black/[0.05] dark:bg-white/[0.08] border border-black/[0.04] dark:border-white/[0.05]">
+                                        <SegBtn active={subconta === 'CAIXA'} color="#34C759" onClick={() => setSubconta('CAIXA')} layoutId="sc-bg">
+                                            <Wallet className="h-3.5 w-3.5" /><span>Em Caixa</span>
+                                        </SegBtn>
+                                        <SegBtn active={subconta === 'APLICADO'} color="#007AFF" onClick={() => setSubconta('APLICADO')} layoutId="sc-bg">
+                                            <FileText className="h-3.5 w-3.5" /><span>Aplicado</span>
+                                        </SegBtn>
                                     </div>
-                                </SegBtn>
-                                <SegBtn active={subconta === 'APLICADO'} color="#007AFF" onClick={() => setSubconta('APLICADO')} layoutId="conta-bg">
-                                    <div className="flex items-center gap-2">
-                                        <FileText className="h-4 w-4" />Aplicação
+                                </motion.div>
+                            ) : (
+                                <motion.div key="transf-section"
+                                    initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -5 }} transition={{ duration: 0.18 }}
+                                    className="space-y-4">
+
+                                    {/* De */}
+                                    <div className="space-y-2">
+                                        <Label className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-widest pl-0.5">De</Label>
+                                        <div className="flex gap-1 p-1 rounded-[14px] bg-black/[0.05] dark:bg-white/[0.08] border border-black/[0.04] dark:border-white/[0.05]">
+                                            <SegBtn active={subconta === 'CAIXA'} color="#34C759" onClick={() => setSubconta('CAIXA')} layoutId="orig-bg">
+                                                <Wallet className="h-3.5 w-3.5" /><span>Em Caixa</span>
+                                            </SegBtn>
+                                            <SegBtn active={subconta === 'APLICADO'} color="#007AFF" onClick={() => setSubconta('APLICADO')} layoutId="orig-bg">
+                                                <FileText className="h-3.5 w-3.5" /><span>Aplicado</span>
+                                            </SegBtn>
+                                        </div>
                                     </div>
-                                </SegBtn>
-                            </div>
+
+                                    {/* Para */}
+                                    <div className="space-y-2">
+                                        <Label className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-widest pl-0.5">Para</Label>
+                                        <div className="space-y-1.5">
+                                            {/* Troca interna (para outra subconta) */}
+                                            <DestinoCard
+                                                selected={transferenciaDestino === 'SWITCH'}
+                                                onSelect={() => setTransferenciaDestino('SWITCH')}
+                                                icon={subconta === 'CAIXA' ? FileText : Wallet}
+                                                color={subconta === 'CAIXA' ? '#007AFF' : '#34C759'}
+                                                iconBg={subconta === 'CAIXA' ? '#007AFF14' : '#34C75914'}
+                                                title={subconta === 'CAIXA' ? 'Aplicado' : 'Em Caixa'}
+                                                subtitle={`Nesta conta · ${conta.banco}`}
+                                            />
+                                            {/* Outras contas */}
+                                            {outrasContas.map(c => (
+                                                <DestinoCard
+                                                    key={c.id}
+                                                    selected={transferenciaDestino === c.id}
+                                                    onSelect={() => setTransferenciaDestino(c.id)}
+                                                    icon={Landmark}
+                                                    color="#AF52DE"
+                                                    iconBg="#AF52DE14"
+                                                    title={c.banco}
+                                                    subtitle={`Em Caixa: ${formatCurrency(Number(c.valorCaixa) || 0)}`}
+                                                />
+                                            ))}
+                                            {outrasContas.length === 0 && (
+                                                <p className="text-[12px] text-muted-foreground text-center py-2 opacity-60">
+                                                    Cadastre outras contas para transferir entre elas
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        {/* 3 — Valor (acima de Descrição) */}
+                        <div className="space-y-2">
+                            <Label className="text-[11px] font-semibold uppercase tracking-widest pl-0.5"
+                                style={{ color: tipoCfg.color }}>
+                                Valor da Operação
+                            </Label>
+                            <CurrencyInput
+                                placeholder="0,00"
+                                value={valor}
+                                onChange={e => setValor(e.target.value)}
+                                className="h-[54px] rounded-2xl text-[18px] px-4 font-bold bg-background/50 border-black/10 dark:border-white/10 shadow-sm focus-visible:ring-1 focus-visible:ring-primary/40 transition-all"
+                            />
                         </div>
 
-                        {/* 4 — Motivo e Valor (Agrupados Visualmente) */}
-                        <div className="space-y-5 pt-1">
-                            <div className="space-y-2">
-                                <Label className="text-[12px] font-semibold text-muted-foreground/80 uppercase tracking-widest pl-1">Descrição</Label>
-                                <Input
-                                    placeholder={tipo === 'ENTRADA' ? 'Ex: Depósito, Transferência…' : 'Ex: Pagamento, Compra…'}
-                                    value={motivo}
-                                    onChange={e => setMotivo(e.target.value)}
-                                    className="h-[54px] rounded-2xl text-[16px] px-4 font-medium bg-background/50 backdrop-blur-sm border-black/10 dark:border-white/10 shadow-sm focus-visible:ring-1 focus-visible:ring-primary/40 focus-visible:border-primary/40 transition-all"
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label className="text-[12px] font-semibold uppercase tracking-widest pl-1"
-                                    style={{ color: tipo === 'ENTRADA' ? '#34C759' : '#FF3B30' }}>
-                                    Valor da Operação
-                                </Label>
-                                <CurrencyInput
-                                    placeholder="0,00"
-                                    value={valor}
-                                    onChange={e => setValor(e.target.value)}
-                                    className="h-[54px] rounded-2xl text-[18px] px-4 font-bold bg-background/50 backdrop-blur-sm border-black/10 dark:border-white/10 shadow-sm focus-visible:ring-1 focus-visible:ring-primary/40 focus-visible:border-primary/40 transition-all"
-                                />
-                            </div>
+                        {/* 4 — Descrição */}
+                        <div className="space-y-2">
+                            <Label className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-widest pl-0.5">
+                                Descrição
+                            </Label>
+                            <Input
+                                placeholder={
+                                    tipo === 'ENTRADA' ? 'Ex: Depósito, Receita…'
+                                    : tipo === 'SAIDA' ? 'Ex: Pagamento, Despesa…'
+                                    : 'Ex: Reserva, Aplicação…'
+                                }
+                                value={motivo}
+                                onChange={e => setMotivo(e.target.value)}
+                                className="h-[54px] rounded-2xl text-[16px] px-4 font-medium bg-background/50 border-black/10 dark:border-white/10 shadow-sm focus-visible:ring-1 focus-visible:ring-primary/40 transition-all"
+                            />
                         </div>
-
                     </div>
 
-                    {/* Footer - Apple Large Buttons (Safe Area padding on Mobile) */}
-                    <div className="flex gap-3 px-5 sm:px-6 pb-8 sm:pb-7 pt-5 relative before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-border/20 before:to-transparent">
-                        <Button variant="outline" className="flex-1 h-[56px] rounded-[18px] text-[16px] font-semibold bg-white/50 dark:bg-black/20 backdrop-blur shadow-sm border-black/5 dark:border-white/5 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                    {/* ── Footer ── */}
+                    <div className="flex gap-2.5 px-5 sm:px-6 pb-8 sm:pb-6 pt-4">
+                        <Button variant="outline"
+                            className="flex-1 h-[54px] rounded-[18px] text-[15px] font-semibold bg-white/50 dark:bg-black/20 border-black/5 dark:border-white/5 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
                             onClick={() => { setOpen(false); reset() }}>
                             Cancelar
                         </Button>
                         <Button
-                            className="flex-1 h-[56px] rounded-[18px] text-[16px] font-bold text-white shadow-md shadow-black/10 hover:opacity-90 transition-all cursor-pointer active:scale-[0.96] disabled:active:scale-100 disabled:opacity-50"
+                            className="flex-1 h-[54px] rounded-[18px] text-[15px] font-bold text-white shadow-sm hover:opacity-90 transition-all active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100"
                             disabled={!motivo.trim() || !parseCurrency(valor)}
                             onClick={handleAdd}
                             style={{
-                                backgroundColor: motivo.trim() && parseCurrency(valor)
-                                    ? (tipo === 'ENTRADA' ? '#34C759' : '#FF3B30')
-                                    : '#8E8E93',
+                                backgroundColor: motivo.trim() && parseCurrency(valor) ? tipoCfg.color : '#8E8E93',
                             }}>
-                            Confirmar Transação
+                            {tipoCfg.btnLabel}
                         </Button>
                     </div>
                 </DialogContent>

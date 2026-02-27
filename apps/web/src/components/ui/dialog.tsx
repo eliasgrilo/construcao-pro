@@ -59,9 +59,6 @@ const DialogContent = React.forwardRef<
                     <div className="w-9 h-[5px] rounded-full bg-muted-foreground/25" />
                 </div>
                 {children}
-                <DialogPrimitive.Close className="absolute right-4 top-4 sm:top-4 sm:right-4 flex h-8 w-8 items-center justify-center rounded-full bg-accent/80 text-muted-foreground transition-all hover:bg-accent hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/40">
-                    <X className="h-4 w-4" />
-                </DialogPrimitive.Close>
             </DialogPrimitive.Content>
         </div>
     </DialogPortal>

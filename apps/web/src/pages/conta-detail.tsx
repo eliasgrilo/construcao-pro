@@ -3,7 +3,7 @@ import { useParams, useNavigate } from '@tanstack/react-router'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
     ArrowLeft, Landmark, CreditCard, Wallet, FileText,
-    ArrowDownRight, ArrowUpRight, Plus, Trash2, Receipt,
+    ArrowDownRight, ArrowUpRight, Plus, Trash2, Receipt, X,
 } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
 import { CurrencyInput, parseCurrency } from '@/components/ui/currency-input'
@@ -32,6 +32,17 @@ interface MovimentacaoConta {
     createdAt: string
 }
 
+/* ─── UUID polyfill (crypto.randomUUID not available on iOS < 15.4) ─── */
+function uuid(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID()
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16)
+    })
+}
+
 /* ─── Storage ─── */
 const CONTAS_KEY = 'financeiro_contas_v1'
 const movKey = (id: string) => `financeiro_mov_${id}`
@@ -44,6 +55,9 @@ function loadMovs(id: string): MovimentacaoConta[] {
 }
 function saveMovs(id: string, list: MovimentacaoConta[]) {
     localStorage.setItem(movKey(id), JSON.stringify(list))
+}
+function saveContas(list: Conta[]) {
+    localStorage.setItem(CONTAS_KEY, JSON.stringify(list))
 }
 
 /* ─── Dates ─── */
@@ -89,9 +103,9 @@ function Ring({ percent, size = 88, stroke = 8, color }: { percent: number; size
 
 /* ─── Segmented button ─── */
 function SegBtn({
-    active, color, onClick, children,
+    active, color, onClick, children, layoutId
 }: {
-    active: boolean; color: string; onClick: () => void; children: React.ReactNode
+    active: boolean; color: string; onClick: () => void; children: React.ReactNode; layoutId: string
 }) {
     return (
         <motion.button
@@ -99,11 +113,18 @@ function SegBtn({
             whileTap={{ scale: 0.96 }}
             onClick={onClick}
             className={cn(
-                'flex items-center justify-center gap-1.5 rounded-[10px] text-[15px] font-medium transition-all min-h-[46px]',
-                active ? 'bg-card shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                'relative flex items-center justify-center gap-1.5 rounded-[12px] text-[15px] font-medium transition-colors min-h-[46px] z-10',
+                active ? '' : 'text-muted-foreground hover:text-foreground',
             )}
             style={{ color: active ? color : undefined }}
         >
+            {active && (
+                <motion.div
+                    layoutId={layoutId}
+                    className="absolute inset-0 bg-card rounded-[12px] shadow-sm border border-black/5 dark:border-white/5 -z-10"
+                    transition={{ type: "spring", bounce: 0.15, duration: 0.5 }}
+                />
+            )}
             {children}
         </motion.button>
     )
@@ -114,24 +135,31 @@ export function ContaDetailPage() {
     const { contaId } = useParams({ strict: false }) as { contaId: string }
     const navigate = useNavigate()
 
-    const conta = useMemo(() => loadContas().find(c => c.id === contaId), [contaId])
+    const [contasAll, setContasAll] = useState<Conta[]>(() => loadContas())
+    const conta = useMemo(() => contasAll.find(c => c.id === contaId), [contasAll, contaId])
     const accentIdx = useMemo(() => {
         if (!conta) return 0
-        return loadContas().findIndex(c => c.id === contaId) % accents.length
-    }, [conta, contaId])
+        return contasAll.findIndex(c => c.id === contaId) % accents.length
+    }, [conta, contaId, contasAll])
     const accent = accents[accentIdx]
 
     const [movs, setMovs] = useState<MovimentacaoConta[]>(() => loadMovs(contaId))
     useEffect(() => { saveMovs(contaId, movs) }, [contaId, movs])
+    useEffect(() => { saveContas(contasAll) }, [contasAll])
 
-    const baseTotal  = (conta?.valorCaixa ?? 0) + (conta?.valorAplicado ?? 0)
+    const baseTotal = (conta?.valorCaixa ?? 0) + (conta?.valorAplicado ?? 0)
     const saldoAtual = baseTotal   // caixa + aplicado
-    const caixaPct   = baseTotal > 0 ? Math.round(((conta?.valorCaixa ?? 0) / baseTotal) * 100) : 0
+    const caixaPct = baseTotal > 0 ? Math.round(((conta?.valorCaixa ?? 0) / baseTotal) * 100) : 0
 
     const grouped = useMemo(() => {
-        const sorted = [...movs].sort((a, b) =>
-            b.data.localeCompare(a.data) || b.createdAt.localeCompare(a.createdAt)
-        )
+        const sorted = [...movs].sort((a, b) => {
+            const dA = a.data || ''
+            const dB = b.data || ''
+            if (dB !== dA) return dB.localeCompare(dA)
+            const cA = a.createdAt || ''
+            const cB = b.createdAt || ''
+            return cB.localeCompare(cA)
+        })
         const order = ['Hoje', 'Esta Semana', 'Anteriores']
         const map = new Map<string, MovimentacaoConta[]>()
         for (const m of sorted) {
@@ -144,23 +172,57 @@ export function ContaDetailPage() {
 
     /* ─── Modal ─── */
     const [open, setOpen] = useState(false)
-    const [tipo,     setTipo]     = useState<'ENTRADA' | 'SAIDA'>('ENTRADA')
-    const [valor,    setValor]    = useState('')
+    const [tipo, setTipo] = useState<'ENTRADA' | 'SAIDA'>('ENTRADA')
+    const [valor, setValor] = useState('')
     const [subconta, setSubconta] = useState<'CAIXA' | 'APLICADO'>('CAIXA')
-    const [motivo,   setMotivo]   = useState('')
+    const [motivo, setMotivo] = useState('')
 
     function reset() { setTipo('ENTRADA'); setValor(''); setSubconta('CAIXA'); setMotivo('') }
 
     function handleAdd() {
         const v = parseCurrency(valor)
-        if (!motivo.trim() || !v) return
+        if (!motivo.trim() || !v || !conta) return
+
+        const isEntrada = tipo === 'ENTRADA'
+        const isCaixa = subconta === 'CAIXA'
+
+        // 1. Atualizar Saldo
+        setContasAll(prevContas => prevContas.map(c => {
+            if (c.id !== conta.id) return c
+            return {
+                ...c,
+                valorCaixa: isCaixa ? c.valorCaixa + (isEntrada ? v : -v) : c.valorCaixa,
+                valorAplicado: !isCaixa ? c.valorAplicado + (isEntrada ? v : -v) : c.valorAplicado
+            }
+        }))
+
+        // 2. Criar Transação
         setMovs(prev => [{
-            id: crypto.randomUUID(), tipo, subconta,
+            id: uuid(), tipo, subconta,
             motivo: motivo.trim(), valor: v,
             data: todayStr(), createdAt: new Date().toISOString(),
         }, ...prev])
         setOpen(false)
         reset()
+    }
+
+    function handleDeleteMov(mov: MovimentacaoConta) {
+        if (!conta) return
+        const isEntrada = mov.tipo === 'ENTRADA'
+        const isCaixa = mov.subconta === 'CAIXA'
+
+        // Estorno Lógico Inverso do Saldo
+        setContasAll(prevContas => prevContas.map(c => {
+            if (c.id !== conta.id) return c
+            return {
+                ...c,
+                valorCaixa: isCaixa ? c.valorCaixa + (isEntrada ? -mov.valor : mov.valor) : c.valorCaixa,
+                valorAplicado: !isCaixa ? c.valorAplicado + (isEntrada ? -mov.valor : mov.valor) : c.valorAplicado
+            }
+        }))
+
+        // Remove a movimentação da história
+        setMovs(p => p.filter(m => m.id !== mov.id))
     }
 
     /* ─── Not found ─── */
@@ -231,25 +293,25 @@ export function ContaDetailPage() {
                     </div>
 
                     {/* Caixa / Aplicado */}
-                    <div className="flex gap-4 mt-5 pt-5 border-t border-border/20">
+                    <div className="flex gap-4 mt-5 pt-5 border-t border-border/10">
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5 mb-1.5">
-                                <span className="flex h-5 w-5 items-center justify-center rounded-md flex-shrink-0" style={{ backgroundColor: '#34C75914' }}>
-                                    <Wallet className="h-3 w-3" style={{ color: '#34C759' }} />
+                                <span className="flex h-5 w-5 items-center justify-center rounded-[6px] flex-shrink-0" style={{ backgroundColor: '#34C75914' }}>
+                                    <Wallet className="h-[14px] w-[14px]" style={{ color: '#34C759' }} />
                                 </span>
-                                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Em caixa</p>
+                                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">Em caixa</p>
                             </div>
-                            <p className="text-[18px] font-bold tabular-nums" style={{ color: '#34C759' }}>{formatCurrency(conta.valorCaixa)}</p>
+                            <p className="text-[18px] font-bold tabular-nums tracking-tight" style={{ color: '#34C759' }}>{formatCurrency(conta.valorCaixa)}</p>
                         </div>
-                        <div className="w-px bg-border/30" />
+                        <div className="w-px bg-border/20" />
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5 mb-1.5">
-                                <span className="flex h-5 w-5 items-center justify-center rounded-md flex-shrink-0" style={{ backgroundColor: '#007AFF14' }}>
-                                    <FileText className="h-3 w-3" style={{ color: '#007AFF' }} />
+                                <span className="flex h-5 w-5 items-center justify-center rounded-[6px] flex-shrink-0" style={{ backgroundColor: '#007AFF14' }}>
+                                    <FileText className="h-[14px] w-[14px]" style={{ color: '#007AFF' }} />
                                 </span>
-                                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Aplicado</p>
+                                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">Aplicado</p>
                             </div>
-                            <p className="text-[18px] font-bold tabular-nums" style={{ color: '#007AFF' }}>{formatCurrency(conta.valorAplicado)}</p>
+                            <p className="text-[18px] font-bold tabular-nums tracking-tight" style={{ color: '#007AFF' }}>{formatCurrency(conta.valorAplicado)}</p>
                         </div>
                     </div>
                 </div>
@@ -293,46 +355,53 @@ export function ContaDetailPage() {
                                     <p className="text-[12px] font-semibold text-muted-foreground uppercase tracking-widest mb-2 px-1">
                                         {group.label}
                                     </p>
-                                    <div className="rounded-2xl bg-card border overflow-hidden divide-y divide-border/10">
+                                    <div className="rounded-[24px] bg-card/60 backdrop-blur-md border border-border/40 shadow-sm overflow-hidden mb-6">
                                         <AnimatePresence initial={false}>
-                                            {group.items.map((mov) => {
-                                                const isE    = mov.tipo === 'ENTRADA'
-                                                const tint   = isE ? '#34C759' : '#FF3B30'
-                                                const Icon   = isE ? ArrowDownRight : ArrowUpRight
-                                                const sc     = mov.subconta ?? 'CAIXA'
-                                                const scClr  = sc === 'CAIXA' ? '#34C759' : '#007AFF'
-                                                const scLbl  = sc === 'CAIXA' ? 'Caixa' : 'Aplicado'
+                                            {group.items.map((mov, i) => {
+                                                const isE = mov.tipo === 'ENTRADA'
+                                                const tint = isE ? '#34C759' : '#FF3B30'
+                                                const typeLbl = isE ? 'Entrada' : 'Saída'
+                                                const Icon = isE ? ArrowDownRight : ArrowUpRight
+                                                const sc = mov.subconta ?? 'CAIXA'
+                                                const scLbl = sc === 'CAIXA' ? 'Caixa' : 'Aplicado'
                                                 return (
                                                     <motion.div key={mov.id} layout
+                                                        initial={{ opacity: 0, height: 0 }}
+                                                        animate={{ opacity: 1, height: 'auto' }}
                                                         exit={{ opacity: 0, height: 0, transition: { duration: 0.18 } }}
-                                                        className="flex items-center gap-3 px-4 py-3.5 group">
-                                                        <div className="w-[3px] self-stretch rounded-full flex-shrink-0 my-1"
-                                                            style={{ backgroundColor: tint }} />
-                                                        <span className="flex h-9 w-9 items-center justify-center rounded-xl flex-shrink-0"
+                                                        className={cn(
+                                                            'flex items-center gap-3.5 md:gap-4 px-4 md:px-5 py-4 group overflow-hidden transition-colors hover:bg-black/[0.015] dark:hover:bg-white/[0.015]',
+                                                            i > 0 && 'border-t border-border/30'
+                                                        )}>
+                                                        <span className="flex h-11 w-11 items-center justify-center rounded-[14px] flex-shrink-0"
                                                             style={{ backgroundColor: `${tint}14` }}>
-                                                            <Icon className="h-4 w-4" style={{ color: tint }} />
+                                                            <Icon className="h-5 w-5" style={{ color: tint }} />
                                                         </span>
                                                         <div className="min-w-0 flex-1">
-                                                            <div className="flex items-center gap-2">
-                                                                <p className="text-[15px] font-medium leading-snug">{mov.motivo}</p>
-                                                                <span className="flex-shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                                                                    style={{ backgroundColor: `${scClr}18`, color: scClr }}>
-                                                                    {scLbl}
-                                                                </span>
-                                                            </div>
-                                                            <p className="text-[12px] text-muted-foreground mt-0.5 tabular-nums">
-                                                                {formatDateTime(mov.createdAt)}
+                                                            <p className="text-[16px] md:text-[17px] font-semibold tracking-tight truncate leading-snug">
+                                                                {mov.motivo}
+                                                            </p>
+                                                            <p className="text-[13px] font-medium text-muted-foreground mt-0.5 opacity-80">
+                                                                {typeLbl} <span className="mx-1 text-border/50">•</span> {scLbl}
                                                             </p>
                                                         </div>
-                                                        <div className="flex items-center gap-2 flex-shrink-0">
-                                                            <p className="text-[15px] font-semibold tabular-nums" style={{ color: tint }}>
-                                                                {isE ? '+' : '−'}{formatCurrency(mov.valor)}
-                                                            </p>
+                                                        <div className="flex items-center gap-3 md:gap-4 flex-shrink-0">
+                                                            <div className="text-right">
+                                                                <p className={cn(
+                                                                    'text-[17px] font-bold tracking-tight tabular-nums',
+                                                                    isE ? 'text-[#34C759]' : 'text-foreground'
+                                                                )}>
+                                                                    {isE ? '+' : '−'}{formatCurrency(mov.valor)}
+                                                                </p>
+                                                                <p className="text-[12px] font-medium text-muted-foreground tabular-nums opacity-60 mt-0.5">
+                                                                    {formatDateTime(mov.createdAt)}
+                                                                </p>
+                                                            </div>
                                                             <motion.button whileTap={{ scale: 0.88 }}
-                                                                onClick={() => setMovs(p => p.filter(m => m.id !== mov.id))}
-                                                                className="flex h-8 w-8 items-center justify-center rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
-                                                                style={{ backgroundColor: '#FF3B3010' }}>
-                                                                <Trash2 className="h-3.5 w-3.5" style={{ color: '#FF3B30' }} />
+                                                                onClick={() => handleDeleteMov(mov)}
+                                                                className="flex h-8 w-8 items-center justify-center rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0"
+                                                                style={{ backgroundColor: '#FF3B3012' }}>
+                                                                <Trash2 className="h-4 w-4" style={{ color: '#FF3B30' }} />
                                                             </motion.button>
                                                         </div>
                                                     </motion.div>
@@ -347,94 +416,116 @@ export function ContaDetailPage() {
                 </AnimatePresence>
             </motion.div>
 
-            {/* ══════ MODAL ══════ */}
+            {/* ══════ MODAL PREMIUM APPLE ══════ */}
             <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset() }}>
-                <DialogContent className="max-w-[calc(100vw-32px)] sm:max-w-[440px] rounded-2xl p-0 gap-0 overflow-hidden">
+                <DialogContent className="max-w-[90vw] sm:max-w-[420px] rounded-[28px] p-0 gap-0 overflow-hidden shadow-2xl border border-white/10 bg-background/85 backdrop-blur-2xl dark:bg-zinc-900/80">
 
-                    {/* Header */}
-                    <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/20">
-                        <div className="flex items-center gap-3">
-                            <span className="flex h-10 w-10 items-center justify-center rounded-[12px]"
-                                style={{ backgroundColor: tipo === 'ENTRADA' ? '#34C75914' : '#FF3B3014' }}>
+                    {/* Header Premium Apple */}
+                    <DialogHeader className="px-6 pt-8 pb-6 relative z-10 border-b border-border/10">
+                        <motion.button
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => { setOpen(false); reset() }}
+                            className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 transition-colors"
+                        >
+                            <X className="h-4 w-4 text-muted-foreground" />
+                        </motion.button>
+
+                        <div className="flex flex-col items-center justify-center text-center gap-3">
+                            <span className="flex h-14 w-14 items-center justify-center rounded-[18px] shadow-sm flex-shrink-0"
+                                style={{ backgroundColor: tipo === 'ENTRADA' ? '#34C75918' : '#FF3B3018' }}>
                                 {tipo === 'ENTRADA'
-                                    ? <ArrowDownRight className="h-5 w-5" style={{ color: '#34C759' }} />
-                                    : <ArrowUpRight   className="h-5 w-5" style={{ color: '#FF3B30' }} />}
+                                    ? <ArrowDownRight className="h-7 w-7" style={{ color: '#34C759' }} />
+                                    : <ArrowUpRight className="h-7 w-7" style={{ color: '#FF3B30' }} />}
                             </span>
-                            <DialogTitle className="text-[18px] font-semibold tracking-tight">Nova Movimentação</DialogTitle>
+                            <div>
+                                <DialogTitle className="text-[22px] font-semibold tracking-tight leading-none mb-1.5">Nova Movimentação</DialogTitle>
+                                <p className="text-[14px] text-muted-foreground">Registre os detalhes da transação</p>
+                            </div>
                         </div>
                     </DialogHeader>
 
-                    <div className="px-6 py-5 space-y-5">
+                    {/* Corpos Formulário - Apple Form Style */}
+                    <div className="px-6 py-7 space-y-7 bg-black/[0.02] dark:bg-white/[0.02]">
 
                         {/* 1 — Tipo */}
-                        <div className="space-y-2">
-                            <Label className="text-[13px] font-medium text-foreground">Tipo</Label>
-                            <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-muted/40">
-                                <SegBtn active={tipo === 'ENTRADA'} color="#34C759" onClick={() => setTipo('ENTRADA')}>
-                                    <ArrowDownRight className="h-4 w-4" />Entrada
+                        <div className="space-y-2.5">
+                            <Label className="text-[12px] font-semibold text-muted-foreground/80 uppercase tracking-widest pl-1">Tipo de Operação</Label>
+                            <div className="grid grid-cols-2 gap-1.5 p-1.5 rounded-[16px] bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 shadow-inner relative">
+                                <SegBtn active={tipo === 'ENTRADA'} color="#34C759" onClick={() => setTipo('ENTRADA')} layoutId="tipo-bg">
+                                    <div className="flex items-center gap-2">
+                                        <ArrowDownRight className="h-4 w-4" />Entrada
+                                    </div>
                                 </SegBtn>
-                                <SegBtn active={tipo === 'SAIDA'} color="#FF3B30" onClick={() => setTipo('SAIDA')}>
-                                    <ArrowUpRight className="h-4 w-4" />Saída
+                                <SegBtn active={tipo === 'SAIDA'} color="#FF3B30" onClick={() => setTipo('SAIDA')} layoutId="tipo-bg">
+                                    <div className="flex items-center gap-2">
+                                        <ArrowUpRight className="h-4 w-4" />Saída
+                                    </div>
                                 </SegBtn>
                             </div>
-                        </div>
-
-                        {/* 2 — Valor */}
-                        <div className="space-y-2">
-                            <Label className="text-[13px] font-medium"
-                                style={{ color: tipo === 'ENTRADA' ? '#34C759' : '#FF3B30' }}>
-                                Valor
-                            </Label>
-                            <CurrencyInput
-                                placeholder="0,00"
-                                value={valor}
-                                onChange={e => setValor(e.target.value)}
-                                autoFocus
-                                className="h-12 sm:h-11 rounded-xl"
-                            />
                         </div>
 
                         {/* 3 — Conta (Em Caixa / Aplicado) */}
-                        <div className="space-y-2">
-                            <Label className="text-[13px] font-medium text-foreground">Conta</Label>
-                            <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-muted/40">
-                                <SegBtn active={subconta === 'CAIXA'} color="#34C759" onClick={() => setSubconta('CAIXA')}>
-                                    <Wallet className="h-4 w-4" />Em Caixa
+                        <div className="space-y-2.5">
+                            <Label className="text-[12px] font-semibold text-muted-foreground/80 uppercase tracking-widest pl-1">Conta de Destino</Label>
+                            <div className="grid grid-cols-2 gap-1.5 p-1.5 rounded-[16px] bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 shadow-inner relative">
+                                <SegBtn active={subconta === 'CAIXA'} color="#34C759" onClick={() => setSubconta('CAIXA')} layoutId="conta-bg">
+                                    <div className="flex items-center gap-2">
+                                        <Wallet className="h-4 w-4" />Caixa Principal
+                                    </div>
                                 </SegBtn>
-                                <SegBtn active={subconta === 'APLICADO'} color="#007AFF" onClick={() => setSubconta('APLICADO')}>
-                                    <FileText className="h-4 w-4" />Aplicado
+                                <SegBtn active={subconta === 'APLICADO'} color="#007AFF" onClick={() => setSubconta('APLICADO')} layoutId="conta-bg">
+                                    <div className="flex items-center gap-2">
+                                        <FileText className="h-4 w-4" />Aplicado
+                                    </div>
                                 </SegBtn>
                             </div>
                         </div>
 
-                        {/* 4 — Motivo */}
-                        <div className="space-y-2">
-                            <Label className="text-[13px] font-medium text-foreground">Motivo</Label>
-                            <Input
-                                placeholder={tipo === 'ENTRADA' ? 'Ex: Depósito, Transferência recebida…' : 'Ex: Pagamento fornecedor, Compra…'}
-                                value={motivo}
-                                onChange={e => setMotivo(e.target.value)}
-                                className="h-12 sm:h-11 rounded-xl text-[16px] sm:text-[15px] placeholder:text-muted-foreground/40"
-                            />
+                        {/* 4 — Motivo e Valor (Agrupados Visualmente) */}
+                        <div className="space-y-5 pt-1">
+                            <div className="space-y-2">
+                                <Label className="text-[12px] font-semibold text-muted-foreground/80 uppercase tracking-widest pl-1">Descrição</Label>
+                                <Input
+                                    placeholder={tipo === 'ENTRADA' ? 'Ex: Depósito, Transferência…' : 'Ex: Pagamento, Compra…'}
+                                    value={motivo}
+                                    onChange={e => setMotivo(e.target.value)}
+                                    className="h-[54px] rounded-2xl text-[16px] px-4 font-medium bg-background/50 backdrop-blur-sm border-black/10 dark:border-white/10 shadow-sm focus-visible:ring-1 focus-visible:ring-primary/40 focus-visible:border-primary/40 transition-all"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label className="text-[12px] font-semibold uppercase tracking-widest pl-1"
+                                    style={{ color: tipo === 'ENTRADA' ? '#34C759' : '#FF3B30' }}>
+                                    Valor da Operação
+                                </Label>
+                                <CurrencyInput
+                                    placeholder="0,00"
+                                    value={valor}
+                                    onChange={e => setValor(e.target.value)}
+                                    autoFocus
+                                    className="h-[54px] rounded-2xl text-[18px] px-4 font-bold bg-background/50 backdrop-blur-sm border-black/10 dark:border-white/10 shadow-sm focus-visible:ring-1 focus-visible:ring-primary/40 focus-visible:border-primary/40 transition-all"
+                                />
+                            </div>
                         </div>
+
                     </div>
 
-                    {/* Footer */}
-                    <div className="flex gap-3 px-6 pb-6">
-                        <Button variant="outline" className="flex-1 h-12 sm:h-11 rounded-xl text-[15px] font-medium"
+                    {/* Footer - Apple Large Buttons */}
+                    <div className="flex gap-3 px-6 pb-7 pt-5 relative before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-border/20 before:to-transparent">
+                        <Button variant="outline" className="flex-1 h-[54px] rounded-[18px] text-[16px] font-semibold bg-white/50 dark:bg-black/20 backdrop-blur shadow-sm border-black/5 dark:border-white/5 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
                             onClick={() => { setOpen(false); reset() }}>
                             Cancelar
                         </Button>
                         <Button
-                            className="flex-1 h-12 sm:h-11 rounded-xl text-[15px] font-medium"
+                            className="flex-1 h-[54px] rounded-[18px] text-[16px] font-bold text-white shadow-md shadow-black/10 hover:opacity-90 transition-all cursor-pointer active:scale-[0.96] disabled:active:scale-100 disabled:opacity-50"
                             disabled={!motivo.trim() || !parseCurrency(valor)}
                             onClick={handleAdd}
                             style={{
                                 backgroundColor: motivo.trim() && parseCurrency(valor)
                                     ? (tipo === 'ENTRADA' ? '#34C759' : '#FF3B30')
-                                    : undefined,
+                                    : '#8E8E93',
                             }}>
-                            Registrar
+                            Confirmar Transação
                         </Button>
                     </div>
                 </DialogContent>

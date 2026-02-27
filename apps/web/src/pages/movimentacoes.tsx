@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge'
 import { useMovimentacoes } from '@/hooks/use-supabase'
 import { formatDate, formatNumber, formatCurrency } from '@/lib/utils'
 
+import { useState, useEffect } from 'react'
+
 const tipoConfig: Record<string, { label: string; badge: 'success' | 'destructive' | 'info'; icon: typeof ArrowLeftRight; tint: string }> = {
     ENTRADA: { label: 'Entrada', badge: 'success', icon: ArrowDownRight, tint: '#34C759' },
     SAIDA: { label: 'Saída', badge: 'destructive', icon: ArrowUpRight, tint: '#FF3B30' },
@@ -17,8 +19,46 @@ const statusAprovacao: Record<string, { label: string; variant: 'success' | 'des
     PENDENTE: { label: 'Pendente', variant: 'warning' },
 }
 
+/* ─── Extract LocalStorage Financial Movements ─── */
+function getGlobalFinancialMovs() {
+    try {
+        const contas = JSON.parse(localStorage.getItem('financeiro_contas_v1') || '[]')
+        let allMovs: any[] = []
+        for (const c of contas) {
+            const movs = JSON.parse(localStorage.getItem(`financeiro_mov_${c.id}`) || '[]')
+            const mapped = movs.map((m: any) => ({
+                id: m.id,
+                tipo: m.tipo,
+                material: { nome: m.motivo, codigo: 'FINANCEIRO' },
+                quantidade: 1,
+                preco_unitario: m.valor,
+                almoxarifado: { nome: `Banco: ${c.banco}`, obra: { nome: m.subconta === 'CAIXA' ? 'Caixa Principal' : 'Aplicado' } },
+                updated_at: m.createdAt,
+                created_at: m.createdAt || (m.data ? new Date(m.data).toISOString() : new Date().toISOString()),
+                isFinancial: true
+            }))
+            allMovs = [...allMovs, ...mapped]
+        }
+        return allMovs
+    } catch { return [] }
+}
+
 export function MovimentacoesPage() {
     const { data: movsData, isLoading } = useMovimentacoes()
+    const [unifiedData, setUnifiedData] = useState<any[]>([])
+
+    useEffect(() => {
+        if (!isLoading) {
+            const localMovs = getGlobalFinancialMovs()
+            const sbData = movsData || []
+            const combined = [...sbData, ...localMovs].sort((a, b) => {
+                const dA = new Date(a.created_at).getTime()
+                const dB = new Date(b.created_at).getTime()
+                return dB - dA
+            })
+            setUnifiedData(combined)
+        }
+    }, [movsData, isLoading])
 
     const columns: ColumnDef<any>[] = [
         {
@@ -137,7 +177,7 @@ export function MovimentacoesPage() {
             </div>
 
             <div className="px-4 md:px-8">
-                <DataTable columns={columns} data={movsData || []} isLoading={isLoading} searchPlaceholder="Buscar movimentações..." />
+                <DataTable columns={columns} data={unifiedData} isLoading={isLoading} searchPlaceholder="Buscar movimentações..." />
             </div>
         </div>
     )

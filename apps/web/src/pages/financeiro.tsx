@@ -138,6 +138,43 @@ export function FinanceiroPage() {
         setContas(prev => prev.filter(c => c.id !== id))
     }
 
+    /* ─── Extract LocalStorage Financial Movements ─── */
+    function getGlobalFinancialMovs() {
+        try {
+            const contas = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+            let allMovs: any[] = []
+            for (const c of contas) {
+                const movs = JSON.parse(localStorage.getItem(`financeiro_mov_${c.id}`) || '[]')
+                const mapped = movs.map((m: any) => ({
+                    id: m.id,
+                    tipo: m.tipo,
+                    material: { nome: m.motivo, codigo: 'FINANCEIRO' },
+                    quantidade: 1,
+                    preco_unitario: m.valor,
+                    almoxarifado: { nome: `Banco: ${c.banco}`, obra: { nome: m.subconta === 'CAIXA' ? 'Caixa Principal' : 'Aplicado' } },
+                    updated_at: m.createdAt,
+                    created_at: m.createdAt || (m.data ? new Date(m.data).toISOString() : new Date().toISOString()),
+                    isFinancial: true
+                }))
+                allMovs = [...allMovs, ...mapped]
+            }
+            return allMovs
+        } catch { return [] }
+    }
+
+    const [unifiedRecentMovs, setUnifiedRecentMovs] = useState<any[]>([])
+
+    useEffect(() => {
+        const localMovs = getGlobalFinancialMovs()
+        const sbData = recentMovs || []
+        const combined = [...sbData, ...localMovs].sort((a, b) => {
+            const dA = new Date(a.created_at).getTime()
+            const dB = new Date(b.created_at).getTime()
+            return dB - dA
+        }).slice(0, 10) // Pega apenas os 10 mais recentes
+        setUnifiedRecentMovs(combined)
+    }, [recentMovs, contas]) // Re-run when accounts (which trigger local mov creation) or remote movs change
+
     /* ─── Helpers ─── */
     const contaSubLabel = (c: Conta) =>
         [c.agencia ? `Ag. ${c.agencia}` : '', c.numeroConta].filter(Boolean).join(' · ')
@@ -473,9 +510,9 @@ export function FinanceiroPage() {
                 </div>
 
                 <div className="rounded-2xl bg-card border overflow-hidden">
-                    {movs.length === 0 ? (
+                    {unifiedRecentMovs.length === 0 ? (
                         <p className="text-[15px] text-muted-foreground text-center py-12">Nenhuma movimentação.</p>
-                    ) : movs.map((mov: any, i: number) => {
+                    ) : unifiedRecentMovs.map((mov: any, i: number) => {
                         const t = tipos[mov.tipo] ?? tipos.ENTRADA
                         const Icon = t.icon
                         const cost = mov.quantidade * (mov.precoUnitario ?? mov.preco_unitario ?? mov.material?.preco_unitario ?? 0)

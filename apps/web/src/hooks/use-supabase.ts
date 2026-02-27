@@ -685,11 +685,11 @@ export function useFinanceiroContas() {
         queryKey: ['financeiro', 'contas'],
         queryFn: async () => {
             const { data, error } = await supabase
-                .from('financeiro_contas')
+                .from('financeiro_contas' as any)
                 .select('*')
                 .order('created_at', { ascending: true })
             if (error) throw error
-            return (data || []) as FinanceiroConta[]
+            return (data || []) as any as FinanceiroConta[]
         },
     })
 }
@@ -705,12 +705,12 @@ export function useCreateFinanceiroConta() {
             valor_aplicado: number
         }) => {
             const { data, error } = await supabase
-                .from('financeiro_contas')
+                .from('financeiro_contas' as any)
                 .insert(body)
                 .select()
                 .single()
             if (error) throw error
-            return data as FinanceiroConta
+            return data as any as FinanceiroConta
         },
         onSuccess: () => qc.invalidateQueries({ queryKey: ['financeiro', 'contas'] }),
     })
@@ -721,13 +721,13 @@ export function useUpdateFinanceiroConta() {
     return useMutation({
         mutationFn: async ({ id, ...body }: Partial<FinanceiroConta> & { id: string }) => {
             const { data, error } = await supabase
-                .from('financeiro_contas')
+                .from('financeiro_contas' as any)
                 .update(body as any)
                 .eq('id', id)
                 .select()
                 .single()
             if (error) throw error
-            return data as FinanceiroConta
+            return data as any as FinanceiroConta
         },
         onSuccess: () => qc.invalidateQueries({ queryKey: ['financeiro', 'contas'] }),
     })
@@ -738,7 +738,7 @@ export function useDeleteFinanceiroConta() {
     return useMutation({
         mutationFn: async (id: string) => {
             const { error } = await supabase
-                .from('financeiro_contas')
+                .from('financeiro_contas' as any)
                 .delete()
                 .eq('id', id)
             if (error) throw error
@@ -754,12 +754,12 @@ export function useFinanceiroMovimentacoes(contaId: string) {
         queryKey: ['financeiro', 'movimentacoes', contaId],
         queryFn: async () => {
             const { data, error } = await supabase
-                .from('financeiro_movimentacoes')
+                .from('financeiro_movimentacoes' as any)
                 .select('*')
                 .eq('conta_id', contaId)
                 .order('created_at', { ascending: false })
             if (error) throw error
-            return (data || []) as FinanceiroMovimentacao[]
+            return (data || []) as any as FinanceiroMovimentacao[]
         },
         enabled: !!contaId,
     })
@@ -778,12 +778,12 @@ export function useCreateFinanceiroMovimentacao() {
             transferencia_destino_id?: string | null
         }) => {
             const { data, error } = await supabase
-                .from('financeiro_movimentacoes')
+                .from('financeiro_movimentacoes' as any)
                 .insert(body)
                 .select()
                 .single()
             if (error) throw error
-            return data as FinanceiroMovimentacao
+            return data as any as FinanceiroMovimentacao
         },
         onSuccess: (_data, vars) => {
             qc.invalidateQueries({ queryKey: ['financeiro', 'movimentacoes', vars.conta_id] })
@@ -797,7 +797,7 @@ export function useDeleteFinanceiroMovimentacao() {
     return useMutation({
         mutationFn: async ({ id, contaId }: { id: string; contaId: string }) => {
             const { error } = await supabase
-                .from('financeiro_movimentacoes')
+                .from('financeiro_movimentacoes' as any)
                 .delete()
                 .eq('id', id)
             if (error) throw error

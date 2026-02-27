@@ -3,7 +3,7 @@ import { useParams, useNavigate } from '@tanstack/react-router'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
     ArrowLeft, Landmark, CreditCard, Wallet, FileText,
-    ArrowDownRight, ArrowUpRight, Plus, Trash2, Receipt, ChevronDown,
+    ArrowDownRight, ArrowUpRight, Plus, Trash2, Receipt,
 } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
 import { CurrencyInput, parseCurrency } from '@/components/ui/currency-input'
@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button'
 interface Conta {
     id: string
     banco: string
+    agencia: string
     numeroConta: string
     valorCaixa: number
     valorAplicado: number
@@ -24,6 +25,7 @@ interface Conta {
 interface MovimentacaoConta {
     id: string
     tipo: 'ENTRADA' | 'SAIDA'
+    subconta: 'CAIXA' | 'APLICADO'   // which bucket this movement affects
     motivo: string
     valor: number
     data: string       // YYYY-MM-DD
@@ -50,23 +52,14 @@ function weekAgoStr() {
     const d = new Date(); d.setDate(d.getDate() - 7)
     return d.toISOString().split('T')[0]
 }
-
-/** Format ISO timestamp to full date + time in pt-BR: "14 de fev. de 2026 · 14:32" */
 function formatDateTime(isoStr: string): string {
     if (!isoStr) return '—'
-    const date = new Date(isoStr)
-    const dateStr = date.toLocaleDateString('pt-BR', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
+    const d = new Date(isoStr)
+    return d.toLocaleString('pt-BR', {
+        day: 'numeric', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
     })
-    const timeStr = date.toLocaleTimeString('pt-BR', {
-        hour: '2-digit',
-        minute: '2-digit',
-    })
-    return `${dateStr} · ${timeStr}`
 }
-
 function groupLabel(date: string): string {
     const today = todayStr()
     const weekAgo = weekAgoStr()
@@ -87,7 +80,7 @@ const accents = [
     { bg: '#FF634712', fg: '#FF6347' },
 ]
 
-/* ─── SVG arc ring ─── */
+/* ─── SVG ring ─── */
 function Ring({ percent, size = 96, stroke = 8, color }: { percent: number; size?: number; stroke?: number; color: string }) {
     const r = (size - stroke) / 2
     const circ = 2 * Math.PI * r
@@ -104,6 +97,12 @@ function Ring({ percent, size = 96, stroke = 8, color }: { percent: number; size
     )
 }
 
+/* ─── Subconta config ─── */
+const subcontaOpts = [
+    { key: 'CAIXA' as const, label: 'Em Caixa', icon: Wallet, color: '#34C759' },
+    { key: 'APLICADO' as const, label: 'Aplicado', icon: FileText, color: '#007AFF' },
+]
+
 /* ══════════════════════════════════════════════ */
 export function ContaDetailPage() {
     const { contaId } = useParams({ strict: false }) as { contaId: string }
@@ -113,13 +112,9 @@ export function ContaDetailPage() {
     const conta = useMemo(() => loadContas().find(c => c.id === contaId), [contaId])
     const accentIdx = useMemo(() => {
         if (!conta) return 0
-        const all = loadContas()
-        return all.findIndex(c => c.id === contaId) % accents.length
+        return loadContas().findIndex(c => c.id === contaId) % accents.length
     }, [conta, contaId])
     const accent = accents[accentIdx]
-
-    /* ─── All contas (for Conta selector in modal) ─── */
-    const [allContas] = useState<Conta[]>(() => loadContas())
 
     /* ─── Movimentações ─── */
     const [movs, setMovs] = useState<MovimentacaoConta[]>(() => loadMovs(contaId))
@@ -127,12 +122,12 @@ export function ContaDetailPage() {
 
     /* ─── Computed totals ─── */
     const totalEntradas = useMemo(() => movs.filter(m => m.tipo === 'ENTRADA').reduce((s, m) => s + m.valor, 0), [movs])
-    const totalSaidas = useMemo(() => movs.filter(m => m.tipo === 'SAIDA').reduce((s, m) => s + m.valor, 0), [movs])
+    const totalSaidas   = useMemo(() => movs.filter(m => m.tipo === 'SAIDA').reduce((s, m) => s + m.valor, 0), [movs])
     const baseTotal = (conta?.valorCaixa ?? 0) + (conta?.valorAplicado ?? 0)
     const saldoAtual = baseTotal + totalEntradas - totalSaidas
-    const caixaPct = saldoAtual > 0 ? Math.round(((conta?.valorCaixa ?? 0) / baseTotal) * 100) : 0
+    const caixaPct = baseTotal > 0 ? Math.round(((conta?.valorCaixa ?? 0) / baseTotal) * 100) : 0
 
-    /* ─── Grouped movs (sorted desc by date then createdAt) ─── */
+    /* ─── Grouped movs ─── */
     const grouped = useMemo(() => {
         const sorted = [...movs].sort((a, b) =>
             b.data.localeCompare(a.data) || b.createdAt.localeCompare(a.createdAt)
@@ -147,40 +142,26 @@ export function ContaDetailPage() {
         return order.filter(k => map.has(k)).map(k => ({ label: k, items: map.get(k)! }))
     }, [movs])
 
-    /* ─── Add movimentação modal ─── */
+    /* ─── Modal state ─── */
     const [modalOpen, setModalOpen] = useState(false)
     const [tipo, setTipo] = useState<'ENTRADA' | 'SAIDA'>('ENTRADA')
     const [valor, setValor] = useState('')
-    const [contaSelecionada, setContaSelecionada] = useState(contaId)
+    const [subconta, setSubconta] = useState<'CAIXA' | 'APLICADO'>('CAIXA')
     const [motivo, setMotivo] = useState('')
 
-    const resetModal = () => {
-        setTipo('ENTRADA')
-        setValor('')
-        setContaSelecionada(contaId)
-        setMotivo('')
-    }
+    const resetModal = () => { setTipo('ENTRADA'); setValor(''); setSubconta('CAIXA'); setMotivo('') }
 
     const handleAdd = () => {
         if (!motivo.trim() || !valor) return
         const nova: MovimentacaoConta = {
             id: crypto.randomUUID(),
-            tipo,
+            tipo, subconta,
             motivo: motivo.trim(),
             valor: parseCurrency(valor),
             data: todayStr(),
             createdAt: new Date().toISOString(),
         }
-
-        if (contaSelecionada === contaId) {
-            // Add to current conta's state (auto-saved via useEffect)
-            setMovs(prev => [nova, ...prev])
-        } else {
-            // Add to a different conta's localStorage directly
-            const otherMovs = loadMovs(contaSelecionada)
-            saveMovs(contaSelecionada, [nova, ...otherMovs])
-        }
-
+        setMovs(prev => [nova, ...prev])
         setModalOpen(false)
         resetModal()
     }
@@ -200,27 +181,29 @@ export function ContaDetailPage() {
         )
     }
 
+    const contaLabel = [conta.agencia ? `Ag. ${conta.agencia}` : '', conta.numeroConta].filter(Boolean).join(' · ')
+
     /* ══════ RENDER ══════ */
     return (
         <div className="pb-20">
 
-            {/* ─── Back nav + title ─── */}
+            {/* ─── Back nav ─── */}
             <motion.div
                 initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
-                className="px-4 md:px-6 pt-6 pb-2 flex items-center gap-3"
+                className="px-4 md:px-6 pt-6 pb-2"
             >
                 <motion.button
-                    whileTap={{ scale: 0.92 }}
+                    whileTap={{ scale: 0.93 }}
                     onClick={() => navigate({ to: '/financeiro' })}
-                    className="flex items-center gap-1 text-primary text-[17px] font-regular hover:opacity-70 transition-opacity"
+                    className="flex items-center gap-1.5 text-primary text-[17px] font-medium hover:opacity-70 transition-opacity min-h-[44px]"
                 >
                     <ArrowLeft className="h-5 w-5" />
                     <span>Contas</span>
                 </motion.button>
             </motion.div>
 
-            {/* ─── Hero: bank identity ─── */}
+            {/* ─── Hero identity ─── */}
             <motion.div
                 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.05 }}
@@ -232,13 +215,13 @@ export function ContaDetailPage() {
                         <Landmark className="h-7 w-7" style={{ color: accent.fg }} />
                     </span>
                     <div className="min-w-0">
-                        <h1 className="text-[28px] md:text-[32px] font-bold tracking-tight leading-none truncate">
+                        <h1 className="text-[26px] md:text-[32px] font-bold tracking-tight leading-none truncate">
                             {conta.banco}
                         </h1>
-                        {conta.numeroConta && (
+                        {contaLabel && (
                             <p className="flex items-center gap-1.5 text-[14px] text-muted-foreground mt-1.5">
-                                <CreditCard className="h-3.5 w-3.5 opacity-50" />
-                                {conta.numeroConta}
+                                <CreditCard className="h-3.5 w-3.5 opacity-50 flex-shrink-0" />
+                                <span className="truncate">{contaLabel}</span>
                             </p>
                         )}
                     </div>
@@ -252,19 +235,18 @@ export function ContaDetailPage() {
                 className="px-4 md:px-6"
             >
                 <div className="rounded-2xl bg-card border p-5 md:p-6">
-                    <div className="flex items-center gap-6 md:gap-8">
-                        {/* Ring: caixa% of base */}
+                    <div className="flex items-center gap-5 md:gap-8">
                         <div className="relative flex-shrink-0">
-                            <Ring percent={caixaPct} size={96} stroke={8} color={accent.fg} />
+                            <Ring percent={caixaPct} size={88} stroke={8} color={accent.fg} />
                             <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                <span className="text-[18px] font-bold tabular-nums leading-none">{caixaPct}%</span>
-                                <span className="text-[9px] text-muted-foreground mt-0.5 uppercase tracking-wider">caixa</span>
+                                <span className="text-[17px] font-bold tabular-nums leading-none">{caixaPct}%</span>
+                                <span className="text-[8px] text-muted-foreground mt-0.5 uppercase tracking-wider">caixa</span>
                             </div>
                         </div>
 
                         <div className="min-w-0 flex-1">
                             <p className="text-[11px] text-muted-foreground uppercase tracking-widest mb-1">Saldo Atual</p>
-                            <p className="text-[32px] md:text-[38px] font-bold tabular-nums tracking-tight leading-none">
+                            <p className="text-[28px] md:text-[38px] font-bold tabular-nums tracking-tight leading-none">
                                 {formatCurrency(saldoAtual)}
                             </p>
                             {(totalEntradas > 0 || totalSaidas > 0) && (
@@ -278,7 +260,7 @@ export function ContaDetailPage() {
                         </div>
                     </div>
 
-                    {/* Caixa / Aplicado breakdown */}
+                    {/* Breakdown */}
                     <div className="flex gap-4 mt-5 pt-5 border-t border-border/20">
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5 mb-1">
@@ -292,9 +274,7 @@ export function ContaDetailPage() {
                                 {formatCurrency(conta.valorCaixa)}
                             </p>
                         </div>
-
                         <div className="w-px bg-border/30" />
-
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5 mb-1">
                                 <span className="flex h-5 w-5 items-center justify-center rounded-md flex-shrink-0"
@@ -322,7 +302,7 @@ export function ContaDetailPage() {
                     <motion.button
                         whileTap={{ scale: 0.93 }}
                         onClick={() => { resetModal(); setModalOpen(true) }}
-                        className="flex items-center gap-1.5 text-[15px] text-primary font-medium hover:opacity-70 transition-opacity"
+                        className="flex items-center gap-1.5 text-[15px] text-primary font-medium hover:opacity-70 transition-opacity min-h-[44px]"
                     >
                         <Plus className="h-4 w-4" />
                         Adicionar
@@ -331,7 +311,6 @@ export function ContaDetailPage() {
 
                 <AnimatePresence mode="popLayout">
                     {movs.length === 0 ? (
-                        /* Empty state */
                         <motion.div
                             key="empty"
                             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
@@ -350,7 +329,7 @@ export function ContaDetailPage() {
                             <motion.button
                                 whileTap={{ scale: 0.95 }}
                                 onClick={() => { resetModal(); setModalOpen(true) }}
-                                className="mt-5 flex items-center gap-1.5 px-4 py-2 rounded-xl text-[14px] font-medium text-white hover:opacity-90 transition-opacity"
+                                className="mt-5 flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-[15px] font-medium text-white hover:opacity-90 transition-opacity"
                                 style={{ backgroundColor: accent.fg }}
                             >
                                 <Plus className="h-4 w-4" />
@@ -358,7 +337,6 @@ export function ContaDetailPage() {
                             </motion.button>
                         </motion.div>
                     ) : (
-                        /* Grouped transaction list */
                         <motion.div key="list" className="space-y-6">
                             {grouped.map((group, gi) => (
                                 <motion.div
@@ -367,27 +345,28 @@ export function ContaDetailPage() {
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.3, delay: gi * 0.06 }}
                                 >
-                                    {/* Group header */}
                                     <p className="text-[12px] font-semibold text-muted-foreground uppercase tracking-widest mb-2 px-1">
                                         {group.label}
                                     </p>
 
-                                    {/* Transactions card */}
                                     <div className="rounded-2xl bg-card border overflow-hidden divide-y divide-border/15">
                                         <AnimatePresence>
                                             {group.items.map((mov) => {
                                                 const isEntrada = mov.tipo === 'ENTRADA'
                                                 const tint = isEntrada ? '#34C759' : '#FF3B30'
                                                 const Icon = isEntrada ? ArrowDownRight : ArrowUpRight
+                                                const sc = mov.subconta ?? 'CAIXA'
+                                                const scColor = sc === 'CAIXA' ? '#34C759' : '#007AFF'
+                                                const scLabel = sc === 'CAIXA' ? 'Caixa' : 'Aplicado'
                                                 return (
                                                     <motion.div
                                                         key={mov.id}
                                                         layout
                                                         exit={{ opacity: 0, x: -20, transition: { duration: 0.2 } }}
-                                                        className="flex items-center gap-3 md:gap-4 px-4 py-3.5 group"
+                                                        className="flex items-center gap-3 px-4 py-3.5 group"
                                                     >
-                                                        {/* Colored left accent bar */}
-                                                        <div className="w-[3px] h-10 rounded-full flex-shrink-0 self-center"
+                                                        {/* Accent bar */}
+                                                        <div className="w-[3px] h-11 rounded-full flex-shrink-0 self-center"
                                                             style={{ backgroundColor: tint }} />
 
                                                         {/* Icon */}
@@ -398,9 +377,16 @@ export function ContaDetailPage() {
 
                                                         {/* Info */}
                                                         <div className="min-w-0 flex-1">
-                                                            <p className="text-[15px] font-medium leading-snug truncate">
-                                                                {mov.motivo}
-                                                            </p>
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <p className="text-[15px] font-medium leading-snug truncate">
+                                                                    {mov.motivo}
+                                                                </p>
+                                                                {/* Subconta badge */}
+                                                                <span className="flex-shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                                                                    style={{ backgroundColor: `${scColor}18`, color: scColor }}>
+                                                                    {scLabel}
+                                                                </span>
+                                                            </div>
                                                             <p className="text-[12px] text-muted-foreground mt-0.5 tabular-nums">
                                                                 {formatDateTime(mov.createdAt)}
                                                             </p>
@@ -408,14 +394,15 @@ export function ContaDetailPage() {
 
                                                         {/* Value + delete */}
                                                         <div className="flex items-center gap-2 flex-shrink-0">
-                                                            <p className="text-[16px] font-semibold tabular-nums"
+                                                            <p className="text-[15px] font-semibold tabular-nums"
                                                                 style={{ color: tint }}>
                                                                 {isEntrada ? '+' : '−'}{formatCurrency(mov.valor)}
                                                             </p>
+                                                            {/* Always visible on mobile, hover on desktop */}
                                                             <motion.button
                                                                 whileTap={{ scale: 0.88 }}
                                                                 onClick={() => handleDelete(mov.id)}
-                                                                className="flex h-7 w-7 items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                                                                className="flex h-8 w-8 items-center justify-center rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0"
                                                                 style={{ backgroundColor: '#FF3B3010' }}
                                                             >
                                                                 <Trash2 className="h-3.5 w-3.5" style={{ color: '#FF3B30' }} />
@@ -437,10 +424,25 @@ export function ContaDetailPage() {
                 MODAL: Nova Movimentação
             ══════════════════════════════════════════ */}
             <Dialog open={modalOpen} onOpenChange={(open) => { setModalOpen(open); if (!open) resetModal() }}>
-                <DialogContent className="sm:max-w-[400px] rounded-2xl p-0 overflow-hidden gap-0">
+                <DialogContent className={cn(
+                    /* shared */
+                    'gap-0 p-0 overflow-hidden border-0 shadow-2xl',
+                    /* mobile: full-width bottom sheet */
+                    'left-0 right-0 bottom-0 top-auto translate-x-0 translate-y-0',
+                    'w-full max-w-none rounded-t-[28px] rounded-b-none',
+                    /* desktop: centered dialog */
+                    'sm:left-[50%] sm:top-[50%] sm:bottom-auto sm:right-auto',
+                    'sm:translate-x-[-50%] sm:translate-y-[-50%]',
+                    'sm:w-auto sm:max-w-[440px] sm:rounded-2xl sm:border',
+                )}>
+
+                    {/* iOS-style drag handle — mobile only */}
+                    <div className="flex justify-center pt-3 pb-1 sm:hidden">
+                        <div className="h-1 w-10 rounded-full bg-foreground/15" />
+                    </div>
 
                     {/* Header */}
-                    <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/20">
+                    <DialogHeader className="px-6 pt-4 sm:pt-6 pb-4 border-b border-border/20">
                         <div className="flex items-center gap-3">
                             <span className="flex h-10 w-10 items-center justify-center rounded-[12px]"
                                 style={{ backgroundColor: tipo === 'ENTRADA' ? '#34C75914' : '#FF3B3014' }}>
@@ -455,11 +457,11 @@ export function ContaDetailPage() {
                         </div>
                     </DialogHeader>
 
-                    <div className="px-6 py-5 space-y-4">
+                    <div className="px-6 py-5 space-y-5">
 
-                        {/* 1. Tipo — segmented control */}
-                        <div className="space-y-1.5">
-                            <Label className="text-[13px] font-medium text-foreground">Tipo</Label>
+                        {/* 1. Tipo */}
+                        <div className="space-y-2">
+                            <Label className="text-[14px] sm:text-[13px] font-medium text-foreground">Tipo</Label>
                             <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-muted/40">
                                 {(['ENTRADA', 'SAIDA'] as const).map((t) => {
                                     const active = tipo === t
@@ -467,12 +469,11 @@ export function ContaDetailPage() {
                                     const Icon = t === 'ENTRADA' ? ArrowDownRight : ArrowUpRight
                                     return (
                                         <motion.button
-                                            key={t}
-                                            whileTap={{ scale: 0.96 }}
+                                            key={t} whileTap={{ scale: 0.96 }}
                                             onClick={() => setTipo(t)}
                                             className={cn(
-                                                'flex items-center justify-center gap-1.5 py-2 rounded-[10px] text-[14px] font-medium transition-all',
-                                                active ? 'bg-card shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                                                'flex items-center justify-center gap-1.5 rounded-[10px] text-[15px] font-medium transition-all min-h-[44px]',
+                                                active ? 'bg-card shadow-sm' : 'text-muted-foreground',
                                             )}
                                             style={active ? { color } : {}}
                                         >
@@ -485,8 +486,8 @@ export function ContaDetailPage() {
                         </div>
 
                         {/* 2. Valor */}
-                        <div className="space-y-1.5">
-                            <Label className="text-[13px] font-medium"
+                        <div className="space-y-2">
+                            <Label className="text-[14px] sm:text-[13px] font-medium"
                                 style={{ color: tipo === 'ENTRADA' ? '#34C759' : '#FF3B30' }}>
                                 Valor
                             </Label>
@@ -495,57 +496,57 @@ export function ContaDetailPage() {
                                 value={valor}
                                 onChange={e => setValor(e.target.value)}
                                 autoFocus
-                                className="h-11 rounded-xl text-[15px]"
+                                className="h-12 sm:h-11 rounded-xl"
                             />
                         </div>
 
-                        {/* 3. Conta */}
-                        <div className="space-y-1.5">
-                            <Label className="text-[13px] font-medium text-foreground">Conta</Label>
-                            <div className="relative">
-                                <select
-                                    value={contaSelecionada}
-                                    onChange={e => setContaSelecionada(e.target.value)}
-                                    className={cn(
-                                        'w-full h-11 rounded-xl border bg-transparent',
-                                        'pl-4 pr-10 text-[15px] appearance-none cursor-pointer',
-                                        'focus:outline-none focus:ring-2 focus:ring-ring/40 focus:ring-offset-1 focus:ring-offset-background',
-                                        'transition-colors',
-                                    )}
-                                >
-                                    {allContas.map(c => (
-                                        <option key={c.id} value={c.id}>
-                                            {c.banco}{c.numeroConta ? ` · ${c.numeroConta}` : ''}
-                                        </option>
-                                    ))}
-                                </select>
-                                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        {/* 3. Conta — Em Caixa ou Aplicado */}
+                        <div className="space-y-2">
+                            <Label className="text-[14px] sm:text-[13px] font-medium text-foreground">Conta</Label>
+                            <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-muted/40">
+                                {subcontaOpts.map(({ key, label, icon: Icon, color }) => {
+                                    const active = subconta === key
+                                    return (
+                                        <motion.button
+                                            key={key} whileTap={{ scale: 0.96 }}
+                                            onClick={() => setSubconta(key)}
+                                            className={cn(
+                                                'flex items-center justify-center gap-1.5 rounded-[10px] text-[15px] font-medium transition-all min-h-[48px]',
+                                                active ? 'bg-card shadow-sm' : 'text-muted-foreground',
+                                            )}
+                                            style={active ? { color } : {}}
+                                        >
+                                            <Icon className="h-4 w-4" />
+                                            {label}
+                                        </motion.button>
+                                    )
+                                })}
                             </div>
                         </div>
 
                         {/* 4. Motivo */}
-                        <div className="space-y-1.5">
-                            <Label className="text-[13px] font-medium text-foreground">Motivo</Label>
+                        <div className="space-y-2">
+                            <Label className="text-[14px] sm:text-[13px] font-medium text-foreground">Motivo</Label>
                             <Input
-                                placeholder={tipo === 'ENTRADA' ? 'Ex: Depósito, Transferência recebida…' : 'Ex: Pagamento fornecedor, Compra…'}
+                                placeholder={tipo === 'ENTRADA' ? 'Ex: Depósito, Transferência…' : 'Ex: Pagamento fornecedor, Compra…'}
                                 value={motivo}
                                 onChange={e => setMotivo(e.target.value)}
-                                className="h-11 rounded-xl text-[15px] placeholder:text-muted-foreground/40"
+                                className="h-12 sm:h-11 rounded-xl text-[16px] sm:text-[15px] placeholder:text-muted-foreground/40"
                             />
                         </div>
                     </div>
 
                     {/* Footer */}
-                    <div className="flex gap-3 px-6 pb-6">
+                    <div className="flex gap-3 px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6">
                         <Button
                             variant="outline"
-                            className="flex-1 h-11 rounded-xl text-[15px] font-medium"
+                            className="flex-1 h-12 sm:h-11 rounded-xl text-[16px] sm:text-[15px] font-medium"
                             onClick={() => { setModalOpen(false); resetModal() }}
                         >
                             Cancelar
                         </Button>
                         <Button
-                            className="flex-1 h-11 rounded-xl text-[15px] font-medium"
+                            className="flex-1 h-12 sm:h-11 rounded-xl text-[16px] sm:text-[15px] font-medium"
                             disabled={!motivo.trim() || !valor}
                             onClick={handleAdd}
                             style={{

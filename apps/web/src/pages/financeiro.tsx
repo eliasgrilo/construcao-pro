@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button'
 interface Conta {
     id: string
     banco: string
+    agencia: string
     numeroConta: string
     valorCaixa: number
     valorAplicado: number
@@ -48,6 +49,7 @@ function Ring({ percent, size = 80, stroke = 6, color }: { percent: number; size
             <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round"
                 strokeDasharray={`${(Math.min(percent, 100) / 100) * circ} ${circ}`}
                 transform={`rotate(-90 ${size / 2} ${size / 2})`}
+                style={{ transition: 'stroke-dasharray 0.8s cubic-bezier(0.34,1.56,0.64,1)' }}
             />
         </svg>
     )
@@ -70,12 +72,24 @@ const tipos: Record<string, { label: string; icon: typeof ArrowLeftRight; tint: 
 
 const STORAGE_KEY = 'financeiro_contas_v1'
 
+/* ─── Bottom-sheet modal className helper ─── */
+const sheetCn = cn(
+    /* shared */
+    'gap-0 p-0 overflow-hidden border-0 shadow-2xl',
+    /* mobile: full-width bottom sheet */
+    'left-0 right-0 bottom-0 top-auto translate-x-0 translate-y-0',
+    'w-full max-w-none rounded-t-[28px] rounded-b-none',
+    /* desktop: centered dialog */
+    'sm:left-[50%] sm:top-[50%] sm:bottom-auto sm:right-auto',
+    'sm:translate-x-[-50%] sm:translate-y-[-50%]',
+    'sm:w-auto sm:max-w-[440px] sm:rounded-2xl sm:border',
+)
+
 export function FinanceiroPage() {
     const navigate = useNavigate()
 
     const { data: stats } = useDashboardStats()
     const { data: recentMovs } = useMovimentacoesRecentes()
-    const { data: custoPorObra } = useDashboardCustoPorObra()
     const { data: alertasData } = useEstoqueAlertas()
     const { data: obrasData } = useObras()
 
@@ -93,9 +107,7 @@ export function FinanceiroPage() {
         try {
             const stored = localStorage.getItem(STORAGE_KEY)
             return stored ? JSON.parse(stored) : []
-        } catch {
-            return []
-        }
+        } catch { return [] }
     })
 
     useEffect(() => {
@@ -105,24 +117,23 @@ export function FinanceiroPage() {
     /* ─── Add Conta modal state ─── */
     const [modalOpen, setModalOpen] = useState(false)
     const [banco, setBanco] = useState('')
+    const [agencia, setAgencia] = useState('')
     const [numeroConta, setNumeroConta] = useState('')
     const [valorCaixa, setValorCaixa] = useState('')
     const [valorAplicado, setValorAplicado] = useState('')
 
     const resetForm = () => {
-        setBanco(''); setNumeroConta(''); setValorCaixa(''); setValorAplicado('')
+        setBanco(''); setAgencia(''); setNumeroConta(''); setValorCaixa(''); setValorAplicado('')
     }
 
-    const handleOpenModal = () => {
-        resetForm()
-        setModalOpen(true)
-    }
+    const handleOpenModal = () => { resetForm(); setModalOpen(true) }
 
     const handleAddConta = () => {
         if (!banco.trim()) return
         const nova: Conta = {
             id: crypto.randomUUID(),
             banco: banco.trim(),
+            agencia: agencia.trim(),
             numeroConta: numeroConta.trim(),
             valorCaixa: parseCurrency(valorCaixa),
             valorAplicado: parseCurrency(valorAplicado),
@@ -137,49 +148,55 @@ export function FinanceiroPage() {
         setContas(prev => prev.filter(c => c.id !== id))
     }
 
-    return (
-        <div className="pb-16 pt-10">
+    /* ─── Helpers ─── */
+    const contaSubLabel = (c: Conta) =>
+        [c.agencia ? `Ag. ${c.agencia}` : '', c.numeroConta].filter(Boolean).join(' · ')
 
-            {/* ─── Financial Summary ─── */}
+    return (
+        <div className="pb-20 pt-8 md:pt-10">
+
+            {/* ─── Orçamento Geral ─── */}
             <motion.div
                 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.1 }}
                 className="px-4 md:px-6"
             >
-                <div className="flex items-baseline justify-between mb-4">
-                    <h2 className="text-[20px] md:text-[22px] font-bold tracking-tight">Orçamento Geral</h2>
-                </div>
-                <div className="rounded-2xl bg-card p-5 md:p-6">
-                    <div className="flex flex-col items-center gap-5 md:flex-row md:items-center md:gap-8">
-                        <div className="relative">
-                            <Ring percent={pct} size={120} stroke={10} color={ringColor(pct)} />
+                <h2 className="text-[20px] md:text-[22px] font-bold tracking-tight mb-4">Orçamento Geral</h2>
+                <div className="rounded-2xl bg-card border p-5 md:p-6">
+                    <div className="flex items-center gap-5 md:gap-8">
+                        {/* Ring — always row layout */}
+                        <div className="relative flex-shrink-0">
+                            <Ring percent={pct} size={100} stroke={9} color={ringColor(pct)} />
                             <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                <span className="text-[24px] font-bold tabular-nums leading-none">{pct}%</span>
-                                <span className="text-[11px] text-muted-foreground mt-1 uppercase tracking-wider">usado</span>
+                                <span className="text-[22px] font-bold tabular-nums leading-none">{pct}%</span>
+                                <span className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-wider">usado</span>
                             </div>
                         </div>
-                        <div className="text-center md:text-left">
-                            <p className="text-[26px] md:text-[34px] font-bold tabular-nums tracking-tight leading-none">
+
+                        <div className="min-w-0 flex-1">
+                            <p className="text-[24px] md:text-[32px] font-bold tabular-nums tracking-tight leading-none">
                                 {formatCurrency(s?.custoTotal ?? 0)}
                             </p>
-                            <p className="text-[15px] md:text-[17px] text-muted-foreground mt-2">
+                            <p className="text-[14px] md:text-[15px] text-muted-foreground mt-1.5">
                                 de {formatCurrency(s?.orcamentoTotal ?? 0)} em orçamento
                             </p>
-                            <div className="flex justify-center md:justify-start gap-5 mt-4 pt-4 border-t border-border/20">
+
+                            {/* Status breakdown */}
+                            <div className="flex gap-4 md:gap-5 mt-4 pt-4 border-t border-border/20">
                                 {statusBreakdown.map((st) => {
                                     const count = obrasData?.filter((o: any) => o.status === st.key).length ?? 0
                                     return (
                                         <motion.div
                                             key={st.key}
-                                            className={cn('transition-opacity duration-300', count === 0 ? 'opacity-30' : 'opacity-100')}
-                                            whileTap={{ scale: 0.94 }}
+                                            className={cn('transition-opacity min-w-0', count === 0 ? 'opacity-30' : 'opacity-100')}
+                                            whileTap={{ scale: 0.93 }}
                                             onClick={() => navigate({ to: '/obras' })}
                                             style={{ cursor: 'pointer' }}
                                         >
-                                            <p className="text-[20px] md:text-[22px] font-semibold tabular-nums leading-none">{count}</p>
+                                            <p className="text-[18px] md:text-[22px] font-semibold tabular-nums leading-none">{count}</p>
                                             <div className="flex items-center gap-1 mt-1">
                                                 <span className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: st.color }} />
-                                                <p className="text-[13px] text-muted-foreground">{st.label}</p>
+                                                <p className="text-[12px] md:text-[13px] text-muted-foreground whitespace-nowrap">{st.label}</p>
                                             </div>
                                         </motion.div>
                                     )
@@ -194,23 +211,23 @@ export function FinanceiroPage() {
             <motion.div
                 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.2 }}
-                className="px-4 md:px-6 mt-6 grid grid-cols-2 gap-3 md:gap-4"
+                className="px-4 md:px-6 mt-5 grid grid-cols-2 gap-3"
             >
                 {/* Alertas de Estoque */}
-                <div className="rounded-2xl bg-card p-4 md:p-5">
+                <div className="rounded-2xl bg-card border p-4 md:p-5">
                     <span className="flex h-10 w-10 items-center justify-center rounded-xl mb-3"
                         style={{ backgroundColor: alertas.length > 0 ? '#FF3B3018' : '#8E8E9318' }}>
                         <AlertTriangle className="h-5 w-5" style={{ color: alertas.length > 0 ? clr.red : '#8E8E93' }} />
                     </span>
-                    <p className="text-[24px] md:text-[28px] font-bold tabular-nums leading-none">{alertas.length}</p>
-                    <p className="text-[13px] md:text-[15px] text-muted-foreground mt-1">
+                    <p className="text-[22px] md:text-[26px] font-bold tabular-nums leading-none">{alertas.length}</p>
+                    <p className="text-[13px] md:text-[14px] text-muted-foreground mt-1 leading-tight">
                         {alertas.length === 1 ? 'Alerta de estoque' : 'Alertas de estoque'}
                     </p>
                 </div>
 
                 {/* Terrenos em Standby */}
                 <motion.div
-                    className="rounded-2xl bg-card p-4 md:p-5 cursor-pointer"
+                    className="rounded-2xl bg-card border p-4 md:p-5 cursor-pointer"
                     whileTap={{ scale: 0.97 }}
                     onClick={() => navigate({ to: '/obras' })}
                 >
@@ -218,10 +235,11 @@ export function FinanceiroPage() {
                         style={{ backgroundColor: '#AF52DE18' }}>
                         <Landmark className="h-5 w-5" style={{ color: '#AF52DE' }} />
                     </span>
-                    <p className="text-[18px] md:text-[20px] font-bold tabular-nums leading-none" style={{ color: terrenosStandby.length > 0 ? '#AF52DE' : undefined }}>
+                    <p className="text-[16px] md:text-[18px] font-bold tabular-nums leading-none"
+                        style={{ color: terrenosStandby.length > 0 ? '#AF52DE' : undefined }}>
                         {formatCurrency(totalTerrenos)}
                     </p>
-                    <p className="text-[13px] md:text-[15px] text-muted-foreground mt-1">
+                    <p className="text-[13px] md:text-[14px] text-muted-foreground mt-1 leading-tight">
                         Terrenos em Standby
                         {terrenosStandby.length > 0 && (
                             <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 rounded-full text-[10px] font-semibold px-1"
@@ -239,12 +257,12 @@ export function FinanceiroPage() {
                 transition={{ duration: 0.4, delay: 0.3 }}
                 className="mt-10 px-4 md:px-6"
             >
-                <div className="flex items-baseline justify-between mb-4">
+                <div className="flex items-center justify-between mb-4">
                     <h2 className="text-[20px] md:text-[22px] font-bold tracking-tight">Contas</h2>
                     <motion.button
                         whileTap={{ scale: 0.94 }}
                         onClick={handleOpenModal}
-                        className="flex items-center gap-1.5 text-[15px] md:text-[17px] text-primary font-medium hover:text-primary/80 transition-colors"
+                        className="flex items-center gap-1.5 text-[15px] text-primary font-medium hover:text-primary/80 transition-colors min-h-[44px] px-1"
                     >
                         <Plus className="h-4 w-4" />
                         Adicionar Conta
@@ -255,24 +273,23 @@ export function FinanceiroPage() {
                     {contas.length === 0 ? (
                         <motion.div
                             key="empty"
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
+                            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -8 }}
                             transition={{ duration: 0.25 }}
-                            className="flex flex-col items-center justify-center py-14 rounded-2xl border border-dashed border-border/50"
+                            className="flex flex-col items-center justify-center py-16 rounded-2xl border border-dashed border-border/50"
                         >
                             <span className="flex h-14 w-14 items-center justify-center rounded-2xl mb-4"
                                 style={{ backgroundColor: '#007AFF10' }}>
                                 <CreditCard className="h-7 w-7" style={{ color: '#007AFF' }} />
                             </span>
                             <p className="text-[17px] font-semibold">Nenhuma conta cadastrada</p>
-                            <p className="text-[14px] text-muted-foreground mt-1 text-center max-w-[220px]">
+                            <p className="text-[14px] text-muted-foreground mt-1.5 text-center max-w-[240px] leading-relaxed">
                                 Adicione suas contas bancárias para acompanhar o saldo
                             </p>
                             <motion.button
                                 whileTap={{ scale: 0.95 }}
                                 onClick={handleOpenModal}
-                                className="mt-5 flex items-center gap-1.5 px-4 py-2 rounded-xl text-[14px] font-medium text-white transition-opacity hover:opacity-90"
+                                className="mt-6 flex items-center gap-1.5 px-5 py-3 rounded-xl text-[15px] font-medium text-white transition-opacity hover:opacity-90 min-h-[48px]"
                                 style={{ backgroundColor: '#007AFF' }}
                             >
                                 <Plus className="h-4 w-4" />
@@ -282,14 +299,14 @@ export function FinanceiroPage() {
                     ) : (
                         <motion.div
                             key="grid"
-                            initial="hidden"
-                            animate="show"
+                            initial="hidden" animate="show"
                             variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06 } } }}
                             className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
                         >
                             {contas.map((conta, i) => {
                                 const accent = accents[i % accents.length]
                                 const total = conta.valorCaixa + conta.valorAplicado
+                                const sub = contaSubLabel(conta)
                                 return (
                                     <motion.div
                                         key={conta.id}
@@ -298,16 +315,16 @@ export function FinanceiroPage() {
                                         exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
                                         whileTap={{ scale: 0.97 }}
                                         onClick={() => navigate({ to: '/financeiro/$contaId', params: { contaId: conta.id } })}
-                                        className="rounded-[20px] bg-card border shadow-sm shadow-black/[0.03] p-5 md:p-6 relative overflow-hidden group cursor-pointer"
+                                        className="rounded-[20px] bg-card border shadow-sm shadow-black/[0.04] p-5 md:p-6 relative overflow-hidden group cursor-pointer active:scale-[0.97] transition-transform"
                                     >
-                                        {/* Delete button */}
+                                        {/* Delete */}
                                         <motion.button
                                             whileTap={{ scale: 0.9 }}
                                             onClick={(e) => handleDeleteConta(conta.id, e)}
-                                            className="absolute top-4 right-4 flex h-7 w-7 items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                            style={{ backgroundColor: '#FF3B3014' }}
+                                            className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                                            style={{ backgroundColor: '#FF3B3012' }}
                                         >
-                                            <Trash2 className="h-3.5 w-3.5" style={{ color: clr.red }} />
+                                            <Trash2 className="h-4 w-4" style={{ color: clr.red }} />
                                         </motion.button>
 
                                         {/* Bank icon */}
@@ -317,24 +334,23 @@ export function FinanceiroPage() {
                                         </span>
 
                                         {/* Bank name */}
-                                        <p className="text-[15px] font-semibold truncate pr-8">{conta.banco}</p>
+                                        <p className="text-[16px] font-semibold truncate pr-9">{conta.banco}</p>
 
-                                        {/* Account number */}
-                                        {conta.numeroConta && (
-                                            <p className="flex items-center gap-1 text-[12px] text-muted-foreground mt-0.5 truncate">
-                                                <CreditCard className="h-[11px] w-[11px] shrink-0 opacity-50" />
-                                                <span className="truncate">{conta.numeroConta}</span>
+                                        {/* Agencia + Numero */}
+                                        {sub && (
+                                            <p className="flex items-center gap-1 text-[13px] text-muted-foreground mt-0.5 truncate">
+                                                <CreditCard className="h-3 w-3 shrink-0 opacity-50" />
+                                                <span className="truncate">{sub}</span>
                                             </p>
                                         )}
 
                                         {/* Total */}
-                                        <p className="text-[24px] md:text-[28px] font-bold tabular-nums tracking-tight leading-none mt-3">
+                                        <p className="text-[26px] md:text-[28px] font-bold tabular-nums tracking-tight leading-none mt-3">
                                             {formatCurrency(total)}
                                         </p>
 
-                                        {/* Breakdown */}
+                                        {/* Em caixa / Aplicado breakdown */}
                                         <div className="flex items-stretch gap-3 mt-4 pt-4 border-t border-border/30">
-                                            {/* Em caixa */}
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-1.5 mb-1">
                                                     <span className="flex h-5 w-5 items-center justify-center rounded-md flex-shrink-0"
@@ -347,11 +363,7 @@ export function FinanceiroPage() {
                                                     {formatCurrency(conta.valorCaixa)}
                                                 </p>
                                             </div>
-
-                                            {/* Divider */}
                                             <div className="w-px bg-border/30 self-stretch" />
-
-                                            {/* Aplicado */}
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-1.5 mb-1">
                                                     <span className="flex h-5 w-5 items-center justify-center rounded-md flex-shrink-0"
@@ -373,49 +385,46 @@ export function FinanceiroPage() {
                 </AnimatePresence>
             </motion.div>
 
-            {/* ─── Alertas de Estoque (lista detalhada, sempre visível) ─── */}
+            {/* ─── Alertas de Estoque ─── */}
             <motion.div
                 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.4 }}
                 className="px-4 md:px-6 mt-10"
             >
-                <div className="rounded-2xl bg-card overflow-hidden">
-                    {/* Header */}
-                    <div className="flex items-center gap-2.5 px-4 md:px-5 pt-4 pb-3 border-b border-border/20">
-                        <span className="flex h-7 w-7 items-center justify-center rounded-lg flex-shrink-0"
+                <div className="rounded-2xl bg-card border overflow-hidden">
+                    <div className="flex items-center gap-3 px-4 md:px-5 pt-4 pb-3 border-b border-border/20">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-xl flex-shrink-0"
                             style={{ backgroundColor: alertas.length > 0 ? '#FF3B3018' : '#34C75918' }}>
                             {alertas.length > 0
                                 ? <AlertTriangle className="h-4 w-4" style={{ color: clr.red }} />
                                 : <CheckCircle2 className="h-4 w-4" style={{ color: clr.green }} />
                             }
                         </span>
-                        <div>
+                        <div className="min-w-0">
                             <p className="text-[15px] font-semibold leading-none">
                                 {alertas.length > 0 ? 'Itens com Estoque Baixo' : 'Estoque em Dia'}
                             </p>
-                            <p className="text-[12px] text-muted-foreground mt-0.5">
+                            <p className="text-[13px] text-muted-foreground mt-0.5">
                                 {alertas.length > 0
                                     ? `${alertas.length} ${alertas.length === 1 ? 'material abaixo do mínimo' : 'materiais abaixo do mínimo'}`
-                                    : 'Nenhum item abaixo do estoque mínimo'
+                                    : 'Nenhum item abaixo do mínimo'
                                 }
                             </p>
                         </div>
                     </div>
 
-                    {alertas.length === 0 && (
-                        <div className="flex flex-col items-center justify-center py-8 px-4 gap-2">
+                    {alertas.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-10 px-4 gap-2">
                             <div className="flex h-12 w-12 items-center justify-center rounded-full"
                                 style={{ backgroundColor: '#34C75918' }}>
                                 <CheckCircle2 className="h-6 w-6" style={{ color: clr.green }} />
                             </div>
-                            <p className="text-[15px] font-semibold mt-1">Todos os materiais em dia</p>
+                            <p className="text-[15px] font-semibold mt-2">Todos os materiais em dia</p>
                             <p className="text-[13px] text-muted-foreground text-center max-w-[220px]">
                                 Todos os estoques estão acima do mínimo requerido
                             </p>
                         </div>
-                    )}
-
-                    {alertas.map((alerta: any, i: number) => {
+                    ) : alertas.map((alerta: any, i: number) => {
                         const qty = alerta.quantidade ?? 0
                         const min = alerta.estoque_minimo ?? 0
                         const isCritical = qty === 0
@@ -424,39 +433,29 @@ export function FinanceiroPage() {
                         return (
                             <div
                                 key={alerta.id}
-                                className={cn(
-                                    'flex items-center gap-3 md:gap-4 px-4 md:px-5 py-3.5',
-                                    i > 0 && 'border-t border-border/15',
-                                )}
+                                className={cn('flex items-center gap-3 md:gap-4 px-4 md:px-5 py-4', i > 0 && 'border-t border-border/15')}
                             >
-                                <span className="flex h-9 w-9 items-center justify-center rounded-xl flex-shrink-0"
+                                <span className="flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0"
                                     style={{ backgroundColor: `${accentColor}14` }}>
-                                    <Package className="h-4 w-4" style={{ color: accentColor }} />
+                                    <Package className="h-5 w-5" style={{ color: accentColor }} />
                                 </span>
                                 <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-2 mb-0.5">
+                                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                                         <p className="text-[15px] font-medium truncate leading-snug">{alerta.material_nome ?? '—'}</p>
-                                        <span
-                                            className="flex-shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                                            style={{
-                                                backgroundColor: isCritical ? '#FF3B3018' : '#FF950018',
-                                                color: accentColor,
-                                            }}
-                                        >
-                                            {isCritical ? 'Sem estoque' : 'Estoque baixo'}
+                                        <span className="flex-shrink-0 text-[11px] font-semibold px-1.5 py-0.5 rounded-full"
+                                            style={{ backgroundColor: isCritical ? '#FF3B3018' : '#FF950018', color: accentColor }}>
+                                            {isCritical ? 'Sem estoque' : 'Baixo'}
                                         </span>
                                     </div>
-                                    <p className="text-[12px] text-muted-foreground truncate">
+                                    <p className="text-[13px] text-muted-foreground truncate">
                                         {alerta.almoxarifado_nome ?? '—'} · {alerta.obra_nome ?? '—'}
                                     </p>
                                     <div className="flex items-center gap-2 mt-2">
-                                        <div className="flex-1 h-[3px] rounded-full bg-muted/60 overflow-hidden">
-                                            <div
-                                                className="h-full rounded-full transition-all"
-                                                style={{ width: `${pctStock}%`, backgroundColor: accentColor }}
-                                            />
+                                        <div className="flex-1 h-1 rounded-full bg-muted/60 overflow-hidden">
+                                            <div className="h-full rounded-full transition-all"
+                                                style={{ width: `${pctStock}%`, backgroundColor: accentColor }} />
                                         </div>
-                                        <span className="text-[11px] tabular-nums text-muted-foreground flex-shrink-0">
+                                        <span className="text-[12px] tabular-nums text-muted-foreground flex-shrink-0">
                                             {formatNumber(qty)} / {formatNumber(min)} un.
                                         </span>
                                     </div>
@@ -473,58 +472,70 @@ export function FinanceiroPage() {
                 transition={{ duration: 0.4, delay: 0.45 }}
                 className="px-4 md:px-6 mt-10"
             >
-                <div className="flex items-baseline justify-between mb-3">
+                <div className="flex items-center justify-between mb-4">
                     <h2 className="text-[20px] md:text-[22px] font-bold tracking-tight">Atividade Recente</h2>
-                    <button onClick={() => navigate({ to: '/movimentacoes' })} className="text-[15px] md:text-[17px] text-primary flex items-center hover:text-primary/80 transition-colors">
-                        Ver Todas<ChevronRight className="h-4 w-4 ml-1" />
+                    <button
+                        onClick={() => navigate({ to: '/movimentacoes' })}
+                        className="flex items-center text-[15px] text-primary font-medium hover:text-primary/80 transition-colors min-h-[44px]"
+                    >
+                        Ver Todas<ChevronRight className="h-4 w-4 ml-0.5" />
                     </button>
                 </div>
-                <div className="rounded-2xl bg-card overflow-hidden">
+
+                <div className="rounded-2xl bg-card border overflow-hidden">
                     {movs.length === 0 ? (
-                        <p className="text-[17px] text-muted-foreground text-center py-12">Nenhuma movimentação.</p>
-                    ) : (
-                        movs.map((mov: any, i: number) => {
-                            const t = tipos[mov.tipo] ?? tipos.ENTRADA
-                            const Icon = t.icon
-                            const cost = mov.quantidade * (mov.precoUnitario ?? mov.preco_unitario ?? mov.material?.preco_unitario ?? 0)
-                            return (
-                                <div
-                                    key={mov.id}
-                                    className={cn(
-                                        'flex items-center gap-3 md:gap-4 px-4 md:px-5 min-h-[56px] md:min-h-[64px] py-3',
-                                        i > 0 && 'border-t border-border/20',
-                                    )}
-                                >
-                                    <span className="flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0"
-                                        style={{ backgroundColor: `${t.tint}14` }}>
-                                        <Icon className="h-5 w-5" style={{ color: t.tint }} />
-                                    </span>
-                                    <div className="min-w-0 flex-1">
-                                        <p className="text-[15px] md:text-[17px] font-medium truncate">{mov.material?.nome ?? '—'}</p>
-                                        <p className="text-[13px] md:text-[15px] text-muted-foreground">
-                                            {t.label} · {formatNumber(mov.quantidade)} un
-                                        </p>
-                                    </div>
-                                    <div className="text-right flex-shrink-0">
-                                        <p className={cn(
-                                            'text-[17px] font-semibold tabular-nums',
-                                            mov.tipo === 'SAIDA' ? 'text-destructive' : 'text-success'
-                                        )}>
-                                            {mov.tipo === 'SAIDA' ? '−' : '+'}{formatCurrency(cost)}
-                                        </p>
-                                        <p className="text-[13px] text-muted-foreground tabular-nums">{formatDate(mov.created_at)}</p>
-                                    </div>
+                        <p className="text-[15px] text-muted-foreground text-center py-12">Nenhuma movimentação.</p>
+                    ) : movs.map((mov: any, i: number) => {
+                        const t = tipos[mov.tipo] ?? tipos.ENTRADA
+                        const Icon = t.icon
+                        const cost = mov.quantidade * (mov.precoUnitario ?? mov.preco_unitario ?? mov.material?.preco_unitario ?? 0)
+                        return (
+                            <div
+                                key={mov.id}
+                                className={cn(
+                                    'flex items-center gap-3 md:gap-4 px-4 md:px-5 py-4',
+                                    i > 0 && 'border-t border-border/20',
+                                )}
+                            >
+                                <span className="flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0"
+                                    style={{ backgroundColor: `${t.tint}14` }}>
+                                    <Icon className="h-5 w-5" style={{ color: t.tint }} />
+                                </span>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-[15px] md:text-[16px] font-medium truncate leading-snug">
+                                        {mov.material?.nome ?? '—'}
+                                    </p>
+                                    <p className="text-[13px] text-muted-foreground mt-0.5">
+                                        {t.label} · {formatNumber(mov.quantidade)} un
+                                    </p>
                                 </div>
-                            )
-                        })
-                    )}
+                                <div className="text-right flex-shrink-0">
+                                    <p className={cn(
+                                        'text-[16px] font-semibold tabular-nums',
+                                        mov.tipo === 'SAIDA' ? 'text-destructive' : 'text-[#34C759]'
+                                    )}>
+                                        {mov.tipo === 'SAIDA' ? '−' : '+'}{formatCurrency(cost)}
+                                    </p>
+                                    <p className="text-[12px] text-muted-foreground tabular-nums mt-0.5">{formatDate(mov.created_at)}</p>
+                                </div>
+                            </div>
+                        )
+                    })}
                 </div>
             </motion.div>
 
-            {/* ─── Modal: Nova Conta ─── */}
+            {/* ══════════════════════════════════════════
+                MODAL: Nova Conta
+            ══════════════════════════════════════════ */}
             <Dialog open={modalOpen} onOpenChange={(open) => { setModalOpen(open); if (!open) resetForm() }}>
-                <DialogContent className="sm:max-w-[400px] rounded-2xl p-0 overflow-hidden gap-0">
-                    <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/20">
+                <DialogContent className={sheetCn}>
+
+                    {/* iOS drag handle — mobile only */}
+                    <div className="flex justify-center pt-3 pb-1 sm:hidden">
+                        <div className="h-1 w-10 rounded-full bg-foreground/15" />
+                    </div>
+
+                    <DialogHeader className="px-6 pt-4 sm:pt-6 pb-4 border-b border-border/20">
                         <div className="flex items-center gap-3">
                             <span className="flex h-10 w-10 items-center justify-center rounded-[12px]"
                                 style={{ backgroundColor: '#007AFF12' }}>
@@ -535,63 +546,75 @@ export function FinanceiroPage() {
                     </DialogHeader>
 
                     <div className="px-6 py-5 space-y-4">
+
                         {/* Nome do banco */}
-                        <div className="space-y-1.5">
-                            <Label className="text-[13px] font-medium text-foreground">Nome do banco</Label>
+                        <div className="space-y-2">
+                            <Label className="text-[14px] sm:text-[13px] font-medium text-foreground">Nome do banco</Label>
                             <Input
                                 placeholder="Ex: Itaú, Nubank, Bradesco…"
                                 value={banco}
                                 onChange={e => setBanco(e.target.value)}
                                 autoFocus
-                                className="h-11 rounded-xl text-[15px] placeholder:text-muted-foreground/40"
+                                className="h-12 sm:h-11 rounded-xl text-[16px] sm:text-[15px] placeholder:text-muted-foreground/40"
                             />
                         </div>
 
-                        {/* Número da conta */}
-                        <div className="space-y-1.5">
-                            <Label className="text-[13px] font-medium text-foreground">Número da conta</Label>
-                            <Input
-                                placeholder="Ex: 12345-6"
-                                value={numeroConta}
-                                onChange={e => setNumeroConta(e.target.value)}
-                                className="h-11 rounded-xl text-[15px] placeholder:text-muted-foreground/40"
-                            />
-                        </div>
-
-                        {/* Valores em grid 2 colunas */}
+                        {/* Agência + Número da conta — side by side */}
                         <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1.5">
-                                <Label className="text-[13px] font-medium" style={{ color: '#34C759' }}>Valor em caixa</Label>
+                            <div className="space-y-2">
+                                <Label className="text-[14px] sm:text-[13px] font-medium text-foreground">Agência</Label>
+                                <Input
+                                    placeholder="Ex: 0001"
+                                    value={agencia}
+                                    onChange={e => setAgencia(e.target.value)}
+                                    className="h-12 sm:h-11 rounded-xl text-[16px] sm:text-[15px] placeholder:text-muted-foreground/40"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-[14px] sm:text-[13px] font-medium text-foreground">Número da conta</Label>
+                                <Input
+                                    placeholder="Ex: 12345-6"
+                                    value={numeroConta}
+                                    onChange={e => setNumeroConta(e.target.value)}
+                                    className="h-12 sm:h-11 rounded-xl text-[16px] sm:text-[15px] placeholder:text-muted-foreground/40"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Valores */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                                <Label className="text-[14px] sm:text-[13px] font-medium" style={{ color: '#34C759' }}>Valor em caixa</Label>
                                 <CurrencyInput
                                     placeholder="0,00"
                                     value={valorCaixa}
                                     onChange={e => setValorCaixa(e.target.value)}
-                                    className="h-11 rounded-xl text-[15px]"
+                                    className="h-12 sm:h-11 rounded-xl"
                                 />
                             </div>
-                            <div className="space-y-1.5">
-                                <Label className="text-[13px] font-medium" style={{ color: '#007AFF' }}>Valor aplicado</Label>
+                            <div className="space-y-2">
+                                <Label className="text-[14px] sm:text-[13px] font-medium" style={{ color: '#007AFF' }}>Valor aplicado</Label>
                                 <CurrencyInput
                                     placeholder="0,00"
                                     value={valorAplicado}
                                     onChange={e => setValorAplicado(e.target.value)}
-                                    className="h-11 rounded-xl text-[15px]"
+                                    className="h-12 sm:h-11 rounded-xl"
                                 />
                             </div>
                         </div>
                     </div>
 
-                    {/* Footer actions */}
-                    <div className="flex gap-3 px-6 pb-6">
+                    {/* Footer */}
+                    <div className="flex gap-3 px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6">
                         <Button
                             variant="outline"
-                            className="flex-1 h-11 rounded-xl text-[15px] font-medium"
+                            className="flex-1 h-12 sm:h-11 rounded-xl text-[16px] sm:text-[15px] font-medium"
                             onClick={() => { setModalOpen(false); resetForm() }}
                         >
                             Cancelar
                         </Button>
                         <Button
-                            className="flex-1 h-11 rounded-xl text-[15px] font-medium"
+                            className="flex-1 h-12 sm:h-11 rounded-xl text-[16px] sm:text-[15px] font-medium"
                             disabled={!banco.trim()}
                             onClick={handleAddConta}
                             style={{ backgroundColor: banco.trim() ? '#007AFF' : undefined }}

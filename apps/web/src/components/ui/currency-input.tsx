@@ -25,7 +25,7 @@ const CurrencyInput = React.forwardRef<
       type="text"
       inputMode="decimal"
       onChange={(e) => {
-        e.target.value = e.target.value.replace(/[^\d,.]/g, '')
+        e.target.value = formatBRL(e.target.value)
         onChange?.(e)
       }}
       /* inline style wins over any Tailwind px-* / pl-* from className */
@@ -48,6 +48,24 @@ const CurrencyInput = React.forwardRef<
   </div>
 ))
 CurrencyInput.displayName = 'CurrencyInput'
+
+/**
+ * Format a raw user-typed string into Brazilian accounting format (pt-BR).
+ * Strips dot separators already in the string, adds them back correctly.
+ * Examples: "1234" → "1.234"  |  "1234,5" → "1.234,5"  |  "1234,56" → "1.234,56"
+ */
+export function formatBRL(raw: string): string {
+  // Keep only digits and commas; removes any dot separators already present
+  const clean = raw.replace(/[^\d,]/g, '')
+  const parts = clean.split(',')
+  // Add dot thousands separators to the integer part
+  const intPart = (parts[0] || '').replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  // If the user typed a comma, preserve decimal part (max 2 digits)
+  if (parts.length >= 2) {
+    return `${intPart},${parts[1].slice(0, 2)}`
+  }
+  return intPart
+}
 
 /** Parse a Brazilian-format currency string → float. "1.234,56" → 1234.56 */
 export function parseCurrency(value: string): number {

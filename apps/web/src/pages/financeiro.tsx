@@ -1,4 +1,4 @@
-import { parseCurrency } from '@/components/ui/currency-input'
+import { formatBRL, parseCurrency } from '@/components/ui/currency-input'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import {
   type FinanceiroConta,
@@ -841,7 +841,7 @@ export function FinanceiroPage() {
                   </span>
                   <input
                     value={valorInicial}
-                    onChange={(e) => setValorInicial(e.target.value.replace(/[^\d,.]/g, ''))}
+                    onChange={(e) => setValorInicial(formatBRL(e.target.value))}
                     placeholder="0,00"
                     inputMode="decimal"
                     className="text-[16px] text-right bg-transparent outline-none tabular-nums font-semibold min-w-0 w-[130px] placeholder:text-black/20 dark:placeholder:text-white/20"

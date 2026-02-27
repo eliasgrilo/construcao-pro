@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { parseCurrency } from '@/components/ui/currency-input'
+import { formatBRL, parseCurrency } from '@/components/ui/currency-input'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { cn, formatCurrency } from '@/lib/utils'
 import { useNavigate, useParams } from '@tanstack/react-router'
@@ -997,7 +997,7 @@ export function ContaDetailPage() {
                   </span>
                   <input
                     value={valor}
-                    onChange={(e) => setValor(e.target.value.replace(/[^\d,.]/g, ''))}
+                    onChange={(e) => setValor(formatBRL(e.target.value))}
                     placeholder="0,00"
                     inputMode="decimal"
                     className="text-[18px] text-right bg-transparent outline-none tabular-nums font-bold min-w-0 w-[140px] placeholder:text-black/20 dark:placeholder:text-white/20"

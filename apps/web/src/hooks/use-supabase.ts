@@ -383,7 +383,7 @@ export function useEstoque() {
                 .select(`
                     *,
                     material:materiais(id, nome, codigo, estoque_minimo, preco_unitario, categoria:categorias(id, nome, unidade)),
-                    almoxarifado:almoxarifados(id, nome, obra:obras(id, nome))
+                    almoxarifado:almoxarifados(id, nome, obra:obras(id, nome, endereco))
                 `)
             if (error) throw error
             return data || []

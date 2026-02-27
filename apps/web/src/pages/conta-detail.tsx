@@ -3,8 +3,7 @@ import { useParams, useNavigate } from '@tanstack/react-router'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
     ArrowLeft, Landmark, CreditCard, Wallet, FileText,
-    ArrowDownRight, ArrowUpRight, Plus, Trash2,
-    TrendingUp, TrendingDown, Receipt,
+    ArrowDownRight, ArrowUpRight, Plus, Trash2, Receipt,
 } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
 import { CurrencyInput, parseCurrency } from '@/components/ui/currency-input'
@@ -142,9 +141,8 @@ export function ContaDetailPage() {
     const [tipo, setTipo] = useState<'ENTRADA' | 'SAIDA'>('ENTRADA')
     const [motivo, setMotivo] = useState('')
     const [valor, setValor] = useState('')
-    const [data, setData] = useState(todayStr())
 
-    const resetModal = () => { setTipo('ENTRADA'); setMotivo(''); setValor(''); setData(todayStr()) }
+    const resetModal = () => { setTipo('ENTRADA'); setMotivo(''); setValor('') }
 
     const handleAdd = () => {
         if (!motivo.trim() || !valor) return
@@ -153,7 +151,7 @@ export function ContaDetailPage() {
             tipo,
             motivo: motivo.trim(),
             valor: parseCurrency(valor),
-            data,
+            data: todayStr(),
             createdAt: new Date().toISOString(),
         }
         setMovs(prev => [nova, ...prev])
@@ -287,45 +285,10 @@ export function ContaDetailPage() {
                 </div>
             </motion.div>
 
-            {/* ─── Summary: Entradas / Saídas ─── */}
-            <motion.div
-                initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.18 }}
-                className="px-4 md:px-6 mt-4 grid grid-cols-2 gap-3"
-            >
-                {/* Total Entradas */}
-                <div className="rounded-2xl bg-card border p-4">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-xl mb-3"
-                        style={{ backgroundColor: '#34C75914' }}>
-                        <TrendingUp className="h-4 w-4" style={{ color: '#34C759' }} />
-                    </span>
-                    <p className="text-[20px] font-bold tabular-nums leading-none" style={{ color: '#34C759' }}>
-                        {formatCurrency(totalEntradas)}
-                    </p>
-                    <p className="text-[12px] text-muted-foreground mt-1">
-                        {movs.filter(m => m.tipo === 'ENTRADA').length} entrada{movs.filter(m => m.tipo === 'ENTRADA').length !== 1 ? 's' : ''}
-                    </p>
-                </div>
-
-                {/* Total Saídas */}
-                <div className="rounded-2xl bg-card border p-4">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-xl mb-3"
-                        style={{ backgroundColor: '#FF3B3014' }}>
-                        <TrendingDown className="h-4 w-4" style={{ color: '#FF3B30' }} />
-                    </span>
-                    <p className="text-[20px] font-bold tabular-nums leading-none" style={{ color: '#FF3B30' }}>
-                        {formatCurrency(totalSaidas)}
-                    </p>
-                    <p className="text-[12px] text-muted-foreground mt-1">
-                        {movs.filter(m => m.tipo === 'SAIDA').length} saída{movs.filter(m => m.tipo === 'SAIDA').length !== 1 ? 's' : ''}
-                    </p>
-                </div>
-            </motion.div>
-
             {/* ─── Movimentações ─── */}
             <motion.div
                 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.25 }}
+                transition={{ duration: 0.4, delay: 0.18 }}
                 className="px-4 md:px-6 mt-8"
             >
                 <div className="flex items-baseline justify-between mb-4">
@@ -507,34 +470,18 @@ export function ContaDetailPage() {
                             />
                         </div>
 
-                        {/* Valor + Data in grid */}
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1.5">
-                                <Label className="text-[13px] font-medium"
-                                    style={{ color: tipo === 'ENTRADA' ? '#34C759' : '#FF3B30' }}>
-                                    Valor
-                                </Label>
-                                <CurrencyInput
-                                    placeholder="0,00"
-                                    value={valor}
-                                    onChange={e => setValor(e.target.value)}
-                                    className="h-11 rounded-xl text-[15px]"
-                                />
-                            </div>
-                            <div className="space-y-1.5">
-                                <Label className="text-[13px] font-medium text-foreground">Data</Label>
-                                <input
-                                    type="date"
-                                    value={data}
-                                    onChange={e => setData(e.target.value)}
-                                    className={cn(
-                                        'flex h-11 w-full rounded-xl border bg-transparent px-3 text-[15px]',
-                                        'transition-colors focus-visible:outline-none focus-visible:ring-2',
-                                        'focus-visible:ring-ring/40 focus-visible:ring-offset-1',
-                                        'focus-visible:ring-offset-background text-foreground',
-                                    )}
-                                />
-                            </div>
+                        {/* Valor */}
+                        <div className="space-y-1.5">
+                            <Label className="text-[13px] font-medium"
+                                style={{ color: tipo === 'ENTRADA' ? '#34C759' : '#FF3B30' }}>
+                                Valor
+                            </Label>
+                            <CurrencyInput
+                                placeholder="0,00"
+                                value={valor}
+                                onChange={e => setValor(e.target.value)}
+                                className="h-11 rounded-xl text-[15px]"
+                            />
                         </div>
                     </div>
 

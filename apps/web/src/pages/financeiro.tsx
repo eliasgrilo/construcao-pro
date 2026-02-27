@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -6,23 +6,17 @@ import {
     AlertTriangle, ChevronRight, Landmark, Package, CheckCircle2, FileText, Building2,
     Plus, Trash2, CreditCard, Wallet, X,
 } from 'lucide-react'
-import { useDashboardStats, useDashboardCustoPorObra, useMovimentacoesRecentes, useEstoqueAlertas, useObras } from '@/hooks/use-supabase'
+import {
+    useDashboardStats, useDashboardCustoPorObra, useMovimentacoesRecentes,
+    useEstoqueAlertas, useObras,
+    useFinanceiroContas, useCreateFinanceiroConta, useDeleteFinanceiroConta,
+    type FinanceiroConta,
+} from '@/hooks/use-supabase'
 import { cn, formatDate, formatNumber, formatCurrency } from '@/lib/utils'
 import { CurrencyInput, parseCurrency } from '@/components/ui/currency-input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-
-/* ─── Types ─── */
-interface Conta {
-    id: string
-    banco: string
-    agencia: string
-    numeroConta: string
-    valorCaixa: number
-    valorAplicado: number
-}
 
 /* Apple System Colors */
 const clr = { blue: '#007AFF', green: '#34C759', red: '#FF3B30', orange: '#FF9500' }
@@ -54,7 +48,6 @@ function Ring({ percent, size = 80, stroke = 6, color }: { percent: number; size
         </svg>
     )
 }
-
 function ringColor(p: number) { return p > 90 ? clr.red : p > 70 ? clr.orange : clr.green }
 
 const statusBreakdown = [
@@ -70,18 +63,6 @@ const tipos: Record<string, { label: string; icon: typeof ArrowLeftRight; tint: 
     TRANSFERENCIA: { label: 'Transferência', icon: ArrowLeftRight, tint: clr.blue },
 }
 
-const STORAGE_KEY = 'financeiro_contas_v1'
-
-/* ─── UUID polyfill (crypto.randomUUID not available on iOS < 15.4) ─── */
-function uuid(): string {
-    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-        return crypto.randomUUID()
-    }
-    return '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, c =>
-        (Number(c) ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> Number(c) / 4).toString(16)
-    )
-}
-
 /* ─── Modal className ─── */
 const modalCn = 'p-0 sm:max-w-[400px] sm:rounded-[28px] bg-background/85 dark:bg-background/85 backdrop-blur-2xl border-white/20 dark:border-white/10'
 
@@ -92,6 +73,9 @@ export function FinanceiroPage() {
     const { data: recentMovs } = useMovimentacoesRecentes()
     const { data: alertasData } = useEstoqueAlertas()
     const { data: obrasData } = useObras()
+    const { data: contas = [], isLoading: contasLoading } = useFinanceiroContas()
+    const createConta = useCreateFinanceiroConta()
+    const deleteConta = useDeleteFinanceiroConta()
 
     const s = stats
     const movs = recentMovs || []
@@ -101,18 +85,6 @@ export function FinanceiroPage() {
     /* Terrenos em Standby */
     const terrenosStandby = (obrasData || []).filter((o: any) => o.status === 'TERRENO')
     const totalTerrenos = terrenosStandby.reduce((sum: number, o: any) => sum + (o.valor_terreno ?? 0), 0)
-
-    /* ─── Contas state (localStorage) ─── */
-    const [contas, setContas] = useState<Conta[]>(() => {
-        try {
-            const stored = localStorage.getItem(STORAGE_KEY)
-            return stored ? JSON.parse(stored) : []
-        } catch { return [] }
-    })
-
-    useEffect(() => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(contas))
-    }, [contas])
 
     /* ─── Add Conta modal state ─── */
     const [modalOpen, setModalOpen] = useState(false)
@@ -128,66 +100,27 @@ export function FinanceiroPage() {
 
     const handleOpenModal = () => { resetForm(); setModalOpen(true) }
 
-    const handleAddConta = () => {
+    const handleAddConta = async () => {
         if (!banco.trim()) return
-        const nova: Conta = {
-            id: uuid(),
+        await createConta.mutateAsync({
             banco: banco.trim(),
             agencia: agencia.trim(),
-            numeroConta: numeroConta.trim(),
-            valorCaixa: parseCurrency(valorCaixa),
-            valorAplicado: parseCurrency(valorAplicado),
-        }
-        setContas(prev => [...prev, nova])
+            numero_conta: numeroConta.trim(),
+            valor_caixa: parseCurrency(valorCaixa),
+            valor_aplicado: parseCurrency(valorAplicado),
+        })
         setModalOpen(false)
         resetForm()
     }
 
     const handleDeleteConta = (id: string, e: React.MouseEvent) => {
         e.stopPropagation()
-        setContas(prev => prev.filter(c => c.id !== id))
+        deleteConta.mutate(id)
     }
-
-    /* ─── Extract LocalStorage Financial Movements ─── */
-    function getGlobalFinancialMovs() {
-        try {
-            const contas = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
-            let allMovs: any[] = []
-            for (const c of contas) {
-                const movs = JSON.parse(localStorage.getItem(`financeiro_mov_${c.id}`) || '[]')
-                const mapped = movs.map((m: any) => ({
-                    id: m.id,
-                    tipo: m.tipo,
-                    material: { nome: m.motivo, codigo: 'FINANCEIRO' },
-                    quantidade: 1,
-                    preco_unitario: m.valor,
-                    almoxarifado: { nome: `Banco: ${c.banco}`, obra: { nome: m.subconta === 'CAIXA' ? 'Caixa Principal' : 'Aplicações' } },
-                    updated_at: m.createdAt,
-                    created_at: m.createdAt || (m.data ? new Date(m.data).toISOString() : new Date().toISOString()),
-                    isFinancial: true
-                }))
-                allMovs = [...allMovs, ...mapped]
-            }
-            return allMovs
-        } catch { return [] }
-    }
-
-    const [unifiedRecentMovs, setUnifiedRecentMovs] = useState<any[]>([])
-
-    useEffect(() => {
-        const localMovs = getGlobalFinancialMovs()
-        const sbData = recentMovs || []
-        const combined = [...sbData, ...localMovs].sort((a, b) => {
-            const dA = new Date(a.created_at).getTime()
-            const dB = new Date(b.created_at).getTime()
-            return dB - dA
-        }).slice(0, 10) // Pega apenas os 10 mais recentes
-        setUnifiedRecentMovs(combined)
-    }, [recentMovs, contas]) // Re-run when accounts (which trigger local mov creation) or remote movs change
 
     /* ─── Helpers ─── */
-    const contaSubLabel = (c: Conta) =>
-        [c.agencia ? `Ag. ${c.agencia}` : '', c.numeroConta ? `CC. ${c.numeroConta}` : ''].filter(Boolean).join('  ·  ')
+    const contaSubLabel = (c: FinanceiroConta) =>
+        [c.agencia ? `Ag. ${c.agencia}` : '', c.numero_conta ? `CC. ${c.numero_conta}` : ''].filter(Boolean).join('  ·  ')
 
     return (
         <div className="pb-20 pt-8 md:pt-10">
@@ -250,41 +183,60 @@ export function FinanceiroPage() {
                 transition={{ duration: 0.4, delay: 0.2 }}
                 className="px-4 md:px-6 mt-5 grid grid-cols-2 gap-3"
             >
-                {/* Alertas de Estoque */}
-                <div className="rounded-2xl bg-card border p-4 md:p-5">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl mb-3"
-                        style={{ backgroundColor: alertas.length > 0 ? '#FF3B3018' : '#8E8E9318' }}>
-                        <AlertTriangle className="h-5 w-5" style={{ color: alertas.length > 0 ? clr.red : '#8E8E93' }} />
-                    </span>
-                    <p className="text-[22px] md:text-[26px] font-bold tabular-nums leading-none">{alertas.length}</p>
-                    <p className="text-[13px] md:text-[14px] text-muted-foreground mt-1 leading-tight">
-                        {alertas.length === 1 ? 'Alerta de estoque' : 'Alertas de estoque'}
-                    </p>
-                </div>
-
-                {/* Terrenos em Standby */}
+                {/* Orçamento Geral */}
                 <motion.div
-                    className="rounded-2xl bg-card border p-4 md:p-5 cursor-pointer"
+                    className="rounded-2xl bg-card border p-4 md:p-5 flex flex-col justify-between cursor-pointer h-full"
                     whileTap={{ scale: 0.97 }}
                     onClick={() => navigate({ to: '/obras' })}
                 >
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl mb-3"
-                        style={{ backgroundColor: '#AF52DE18' }}>
-                        <Landmark className="h-5 w-5" style={{ color: '#AF52DE' }} />
-                    </span>
-                    <p className="text-[16px] md:text-[18px] font-bold tabular-nums leading-none"
-                        style={{ color: terrenosStandby.length > 0 ? '#AF52DE' : undefined }}>
-                        {formatCurrency(totalTerrenos)}
-                    </p>
-                    <p className="text-[13px] md:text-[14px] text-muted-foreground mt-1 leading-tight">
-                        Terrenos em Standby
+                    <div className="flex items-center justify-between mb-4">
+                        <span className="flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0"
+                            style={{ backgroundColor: '#007AFF15' }}>
+                            <Wallet className="h-5 w-5" style={{ color: '#007AFF' }} />
+                        </span>
+                        <div className="relative flex items-center justify-center">
+                            <Ring percent={pct} size={36} stroke={4} color={ringColor(pct)} />
+                        </div>
+                    </div>
+                    <div>
+                        <p className="text-[13px] md:text-[14px] text-muted-foreground font-medium mb-1">Orçamento Geral</p>
+                        <p className="text-[20px] md:text-[24px] font-bold tabular-nums leading-none tracking-tight mb-1.5">
+                            {formatCurrency(s?.custoTotal ?? 0)}
+                        </p>
+                        <p className="text-[12px] md:text-[13px] text-muted-foreground leading-tight truncate">
+                            de {formatCurrency(s?.orcamentoTotal ?? 0)} em orçamento
+                        </p>
+                    </div>
+                </motion.div>
+
+                {/* Terrenos em Standby */}
+                <motion.div
+                    className="rounded-2xl bg-card border p-4 md:p-5 flex flex-col justify-between cursor-pointer h-full"
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => navigate({ to: '/obras' })}
+                >
+                    <div className="flex items-center justify-between mb-4">
+                        <span className="flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0"
+                            style={{ backgroundColor: '#AF52DE15' }}>
+                            <Landmark className="h-5 w-5" style={{ color: '#AF52DE' }} />
+                        </span>
                         {terrenosStandby.length > 0 && (
-                            <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 rounded-full text-[10px] font-semibold px-1"
-                                style={{ backgroundColor: '#AF52DE', color: '#fff' }}>
+                            <span className="flex items-center justify-center h-[26px] min-w-[26px] rounded-full text-[13px] font-bold px-2.5"
+                                style={{ backgroundColor: '#AF52DE15', color: '#AF52DE' }}>
                                 {terrenosStandby.length}
                             </span>
                         )}
-                    </p>
+                    </div>
+                    <div>
+                        <p className="text-[13px] md:text-[14px] text-muted-foreground font-medium mb-1">Terrenos Standby</p>
+                        <p className="text-[20px] md:text-[24px] font-bold tabular-nums leading-none tracking-tight mb-1.5"
+                            style={{ color: terrenosStandby.length > 0 ? '#AF52DE' : undefined }}>
+                            {formatCurrency(totalTerrenos)}
+                        </p>
+                        <p className="text-[12px] md:text-[13px] text-muted-foreground leading-tight truncate">
+                            Capital imobilizado
+                        </p>
+                    </div>
                 </motion.div>
             </motion.div>
 
@@ -307,7 +259,13 @@ export function FinanceiroPage() {
                 </div>
 
                 <AnimatePresence mode="popLayout">
-                    {contas.length === 0 ? (
+                    {contasLoading ? (
+                        <motion.div key="loading"
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                            className="flex justify-center py-16">
+                            <div className="h-8 w-8 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+                        </motion.div>
+                    ) : contas.length === 0 ? (
                         <motion.div
                             key="empty"
                             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
@@ -342,7 +300,7 @@ export function FinanceiroPage() {
                         >
                             {contas.map((conta, i) => {
                                 const accent = accents[i % accents.length]
-                                const total = (Number(conta.valorCaixa) || 0) + (Number(conta.valorAplicado) || 0)
+                                const total = (Number(conta.valor_caixa) || 0) + (Number(conta.valor_aplicado) || 0)
                                 const sub = contaSubLabel(conta)
                                 return (
                                     <motion.div
@@ -394,10 +352,10 @@ export function FinanceiroPage() {
                                                         style={{ backgroundColor: '#34C75914' }}>
                                                         <Wallet className="h-3 w-3" style={{ color: '#34C759' }} />
                                                     </span>
-                                                    <p className="text-[11px] text-muted-foreground">Em caixa</p>
+                                                    <p className="text-[11px] text-muted-foreground">Em Caixa</p>
                                                 </div>
                                                 <p className="text-[14px] font-semibold tabular-nums leading-none" style={{ color: '#34C759' }}>
-                                                    {formatCurrency(Number(conta.valorCaixa) || 0)}
+                                                    {formatCurrency(Number(conta.valor_caixa) || 0)}
                                                 </p>
                                             </div>
                                             <div className="w-px bg-border/30 self-stretch" />
@@ -410,7 +368,7 @@ export function FinanceiroPage() {
                                                     <p className="text-[11px] text-muted-foreground">Aplicações</p>
                                                 </div>
                                                 <p className="text-[14px] font-semibold tabular-nums leading-none" style={{ color: '#007AFF' }}>
-                                                    {formatCurrency(Number(conta.valorAplicado) || 0)}
+                                                    {formatCurrency(Number(conta.valor_aplicado) || 0)}
                                                 </p>
                                             </div>
                                         </div>
@@ -520,9 +478,9 @@ export function FinanceiroPage() {
                 </div>
 
                 <div className="rounded-2xl bg-card border overflow-hidden">
-                    {unifiedRecentMovs.length === 0 ? (
+                    {movs.length === 0 ? (
                         <p className="text-[15px] text-muted-foreground text-center py-12">Nenhuma movimentação.</p>
-                    ) : unifiedRecentMovs.map((mov: any, i: number) => {
+                    ) : movs.map((mov: any, i: number) => {
                         const t = tipos[mov.tipo] ?? tipos.ENTRADA
                         const Icon = t.icon
                         const cost = mov.quantidade * (mov.precoUnitario ?? mov.preco_unitario ?? mov.material?.preco_unitario ?? 0)
@@ -593,7 +551,6 @@ export function FinanceiroPage() {
                                 placeholder="Itaú, Nubank, Bradesco…"
                                 value={banco}
                                 onChange={e => setBanco(e.target.value)}
-                                autoFocus
                                 className="h-14 sm:h-[52px] rounded-2xl text-[16px] bg-black/[0.03] dark:bg-white/[0.03] border-border/50 focus-visible:ring-1 focus-visible:ring-primary/30 focus-visible:bg-transparent placeholder:text-muted-foreground/40 transition-all font-medium px-4"
                             />
                         </div>
@@ -643,20 +600,20 @@ export function FinanceiroPage() {
                         </div>
                     </div>
 
-                    {/* Footer - Apple Button (Safe Area) */}
+                    {/* Footer */}
                     <div className="px-5 sm:px-6 pb-8 sm:pb-6 pt-2">
                         <motion.button
                             whileTap={{ scale: banco.trim() ? 0.97 : 1 }}
-                            disabled={!banco.trim()}
+                            disabled={!banco.trim() || createConta.isPending}
                             onClick={handleAddConta}
                             className={cn(
                                 "w-full flex items-center justify-center h-[56px] sm:h-[52px] rounded-[20px] text-[17px] font-semibold tracking-tight transition-all",
-                                banco.trim()
+                                banco.trim() && !createConta.isPending
                                     ? "bg-[#007AFF] text-white shadow-md shadow-[#007AFF]/25"
                                     : "bg-muted text-muted-foreground opacity-50 cursor-not-allowed"
                             )}
                         >
-                            Criar Conta
+                            {createConta.isPending ? 'Salvando…' : 'Criar Conta'}
                         </motion.button>
                     </div>
                 </DialogContent>

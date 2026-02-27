@@ -195,7 +195,10 @@ export function FinanceiroPage() {
                             <Wallet className="h-5 w-5" style={{ color: '#007AFF' }} />
                         </span>
                         <div className="relative flex items-center justify-center">
-                            <Ring percent={pct} size={36} stroke={4} color={ringColor(pct)} />
+                            <Ring percent={pct} size={46} stroke={4} color={ringColor(pct)} />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <span className="text-[12px] font-bold tabular-nums leading-none tracking-tight">{pct}%</span>
+                            </div>
                         </div>
                     </div>
                     <div>

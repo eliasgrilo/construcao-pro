@@ -72,18 +72,8 @@ const tipos: Record<string, { label: string; icon: typeof ArrowLeftRight; tint: 
 
 const STORAGE_KEY = 'financeiro_contas_v1'
 
-/* ─── Bottom-sheet modal className helper ─── */
-const sheetCn = cn(
-    /* shared */
-    'gap-0 p-0 overflow-hidden border-0 shadow-2xl',
-    /* mobile: full-width bottom sheet */
-    'left-0 right-0 bottom-0 top-auto translate-x-0 translate-y-0',
-    'w-full max-w-none rounded-t-[28px] rounded-b-none',
-    /* desktop: centered dialog */
-    'sm:left-[50%] sm:top-[50%] sm:bottom-auto sm:right-auto',
-    'sm:translate-x-[-50%] sm:translate-y-[-50%]',
-    'sm:w-auto sm:max-w-[440px] sm:rounded-2xl sm:border',
-)
+/* ─── Modal className ─── */
+const modalCn = 'max-w-[calc(100vw-32px)] sm:max-w-[440px] rounded-2xl p-0 gap-0 overflow-hidden'
 
 export function FinanceiroPage() {
     const navigate = useNavigate()
@@ -528,14 +518,9 @@ export function FinanceiroPage() {
                 MODAL: Nova Conta
             ══════════════════════════════════════════ */}
             <Dialog open={modalOpen} onOpenChange={(open) => { setModalOpen(open); if (!open) resetForm() }}>
-                <DialogContent className={sheetCn}>
+                <DialogContent className={modalCn}>
 
-                    {/* iOS drag handle — mobile only */}
-                    <div className="flex justify-center pt-3 pb-1 sm:hidden">
-                        <div className="h-1 w-10 rounded-full bg-foreground/15" />
-                    </div>
-
-                    <DialogHeader className="px-6 pt-4 sm:pt-6 pb-4 border-b border-border/20">
+                    <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/20">
                         <div className="flex items-center gap-3">
                             <span className="flex h-10 w-10 items-center justify-center rounded-[12px]"
                                 style={{ backgroundColor: '#007AFF12' }}>
@@ -605,7 +590,7 @@ export function FinanceiroPage() {
                     </div>
 
                     {/* Footer */}
-                    <div className="flex gap-3 px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6">
+                    <div className="flex gap-3 px-6 pb-6">
                         <Button
                             variant="outline"
                             className="flex-1 h-12 sm:h-11 rounded-xl text-[16px] sm:text-[15px] font-medium"

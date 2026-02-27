@@ -296,7 +296,9 @@ export function FinanceiroPage() {
                                         layout
                                         variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }}
                                         exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
-                                        className="rounded-[20px] bg-card border shadow-sm shadow-black/[0.03] p-5 md:p-6 relative overflow-hidden group"
+                                        whileTap={{ scale: 0.97 }}
+                                        onClick={() => navigate({ to: '/financeiro/$contaId', params: { contaId: conta.id } })}
+                                        className="rounded-[20px] bg-card border shadow-sm shadow-black/[0.03] p-5 md:p-6 relative overflow-hidden group cursor-pointer"
                                     >
                                         {/* Delete button */}
                                         <motion.button

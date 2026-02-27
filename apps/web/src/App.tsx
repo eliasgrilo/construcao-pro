@@ -24,6 +24,7 @@ import { ConfiguracoesPage } from '@/pages/configuracoes'
 import { NotFoundPage } from '@/pages/not-found'
 import { FornecedoresPage } from '@/pages/fornecedores'
 import { FinanceiroPage } from '@/pages/financeiro'
+import { ContaDetailPage } from '@/pages/conta-detail'
 // Categorias is now integrated inside MateriaisPage (Apple-style segmented control)
 
 // Auth guard component with error boundary per route
@@ -127,6 +128,12 @@ const financeiroRoute = createRoute({
     component: () => <AuthGuard><FinanceiroPage /></AuthGuard>,
 })
 
+const contaDetailRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/financeiro/$contaId',
+    component: () => <AuthGuard><ContaDetailPage /></AuthGuard>,
+})
+
 // Categorias route removed — now integrated into /materiais via segmented control
 
 // 404 catch-all
@@ -147,6 +154,7 @@ const routeTree = rootRoute.addChildren([
     notasFiscaisRoute,
     fornecedoresRoute,
     financeiroRoute,
+    contaDetailRoute,
     configuracoesRoute,
 ])
 

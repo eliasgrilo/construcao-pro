@@ -90,13 +90,6 @@ function ringColor(p: number) {
   return p > 90 ? clr.red : p > 70 ? clr.orange : clr.green
 }
 
-const statusBreakdown = [
-  { key: 'ATIVA', label: 'Ativa', color: '#34C759' },
-  { key: 'TERRENO', label: 'Terreno', color: '#AF52DE' },
-  { key: 'FINALIZADA', label: 'Finaliz.', color: '#8E8E93' },
-  { key: 'VENDIDO', label: 'Vendido', color: '#5856D6' },
-]
-
 const tipos: Record<string, { label: string; icon: typeof ArrowLeftRight; tint: string }> = {
   ENTRADA: { label: 'Entrada', icon: ArrowDownRight, tint: clr.green },
   SAIDA: { label: 'Saída', icon: ArrowUpRight, tint: clr.red },
@@ -133,6 +126,10 @@ export function FinanceiroPage() {
     (sum: number, o: any) => sum + (o.valor_terreno ?? 0),
     0,
   )
+
+  /* Saldo consolidado de todas as contas bancárias */
+  const totalCaixa = contas.reduce((sum, c) => sum + (Number(c.valor_caixa) || 0), 0)
+  const totalAplicado = contas.reduce((sum, c) => sum + (Number(c.valor_aplicado) || 0), 0)
 
   /* ─── Add Conta modal state ─── */
   const [modalOpen, setModalOpen] = useState(false)
@@ -227,36 +224,59 @@ export function FinanceiroPage() {
                 de {formatCurrency(s?.orcamentoTotal ?? 0)} em orçamento
               </p>
 
-              {/* Status breakdown */}
-              <div className="flex gap-4 md:gap-5 mt-4 pt-4 border-t border-border/20">
-                {statusBreakdown.map((st) => {
-                  const count = obrasData?.filter((o: any) => o.status === st.key).length ?? 0
-                  return (
-                    <motion.div
-                      key={st.key}
-                      className={cn(
-                        'transition-opacity min-w-0',
-                        count === 0 ? 'opacity-30' : 'opacity-100',
-                      )}
-                      whileTap={{ scale: 0.93 }}
-                      onClick={() => navigate({ to: '/obras' })}
-                      style={{ cursor: 'pointer' }}
+              {/* Saldo consolidado em contas bancárias */}
+              <div className="flex items-stretch gap-3 mt-4 pt-4 border-t border-border/20">
+                {/* Em Caixa */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <span
+                      className="flex h-5 w-5 items-center justify-center rounded-md flex-shrink-0"
+                      style={{ backgroundColor: '#34C75914' }}
                     >
-                      <p className="text-[18px] md:text-[22px] font-semibold tabular-nums leading-none">
-                        {count}
-                      </p>
-                      <div className="flex items-center gap-1 mt-1">
-                        <span
-                          className="h-1.5 w-1.5 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: st.color }}
-                        />
-                        <p className="text-[12px] md:text-[13px] text-muted-foreground whitespace-nowrap">
-                          {st.label}
-                        </p>
-                      </div>
-                    </motion.div>
-                  )
-                })}
+                      <Wallet className="h-3 w-3" style={{ color: '#34C759' }} />
+                    </span>
+                    <p className="text-[11px] font-semibold text-muted-foreground whitespace-nowrap">
+                      Em Caixa
+                    </p>
+                  </div>
+                  {contasLoading ? (
+                    <div className="h-[18px] w-20 rounded-md bg-muted/60 animate-pulse" />
+                  ) : (
+                    <p
+                      className="text-[15px] md:text-[17px] font-bold tabular-nums tracking-tight leading-none"
+                      style={{ color: '#34C759' }}
+                    >
+                      {formatCurrency(totalCaixa)}
+                    </p>
+                  )}
+                </div>
+
+                <div className="w-px bg-border/20 self-stretch" />
+
+                {/* Aplicações */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <span
+                      className="flex h-5 w-5 items-center justify-center rounded-md flex-shrink-0"
+                      style={{ backgroundColor: '#007AFF14' }}
+                    >
+                      <FileText className="h-3 w-3" style={{ color: '#007AFF' }} />
+                    </span>
+                    <p className="text-[11px] font-semibold text-muted-foreground whitespace-nowrap">
+                      Aplicações
+                    </p>
+                  </div>
+                  {contasLoading ? (
+                    <div className="h-[18px] w-20 rounded-md bg-muted/60 animate-pulse" />
+                  ) : (
+                    <p
+                      className="text-[15px] md:text-[17px] font-bold tabular-nums tracking-tight leading-none"
+                      style={{ color: '#007AFF' }}
+                    >
+                      {formatCurrency(totalAplicado)}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </div>

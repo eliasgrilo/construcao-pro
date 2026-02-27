@@ -1,12 +1,9 @@
-import { CurrencyInput, parseCurrency } from '@/components/ui/currency-input'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { parseCurrency } from '@/components/ui/currency-input'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import {
   type FinanceiroConta,
   useCreateFinanceiroConta,
   useCreateFinanceiroMovimentacao,
-  useDashboardCustoPorObra,
   useDashboardStats,
   useDeleteFinanceiroConta,
   useEstoqueAlertas,
@@ -22,7 +19,6 @@ import {
   ArrowDownRight,
   ArrowLeftRight,
   ArrowUpRight,
-  Building2,
   CheckCircle2,
   ChevronRight,
   CreditCard,
@@ -107,9 +103,9 @@ const tipos: Record<string, { label: string; icon: typeof ArrowLeftRight; tint: 
   TRANSFERENCIA: { label: 'Transferência', icon: ArrowLeftRight, tint: clr.blue },
 }
 
-/* ─── Modal className ─── */
+/* ─── Modal className — iOS system sheet ─── */
 const modalCn =
-  'p-0 sm:max-w-[400px] sm:rounded-[28px] bg-background/85 dark:bg-background/85 backdrop-blur-2xl border-white/20 dark:border-white/10'
+  'p-0 gap-0 border-0 dark:border dark:border-white/[0.07] sm:max-w-[390px] sm:rounded-[28px] bg-[#F2F2F7] dark:bg-[#1C1C1E] overflow-hidden'
 
 export function FinanceiroPage() {
   const navigate = useNavigate()
@@ -700,7 +696,7 @@ export function FinanceiroPage() {
       </motion.div>
 
       {/* ══════════════════════════════════════════
-                MODAL: Nova Conta Apple Premium
+                MODAL: Nova Conta — iOS Sheet
             ══════════════════════════════════════════ */}
       <Dialog
         open={modalOpen}
@@ -710,117 +706,144 @@ export function FinanceiroPage() {
         }}
       >
         <DialogContent className={modalCn}>
-          <DialogHeader className="px-6 pt-8 pb-6 relative z-10 border-b border-border/10">
+          {/* ── Cabeçalho: título centrado + botão fechar ── */}
+          <div className="relative flex items-center justify-center px-5 pt-4 pb-2">
+            <DialogTitle className="text-[17px] font-semibold tracking-tight">
+              Nova Conta
+            </DialogTitle>
             <motion.button
-              whileTap={{ scale: 0.9 }}
+              whileTap={{ scale: 0.86 }}
               onClick={() => {
                 setModalOpen(false)
                 resetForm()
               }}
-              className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 transition-colors"
+              className="absolute right-4 flex h-[30px] w-[30px] items-center justify-center rounded-full bg-black/[0.08] dark:bg-white/[0.12] hover:bg-black/[0.13] dark:hover:bg-white/[0.18] transition-colors"
             >
-              <X className="h-4 w-4 text-muted-foreground" />
+              <X className="h-[14px] w-[14px] text-foreground/60" />
             </motion.button>
+          </div>
 
-            <div className="flex flex-col items-center gap-3 text-center">
-              <span
-                className="flex h-14 w-14 items-center justify-center rounded-[18px] shadow-sm flex-shrink-0"
-                style={{ backgroundColor: '#007AFF15' }}
-              >
-                <Landmark className="h-6 w-6" style={{ color: '#007AFF' }} />
-              </span>
-              <DialogTitle className="text-[20px] font-semibold tracking-tight">
-                Nova Conta
-              </DialogTitle>
+          {/* ── Ícone + subtítulo ── */}
+          <div className="flex flex-col items-center pt-4 pb-7">
+            <div
+              className="flex h-[64px] w-[64px] items-center justify-center rounded-[20px] mb-3 flex-shrink-0"
+              style={{
+                background: 'linear-gradient(145deg, #2196FF 0%, #0050D8 100%)',
+                boxShadow: '0 10px 30px rgba(0,122,255,0.40)',
+              }}
+            >
+              <Landmark className="h-[28px] w-[28px] text-white" />
             </div>
-          </DialogHeader>
+            <p className="text-[13px] text-foreground/40">Dados da conta bancária</p>
+          </div>
 
-          <div className="px-5 sm:px-6 py-6 space-y-5">
-            {/* Nome do banco */}
-            <div className="space-y-2">
-              <Label className="text-[13px] font-medium text-muted-foreground uppercase tracking-wider ml-1">
-                Nome do banco
-              </Label>
-              <Input
-                placeholder="Itaú, Nubank, Bradesco…"
-                value={banco}
-                onChange={(e) => setBanco(e.target.value)}
-                className="h-14 sm:h-[52px] rounded-2xl text-[16px] bg-black/[0.03] dark:bg-white/[0.03] border-border/50 focus-visible:ring-1 focus-visible:ring-primary/30 focus-visible:bg-transparent placeholder:text-muted-foreground/40 transition-all font-medium px-4"
-              />
-            </div>
+          {/* ── Formulário agrupado — estilo iOS Settings ── */}
+          <div className="px-4 space-y-[10px] pb-3">
+            {/* Grupo 1: informações do banco */}
+            <div className="rounded-[14px] overflow-hidden bg-white dark:bg-white/[0.07]">
+              {/* Banco */}
+              <div className="flex items-center min-h-[52px] px-4 gap-3">
+                <span className="text-[16px] font-medium w-[80px] flex-shrink-0 text-foreground">
+                  Banco
+                </span>
+                <input
+                  value={banco}
+                  onChange={(e) => setBanco(e.target.value)}
+                  placeholder="Itaú, Nubank…"
+                  autoComplete="organization"
+                  className="flex-1 text-[16px] text-right bg-transparent outline-none min-w-0 placeholder:text-black/20 dark:placeholder:text-white/20"
+                />
+              </div>
 
-            {/* Agência + Número da conta */}
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
-              <div className="space-y-2">
-                <Label className="text-[13px] font-medium text-muted-foreground uppercase tracking-wider ml-1">
+              <div className="h-px ml-4 bg-black/[0.07] dark:bg-white/[0.07]" />
+
+              {/* Agência */}
+              <div className="flex items-center min-h-[52px] px-4 gap-3">
+                <span className="text-[16px] font-medium w-[80px] flex-shrink-0 text-foreground">
                   Agência
-                </Label>
-                <Input
-                  placeholder="0001"
+                </span>
+                <input
                   value={agencia}
                   onChange={(e) => setAgencia(e.target.value)}
-                  className="h-14 sm:h-[52px] rounded-2xl text-[16px] bg-black/[0.03] dark:bg-white/[0.03] border-border/50 focus-visible:ring-1 focus-visible:ring-primary/30 focus-visible:bg-transparent placeholder:text-muted-foreground/40 transition-all font-medium px-4"
+                  placeholder="0001"
+                  inputMode="numeric"
+                  className="flex-1 text-[16px] text-right bg-transparent outline-none min-w-0 tabular-nums placeholder:text-black/20 dark:placeholder:text-white/20"
                 />
               </div>
-              <div className="space-y-2">
-                <Label className="text-[13px] font-medium text-muted-foreground uppercase tracking-wider ml-1">
-                  Conta (Opcional)
-                </Label>
-                <Input
-                  placeholder="12345-6"
+
+              <div className="h-px ml-4 bg-black/[0.07] dark:bg-white/[0.07]" />
+
+              {/* Número da conta */}
+              <div className="flex items-center min-h-[52px] px-4 gap-3">
+                <span className="text-[16px] font-medium flex-shrink-0 text-foreground">
+                  Conta
+                </span>
+                <span className="text-[12px] text-foreground/35 flex-shrink-0">opcional</span>
+                <input
                   value={numeroConta}
                   onChange={(e) => setNumeroConta(e.target.value)}
-                  className="h-14 sm:h-[52px] rounded-2xl text-[16px] bg-black/[0.03] dark:bg-white/[0.03] border-border/50 focus-visible:ring-1 focus-visible:ring-primary/30 focus-visible:bg-transparent placeholder:text-muted-foreground/40 transition-all font-medium px-4"
+                  placeholder="12345-6"
+                  className="flex-1 text-[16px] text-right bg-transparent outline-none min-w-0 tabular-nums placeholder:text-black/20 dark:placeholder:text-white/20"
                 />
               </div>
             </div>
 
-            {/* Valores */}
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
-              <div className="space-y-2">
-                <Label
-                  className="text-[13px] font-medium uppercase tracking-wider ml-1"
-                  style={{ color: '#34C759' }}
-                >
+            {/* Grupo 2: saldo inicial */}
+            <div className="rounded-[14px] overflow-hidden bg-white dark:bg-white/[0.07]">
+              {/* Em Caixa */}
+              <div className="flex items-center min-h-[52px] px-4 gap-3">
+                <span className="text-[16px] font-semibold flex-shrink-0" style={{ color: '#34C759' }}>
                   Em Caixa
-                </Label>
-                <CurrencyInput
-                  placeholder="0,00"
-                  value={valorCaixa}
-                  onChange={(e) => setValorCaixa(e.target.value)}
-                  className="h-14 sm:h-[52px] rounded-2xl text-[16px] bg-[#34C75908] border-[#34C75920] focus-visible:ring-1 focus-visible:ring-[#34C759] focus-visible:bg-[#34C75910] placeholder:text-[#34C759]/40 transition-all font-medium"
-                />
+                </span>
+                <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
+                  <span className="text-[14px] flex-shrink-0 font-medium text-foreground/35">R$</span>
+                  <input
+                    value={valorCaixa}
+                    onChange={(e) => setValorCaixa(e.target.value.replace(/[^\d,.]/g, ''))}
+                    placeholder="0,00"
+                    inputMode="decimal"
+                    className="text-[16px] text-right bg-transparent outline-none tabular-nums font-semibold min-w-0 w-[128px] placeholder:text-black/20 dark:placeholder:text-white/20"
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label
-                  className="text-[13px] font-medium uppercase tracking-wider ml-1"
-                  style={{ color: '#007AFF' }}
-                >
+
+              <div className="h-px ml-4 bg-black/[0.07] dark:bg-white/[0.07]" />
+
+              {/* Aplicações */}
+              <div className="flex items-center min-h-[52px] px-4 gap-3">
+                <span className="text-[16px] font-semibold flex-shrink-0" style={{ color: '#007AFF' }}>
                   Aplicações
-                </Label>
-                <CurrencyInput
-                  placeholder="0,00"
-                  value={valorAplicado}
-                  onChange={(e) => setValorAplicado(e.target.value)}
-                  className="h-14 sm:h-[52px] rounded-2xl text-[16px] bg-[#007AFF08] border-[#007AFF20] focus-visible:ring-1 focus-visible:ring-[#007AFF] focus-visible:bg-[#007AFF10] placeholder:text-[#007AFF]/40 transition-all font-medium"
-                />
+                </span>
+                <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
+                  <span className="text-[14px] flex-shrink-0 font-medium text-foreground/35">R$</span>
+                  <input
+                    value={valorAplicado}
+                    onChange={(e) => setValorAplicado(e.target.value.replace(/[^\d,.]/g, ''))}
+                    placeholder="0,00"
+                    inputMode="decimal"
+                    className="text-[16px] text-right bg-transparent outline-none tabular-nums font-semibold min-w-0 w-[128px] placeholder:text-black/20 dark:placeholder:text-white/20"
+                  />
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="px-5 sm:px-6 pb-8 sm:pb-6 pt-2">
+          {/* ── CTA ── */}
+          <div className="px-4 pt-2 pb-8 sm:pb-6">
             <motion.button
               whileTap={{ scale: banco.trim() ? 0.97 : 1 }}
               disabled={!banco.trim() || createConta.isPending}
               onClick={handleAddConta}
               className={cn(
-                'w-full flex items-center justify-center h-[56px] sm:h-[52px] rounded-[20px] text-[17px] font-semibold tracking-tight transition-all',
+                'w-full flex items-center justify-center gap-2 h-[54px] rounded-[14px] text-[17px] font-semibold tracking-tight transition-all',
                 banco.trim() && !createConta.isPending
-                  ? 'bg-[#007AFF] text-white shadow-md shadow-[#007AFF]/25'
-                  : 'bg-muted text-muted-foreground opacity-50 cursor-not-allowed',
+                  ? 'bg-[#007AFF] text-white'
+                  : 'bg-black/[0.07] dark:bg-white/[0.07] text-foreground/25 cursor-not-allowed',
               )}
             >
+              {createConta.isPending && (
+                <div className="h-[18px] w-[18px] rounded-full border-2 border-white/30 border-t-white animate-spin" />
+              )}
               {createConta.isPending ? 'Salvando…' : 'Criar Conta'}
             </motion.button>
           </div>

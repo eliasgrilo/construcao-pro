@@ -83,7 +83,7 @@ function uuid(): string {
 }
 
 /* ─── Modal className ─── */
-const modalCn = 'max-w-[calc(100vw-32px)] sm:max-w-[400px] rounded-[28px] p-0 gap-0 overflow-hidden bg-background/85 dark:bg-background/85 backdrop-blur-2xl border-white/20 dark:border-white/10 shadow-2xl'
+const modalCn = 'max-w-[calc(100vw-32px)] sm:max-w-[400px] rounded-[28px] p-0 gap-0 bg-background/85 dark:bg-background/85 backdrop-blur-2xl border-white/20 dark:border-white/10 shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden'
 
 export function FinanceiroPage() {
     const navigate = useNavigate()
@@ -584,7 +584,7 @@ export function FinanceiroPage() {
                         </div>
                     </DialogHeader>
 
-                    <div className="px-5 sm:px-6 py-6 space-y-5">
+                    <div className="px-5 sm:px-6 py-6 space-y-5 overflow-y-auto flex-1">
 
                         {/* Nome do banco */}
                         <div className="space-y-2">

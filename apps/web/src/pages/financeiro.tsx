@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
     ArrowDownRight, ArrowUpRight, ArrowLeftRight,
     AlertTriangle, ChevronRight, Landmark, Package, CheckCircle2, FileText, Building2,
-    Plus, Trash2, CreditCard, Wallet,
+    Plus, Trash2, CreditCard, Wallet, X,
 } from 'lucide-react'
 import { useDashboardStats, useDashboardCustoPorObra, useMovimentacoesRecentes, useEstoqueAlertas, useObras } from '@/hooks/use-supabase'
 import { cn, formatDate, formatNumber, formatCurrency } from '@/lib/utils'
@@ -72,8 +72,18 @@ const tipos: Record<string, { label: string; icon: typeof ArrowLeftRight; tint: 
 
 const STORAGE_KEY = 'financeiro_contas_v1'
 
+/* ─── UUID polyfill (crypto.randomUUID not available on iOS < 15.4) ─── */
+function uuid(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID()
+    }
+    return '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, c =>
+        (Number(c) ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> Number(c) / 4).toString(16)
+    )
+}
+
 /* ─── Modal className ─── */
-const modalCn = 'max-w-[calc(100vw-32px)] sm:max-w-[440px] rounded-2xl p-0 gap-0 overflow-hidden'
+const modalCn = 'max-w-[calc(100vw-32px)] sm:max-w-[400px] rounded-[28px] p-0 gap-0 overflow-hidden bg-background/85 dark:bg-background/85 backdrop-blur-2xl border-white/20 dark:border-white/10 shadow-2xl'
 
 export function FinanceiroPage() {
     const navigate = useNavigate()
@@ -121,7 +131,7 @@ export function FinanceiroPage() {
     const handleAddConta = () => {
         if (!banco.trim()) return
         const nova: Conta = {
-            id: crypto.randomUUID(),
+            id: uuid(),
             banco: banco.trim(),
             agencia: agencia.trim(),
             numeroConta: numeroConta.trim(),
@@ -552,97 +562,102 @@ export function FinanceiroPage() {
             </motion.div>
 
             {/* ══════════════════════════════════════════
-                MODAL: Nova Conta
+                MODAL: Nova Conta Apple Premium
             ══════════════════════════════════════════ */}
             <Dialog open={modalOpen} onOpenChange={(open) => { setModalOpen(open); if (!open) resetForm() }}>
                 <DialogContent className={modalCn}>
+                    <DialogHeader className="px-6 pt-8 pb-6 relative z-10 border-b border-border/10">
+                        <motion.button
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => { setModalOpen(false); resetForm() }}
+                            className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 transition-colors"
+                        >
+                            <X className="h-4 w-4 text-muted-foreground" />
+                        </motion.button>
 
-                    <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/20">
-                        <div className="flex items-center gap-3">
-                            <span className="flex h-10 w-10 items-center justify-center rounded-[12px]"
-                                style={{ backgroundColor: '#007AFF12' }}>
-                                <Landmark className="h-5 w-5" style={{ color: '#007AFF' }} />
+                        <div className="flex flex-col items-center gap-3 text-center">
+                            <span className="flex h-14 w-14 items-center justify-center rounded-[18px] shadow-sm flex-shrink-0"
+                                style={{ backgroundColor: '#007AFF15' }}>
+                                <Landmark className="h-6 w-6" style={{ color: '#007AFF' }} />
                             </span>
-                            <DialogTitle className="text-[18px] font-semibold tracking-tight">Nova Conta</DialogTitle>
+                            <DialogTitle className="text-[20px] font-semibold tracking-tight">Nova Conta</DialogTitle>
                         </div>
                     </DialogHeader>
 
-                    <div className="px-6 py-5 space-y-4">
+                    <div className="px-6 py-6 space-y-5">
 
                         {/* Nome do banco */}
                         <div className="space-y-2">
-                            <Label className="text-[14px] sm:text-[13px] font-medium text-foreground">Nome do banco</Label>
+                            <Label className="text-[13px] font-medium text-muted-foreground uppercase tracking-wider ml-1">Nome do banco</Label>
                             <Input
-                                placeholder="Ex: Itaú, Nubank, Bradesco…"
+                                placeholder="Itaú, Nubank, Bradesco…"
                                 value={banco}
                                 onChange={e => setBanco(e.target.value)}
                                 autoFocus
-                                className="h-12 sm:h-11 rounded-xl text-[16px] sm:text-[15px] placeholder:text-muted-foreground/40"
+                                className="h-14 rounded-2xl text-[16px] bg-black/[0.03] dark:bg-white/[0.03] border-border/50 focus-visible:ring-1 focus-visible:ring-primary/30 focus-visible:bg-transparent placeholder:text-muted-foreground/40 transition-all font-medium px-4"
                             />
                         </div>
 
-                        {/* Agência + Número da conta — side by side */}
-                        <div className="grid grid-cols-2 gap-3">
+                        {/* Agência + Número da conta */}
+                        <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label className="text-[14px] sm:text-[13px] font-medium text-foreground">Agência</Label>
+                                <Label className="text-[13px] font-medium text-muted-foreground uppercase tracking-wider ml-1">Agência</Label>
                                 <Input
-                                    placeholder="Ex: 0001"
+                                    placeholder="0001"
                                     value={agencia}
                                     onChange={e => setAgencia(e.target.value)}
-                                    className="h-12 sm:h-11 rounded-xl text-[16px] sm:text-[15px] placeholder:text-muted-foreground/40"
+                                    className="h-14 rounded-2xl text-[16px] bg-black/[0.03] dark:bg-white/[0.03] border-border/50 focus-visible:ring-1 focus-visible:ring-primary/30 focus-visible:bg-transparent placeholder:text-muted-foreground/40 transition-all font-medium px-4"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-[14px] sm:text-[13px] font-medium text-foreground">Número da conta</Label>
+                                <Label className="text-[13px] font-medium text-muted-foreground uppercase tracking-wider ml-1">Conta (Opcional)</Label>
                                 <Input
-                                    placeholder="Ex: 12345-6"
+                                    placeholder="12345-6"
                                     value={numeroConta}
                                     onChange={e => setNumeroConta(e.target.value)}
-                                    className="h-12 sm:h-11 rounded-xl text-[16px] sm:text-[15px] placeholder:text-muted-foreground/40"
+                                    className="h-14 rounded-2xl text-[16px] bg-black/[0.03] dark:bg-white/[0.03] border-border/50 focus-visible:ring-1 focus-visible:ring-primary/30 focus-visible:bg-transparent placeholder:text-muted-foreground/40 transition-all font-medium px-4"
                                 />
                             </div>
                         </div>
 
                         {/* Valores */}
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label className="text-[14px] sm:text-[13px] font-medium" style={{ color: '#34C759' }}>Valor em caixa</Label>
+                                <Label className="text-[13px] font-medium uppercase tracking-wider ml-1" style={{ color: '#34C759' }}>Saldo Caixa</Label>
                                 <CurrencyInput
                                     placeholder="0,00"
                                     value={valorCaixa}
                                     onChange={e => setValorCaixa(e.target.value)}
-                                    className="h-12 sm:h-11 rounded-xl"
+                                    className="h-14 rounded-2xl text-[16px] bg-[#34C75908] border-[#34C75920] focus-visible:ring-1 focus-visible:ring-[#34C759] focus-visible:bg-[#34C75910] placeholder:text-[#34C759]/40 transition-all font-medium px-4"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-[14px] sm:text-[13px] font-medium" style={{ color: '#007AFF' }}>Valor aplicado</Label>
+                                <Label className="text-[13px] font-medium uppercase tracking-wider ml-1" style={{ color: '#007AFF' }}>Aplicado</Label>
                                 <CurrencyInput
                                     placeholder="0,00"
                                     value={valorAplicado}
                                     onChange={e => setValorAplicado(e.target.value)}
-                                    className="h-12 sm:h-11 rounded-xl"
+                                    className="h-14 rounded-2xl text-[16px] bg-[#007AFF08] border-[#007AFF20] focus-visible:ring-1 focus-visible:ring-[#007AFF] focus-visible:bg-[#007AFF10] placeholder:text-[#007AFF]/40 transition-all font-medium px-4"
                                 />
                             </div>
                         </div>
                     </div>
 
                     {/* Footer */}
-                    <div className="flex gap-3 px-6 pb-6">
-                        <Button
-                            variant="outline"
-                            className="flex-1 h-12 sm:h-11 rounded-xl text-[16px] sm:text-[15px] font-medium"
-                            onClick={() => { setModalOpen(false); resetForm() }}
-                        >
-                            Cancelar
-                        </Button>
-                        <Button
-                            className="flex-1 h-12 sm:h-11 rounded-xl text-[16px] sm:text-[15px] font-medium"
+                    <div className="px-6 pb-8 pt-2">
+                        <motion.button
+                            whileTap={{ scale: banco.trim() ? 0.97 : 1 }}
                             disabled={!banco.trim()}
                             onClick={handleAddConta}
-                            style={{ backgroundColor: banco.trim() ? '#007AFF' : undefined }}
+                            className={cn(
+                                "w-full flex items-center justify-center h-14 rounded-[20px] text-[17px] font-semibold tracking-tight transition-all",
+                                banco.trim()
+                                    ? "bg-[#007AFF] text-white shadow-md shadow-[#007AFF]/25"
+                                    : "bg-muted text-muted-foreground opacity-50 cursor-not-allowed"
+                            )}
                         >
-                            Adicionar
-                        </Button>
+                            Criar Conta
+                        </motion.button>
                     </div>
                 </DialogContent>
             </Dialog>

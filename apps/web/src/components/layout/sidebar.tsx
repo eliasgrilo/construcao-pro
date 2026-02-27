@@ -12,6 +12,7 @@ import {
     ChevronLeft,
     ChevronRight,
     LogOut,
+    TrendingUp,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
@@ -19,6 +20,7 @@ import { useUIStore } from '@/stores/ui-store'
 
 const nav = [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/financeiro', label: 'Financeiro', icon: TrendingUp },
     { path: '/obras', label: 'Obras', icon: Building2 },
     { path: '/materiais', label: 'Materiais', icon: Package },
     { path: '/fornecedores', label: 'Fornecedores', icon: Truck },

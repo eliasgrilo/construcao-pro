@@ -6,15 +6,9 @@ import {
 } from 'lucide-react'
 import { useDashboardStats, useDashboardCustoPorObra, useMovimentacoesRecentes, useEstoqueAlertas, useObras } from '@/hooks/use-supabase'
 import { cn, formatDate, formatNumber, formatCurrency } from '@/lib/utils'
-import { useAuthStore } from '@/stores/auth-store'
 
 /* Apple System Colors */
 const clr = { blue: '#007AFF', green: '#34C759', red: '#FF3B30', orange: '#FF9500' }
-
-function greeting() {
-    const h = new Date().getHours()
-    return h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite'
-}
 
 /* SVG Ring */
 function Ring({ percent, size = 80, stroke = 6, color }: { percent: number; size?: number; stroke?: number; color: string }) {
@@ -54,8 +48,7 @@ const tipos: Record<string, { label: string; icon: typeof ArrowLeftRight; tint: 
     TRANSFERENCIA: { label: 'Transferência', icon: ArrowLeftRight, tint: clr.blue },
 }
 
-export function DashboardPage() {
-    const { user } = useAuthStore()
+export function FinanceiroPage() {
     const navigate = useNavigate()
 
     const { data: stats } = useDashboardStats()
@@ -75,23 +68,13 @@ export function DashboardPage() {
     const totalTerrenos = terrenosStandby.reduce((sum: number, o: any) => sum + (o.valor_terreno ?? 0), 0)
 
     return (
-        <div className="pb-16">
-
-            {/* ─── Large Title ─── */}
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }} className="px-4 md:px-6 pt-10 pb-8">
-                <h1 className="text-[28px] md:text-[34px] font-bold tracking-tight leading-tight">
-                    {greeting()}, {user?.nome?.split(' ')[0] ?? 'usuário'}.
-                </h1>
-                <p className="text-[15px] md:text-[17px] text-muted-foreground mt-1">
-                    {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
-                </p>
-            </motion.div>
+        <div className="pb-16 pt-10">
 
             {/* ─── Financial Summary ─── */}
             <motion.div
                 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.1 }}
-                className="mt-6 px-4 md:px-6"
+                className="px-4 md:px-6"
             >
                 <div className="flex items-baseline justify-between mb-4">
                     <h2 className="text-[20px] md:text-[22px] font-bold tracking-tight">Orçamento Geral</h2>

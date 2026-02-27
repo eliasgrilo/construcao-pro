@@ -3,7 +3,7 @@ import { type ColumnDef } from '@tanstack/react-table'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
     AlertTriangle, Boxes, Building2, Package,
-    ArrowLeft, Plus, PackagePlus, Minus, ArrowRightLeft, Trash2,
+    ArrowLeft, Plus, PackagePlus, Minus, ArrowRightLeft, Trash2, MapPin,
 } from 'lucide-react'
 import { DataTable } from '@/components/data-table'
 import { Badge } from '@/components/ui/badge'
@@ -24,6 +24,7 @@ import { useToast } from '@/components/ui/toast'
 interface ObraGroup {
     obraId: string
     obraNome: string
+    obraEndereco?: string
     items: any[]
     totalItems: number
     totalQty: number
@@ -143,9 +144,10 @@ export function EstoquePage() {
         for (const item of allItems) {
             const obraId = item.almoxarifado?.obra?.id || 'sem-obra'
             const obraNome = item.almoxarifado?.obra?.nome || 'Sem Obra'
+            const obraEndereco = item.almoxarifado?.obra?.endereco || undefined
             if (!map.has(obraId)) {
                 map.set(obraId, {
-                    obraId, obraNome, items: [], totalItems: 0, totalQty: 0, totalCost: 0,
+                    obraId, obraNome, obraEndereco, items: [], totalItems: 0, totalQty: 0, totalCost: 0,
                     lowStockCount: 0, almoxarifados: 0,
                 })
             }
@@ -461,6 +463,12 @@ export function EstoquePage() {
                                                         <Building2 className="h-[18px] w-[18px]" style={{ color: accent.fg }} />
                                                     </span>
                                                     <p className="text-[15px] font-semibold truncate pr-6">{group.obraNome}</p>
+                                                    {group.obraEndereco && (
+                                                        <p className="flex items-center gap-1 text-[12px] text-muted-foreground mt-1 truncate pr-6">
+                                                            <MapPin className="h-[11px] w-[11px] shrink-0 opacity-60" />
+                                                            <span className="truncate">{group.obraEndereco}</span>
+                                                        </p>
+                                                    )}
                                                     <p className="text-[24px] md:text-[28px] font-bold tabular-nums tracking-tight leading-none mt-3">
                                                         {formatCurrency(group.totalCost)}
                                                     </p>

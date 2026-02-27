@@ -3,7 +3,7 @@ import { useParams, useNavigate } from '@tanstack/react-router'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
     ArrowLeft, Landmark, CreditCard, Wallet, FileText,
-    ArrowDownRight, ArrowUpRight, Plus, Trash2, Receipt,
+    ArrowDownRight, ArrowUpRight, Plus, Trash2, Receipt, ChevronDown,
 } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
 import { CurrencyInput, parseCurrency } from '@/components/ui/currency-input'
@@ -50,15 +50,23 @@ function weekAgoStr() {
     const d = new Date(); d.setDate(d.getDate() - 7)
     return d.toISOString().split('T')[0]
 }
-function formatDatePT(dateStr: string): string {
-    const [y, m, d] = dateStr.split('-').map(Number)
-    const date = new Date(y, m - 1, d)
-    const today = new Date()
-    const yesterday = new Date(); yesterday.setDate(today.getDate() - 1)
-    if (date.toDateString() === today.toDateString()) return 'Hoje'
-    if (date.toDateString() === yesterday.toDateString()) return 'Ontem'
-    return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })
+
+/** Format ISO timestamp to full date + time in pt-BR: "14 de fev. de 2026 · 14:32" */
+function formatDateTime(isoStr: string): string {
+    if (!isoStr) return '—'
+    const date = new Date(isoStr)
+    const dateStr = date.toLocaleDateString('pt-BR', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+    })
+    const timeStr = date.toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+    })
+    return `${dateStr} · ${timeStr}`
 }
+
 function groupLabel(date: string): string {
     const today = todayStr()
     const weekAgo = weekAgoStr()
@@ -67,7 +75,7 @@ function groupLabel(date: string): string {
     return 'Anteriores'
 }
 
-/* ─── Accent accents palette ─── */
+/* ─── Accent palette ─── */
 const accents = [
     { bg: '#007AFF12', fg: '#007AFF' },
     { bg: '#34C75912', fg: '#34C759' },
@@ -110,6 +118,9 @@ export function ContaDetailPage() {
     }, [conta, contaId])
     const accent = accents[accentIdx]
 
+    /* ─── All contas (for Conta selector in modal) ─── */
+    const [allContas] = useState<Conta[]>(() => loadContas())
+
     /* ─── Movimentações ─── */
     const [movs, setMovs] = useState<MovimentacaoConta[]>(() => loadMovs(contaId))
     useEffect(() => { saveMovs(contaId, movs) }, [contaId, movs])
@@ -139,10 +150,16 @@ export function ContaDetailPage() {
     /* ─── Add movimentação modal ─── */
     const [modalOpen, setModalOpen] = useState(false)
     const [tipo, setTipo] = useState<'ENTRADA' | 'SAIDA'>('ENTRADA')
-    const [motivo, setMotivo] = useState('')
     const [valor, setValor] = useState('')
+    const [contaSelecionada, setContaSelecionada] = useState(contaId)
+    const [motivo, setMotivo] = useState('')
 
-    const resetModal = () => { setTipo('ENTRADA'); setMotivo(''); setValor('') }
+    const resetModal = () => {
+        setTipo('ENTRADA')
+        setValor('')
+        setContaSelecionada(contaId)
+        setMotivo('')
+    }
 
     const handleAdd = () => {
         if (!motivo.trim() || !valor) return
@@ -154,7 +171,16 @@ export function ContaDetailPage() {
             data: todayStr(),
             createdAt: new Date().toISOString(),
         }
-        setMovs(prev => [nova, ...prev])
+
+        if (contaSelecionada === contaId) {
+            // Add to current conta's state (auto-saved via useEffect)
+            setMovs(prev => [nova, ...prev])
+        } else {
+            // Add to a different conta's localStorage directly
+            const otherMovs = loadMovs(contaSelecionada)
+            saveMovs(contaSelecionada, [nova, ...otherMovs])
+        }
+
         setModalOpen(false)
         resetModal()
     }
@@ -375,8 +401,8 @@ export function ContaDetailPage() {
                                                             <p className="text-[15px] font-medium leading-snug truncate">
                                                                 {mov.motivo}
                                                             </p>
-                                                            <p className="text-[12px] text-muted-foreground mt-0.5">
-                                                                {formatDatePT(mov.data)}
+                                                            <p className="text-[12px] text-muted-foreground mt-0.5 tabular-nums">
+                                                                {formatDateTime(mov.createdAt)}
                                                             </p>
                                                         </div>
 
@@ -431,7 +457,7 @@ export function ContaDetailPage() {
 
                     <div className="px-6 py-5 space-y-4">
 
-                        {/* Tipo — segmented control */}
+                        {/* 1. Tipo — segmented control */}
                         <div className="space-y-1.5">
                             <Label className="text-[13px] font-medium text-foreground">Tipo</Label>
                             <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-muted/40">
@@ -458,19 +484,7 @@ export function ContaDetailPage() {
                             </div>
                         </div>
 
-                        {/* Motivo */}
-                        <div className="space-y-1.5">
-                            <Label className="text-[13px] font-medium text-foreground">Motivo</Label>
-                            <Input
-                                placeholder={tipo === 'ENTRADA' ? 'Ex: Depósito, Transferência recebida…' : 'Ex: Pagamento fornecedor, Compra…'}
-                                value={motivo}
-                                onChange={e => setMotivo(e.target.value)}
-                                autoFocus
-                                className="h-11 rounded-xl text-[15px] placeholder:text-muted-foreground/40"
-                            />
-                        </div>
-
-                        {/* Valor */}
+                        {/* 2. Valor */}
                         <div className="space-y-1.5">
                             <Label className="text-[13px] font-medium"
                                 style={{ color: tipo === 'ENTRADA' ? '#34C759' : '#FF3B30' }}>
@@ -480,7 +494,43 @@ export function ContaDetailPage() {
                                 placeholder="0,00"
                                 value={valor}
                                 onChange={e => setValor(e.target.value)}
+                                autoFocus
                                 className="h-11 rounded-xl text-[15px]"
+                            />
+                        </div>
+
+                        {/* 3. Conta */}
+                        <div className="space-y-1.5">
+                            <Label className="text-[13px] font-medium text-foreground">Conta</Label>
+                            <div className="relative">
+                                <select
+                                    value={contaSelecionada}
+                                    onChange={e => setContaSelecionada(e.target.value)}
+                                    className={cn(
+                                        'w-full h-11 rounded-xl border bg-transparent',
+                                        'pl-4 pr-10 text-[15px] appearance-none cursor-pointer',
+                                        'focus:outline-none focus:ring-2 focus:ring-ring/40 focus:ring-offset-1 focus:ring-offset-background',
+                                        'transition-colors',
+                                    )}
+                                >
+                                    {allContas.map(c => (
+                                        <option key={c.id} value={c.id}>
+                                            {c.banco}{c.numeroConta ? ` · ${c.numeroConta}` : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            </div>
+                        </div>
+
+                        {/* 4. Motivo */}
+                        <div className="space-y-1.5">
+                            <Label className="text-[13px] font-medium text-foreground">Motivo</Label>
+                            <Input
+                                placeholder={tipo === 'ENTRADA' ? 'Ex: Depósito, Transferência recebida…' : 'Ex: Pagamento fornecedor, Compra…'}
+                                value={motivo}
+                                onChange={e => setMotivo(e.target.value)}
+                                className="h-11 rounded-xl text-[15px] placeholder:text-muted-foreground/40"
                             />
                         </div>
                     </div>

@@ -26,6 +26,7 @@ import {
   Landmark,
   Package,
   Plus,
+  Target,
   Trash2,
   Wallet,
   X,
@@ -130,6 +131,17 @@ export function FinanceiroPage() {
   /* Saldo consolidado de todas as contas bancárias */
   const totalCaixa = contas.reduce((sum, c) => sum + (Number(c.valor_caixa) || 0), 0)
   const totalAplicado = contas.reduce((sum, c) => sum + (Number(c.valor_aplicado) || 0), 0)
+  const totalDisponivel = totalCaixa + totalAplicado
+
+  /* ─── Meta financeira — persisted in localStorage ─── */
+  const [meta, setMeta] = useState<number>(() => {
+    try { return parseFloat(localStorage.getItem('financeiro_meta') || '0') || 0 } catch { return 0 }
+  })
+  const [metaModalOpen, setMetaModalOpen] = useState(false)
+  const [metaInput, setMetaInput] = useState('')
+
+  const metaPct = meta > 0 ? Math.min(Math.round((totalDisponivel / meta) * 100), 100) : 0
+  const metaRingColor = meta === 0 ? '#8E8E9360' : metaPct >= 100 ? '#34C759' : '#007AFF'
 
   /* ─── Add Conta modal state ─── */
   const [modalOpen, setModalOpen] = useState(false)
@@ -205,28 +217,59 @@ export function FinanceiroPage() {
         </h2>
         <div className="rounded-2xl bg-card border p-5 md:p-6">
           <div className="flex items-center gap-5 md:gap-8">
-            {/* Ring — always row layout */}
-            <div className="relative flex-shrink-0">
-              <Ring percent={pct} size={100} stroke={9} color={ringColor(pct)} />
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-[22px] font-bold tabular-nums leading-none">{pct}%</span>
-                <span className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-wider">
-                  usado
-                </span>
+            {/* Ring — meta % alcançada · clicável para definir/editar meta */}
+            <motion.button
+              whileTap={{ scale: 0.93 }}
+              onClick={() => {
+                setMetaInput(meta > 0 ? formatBRL(meta.toFixed(2).replace('.', ',')) : '')
+                setMetaModalOpen(true)
+              }}
+              className="relative flex-shrink-0 focus:outline-none rounded-full"
+              aria-label="Definir meta financeira"
+            >
+              <Ring percent={metaPct} size={100} stroke={9} color={metaRingColor} />
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                {meta > 0 ? (
+                  <>
+                    <span className="text-[22px] font-bold tabular-nums leading-none">{metaPct}%</span>
+                    <span className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-wider">
+                      meta
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Target className="h-5 w-5 text-muted-foreground/40 mb-0.5" />
+                    <span className="text-[9px] text-muted-foreground/50 uppercase tracking-wider leading-none">
+                      meta
+                    </span>
+                  </>
+                )}
               </div>
-            </div>
+            </motion.button>
 
             <div className="min-w-0 flex-1">
-              <p className="text-[24px] md:text-[32px] font-bold tabular-nums tracking-tight leading-none">
-                {formatCurrency(s?.custoTotal ?? 0)}
-              </p>
               {contasLoading ? (
-                <div className="h-[18px] w-28 rounded-md bg-muted/60 animate-pulse mt-1.5" />
+                <div className="h-[30px] w-36 rounded-md bg-muted/60 animate-pulse" />
               ) : (
-                <p className="text-[14px] md:text-[15px] text-muted-foreground mt-1.5 tabular-nums">
-                  {formatCurrency(totalCaixa + totalAplicado)}
-                  <span className="ml-1 text-muted-foreground/55">disponível em contas</span>
+                <p className="text-[24px] md:text-[32px] font-bold tabular-nums tracking-tight leading-none">
+                  {formatCurrency(totalDisponivel)}
                 </p>
+              )}
+              {meta > 0 ? (
+                <p className="text-[14px] md:text-[15px] text-muted-foreground mt-1.5 tabular-nums">
+                  de{' '}
+                  <span className="font-semibold text-foreground/70">{formatCurrency(meta)}</span>
+                  <span className="ml-1 text-muted-foreground/50">de meta</span>
+                </p>
+              ) : (
+                <motion.button
+                  whileTap={{ scale: 0.96 }}
+                  onClick={() => { setMetaInput(''); setMetaModalOpen(true) }}
+                  className="mt-1.5 flex items-center gap-1.5 text-[13px] text-primary/60 hover:text-primary transition-colors focus:outline-none"
+                >
+                  <Target className="h-3 w-3 flex-shrink-0" />
+                  <span>Definir meta financeira</span>
+                </motion.button>
               )}
 
               {/* Saldo consolidado em contas bancárias */}
@@ -894,6 +937,157 @@ export function FinanceiroPage() {
               )}
               {createConta.isPending ? 'Salvando…' : 'Criar Conta'}
             </motion.button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ══════════════════════════════════════════
+                MODAL: Meta Financeira — iOS Sheet
+            ══════════════════════════════════════════ */}
+      <Dialog
+        open={metaModalOpen}
+        onOpenChange={(v) => {
+          setMetaModalOpen(v)
+          if (!v) setMetaInput('')
+        }}
+      >
+        <DialogContent className={modalCn}>
+          {/* ── Cabeçalho fixo ── */}
+          <div className="flex-shrink-0 relative flex items-center justify-center px-5 pt-4 pb-2">
+            <DialogTitle className="text-[17px] font-semibold tracking-tight">
+              Meta Financeira
+            </DialogTitle>
+            <motion.button
+              whileTap={{ scale: 0.86 }}
+              onClick={() => { setMetaModalOpen(false); setMetaInput('') }}
+              className="absolute right-4 flex h-[30px] w-[30px] items-center justify-center rounded-full bg-black/[0.08] dark:bg-white/[0.12] hover:bg-black/[0.13] dark:hover:bg-white/[0.18] transition-colors"
+            >
+              <X className="h-[14px] w-[14px] text-foreground/60" />
+            </motion.button>
+          </div>
+
+          {/* ── Ícone + subtítulo ── */}
+          <div className="flex-shrink-0 flex flex-col items-center pt-4 pb-7">
+            <motion.div
+              initial={{ scale: 0.7, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', bounce: 0.4, duration: 0.5 }}
+              className="flex h-[64px] w-[64px] items-center justify-center rounded-[20px] mb-3 flex-shrink-0"
+              style={{
+                background: 'linear-gradient(145deg, #34C759 0%, #248A3D 100%)',
+                boxShadow: '0 10px 30px rgba(52,199,89,0.38)',
+              }}
+            >
+              <Target className="h-[28px] w-[28px] text-white" />
+            </motion.div>
+            <p className="text-[13px] text-foreground/40">
+              {meta > 0 ? 'Atualize sua meta de capital' : 'Quanto quer acumular?'}
+            </p>
+          </div>
+
+          {/* ── Formulário rolável ── */}
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 space-y-[10px] pb-3">
+            {/* Grupo: Valor da meta + referência atual */}
+            <div className="rounded-[14px] overflow-hidden bg-white dark:bg-white/[0.07]">
+              {/* Input meta */}
+              <div className="flex items-center min-h-[52px] px-4 gap-3">
+                <span className="text-[16px] font-medium flex-shrink-0 text-foreground/55">
+                  Meta
+                </span>
+                <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
+                  <span
+                    className="text-[14px] flex-shrink-0 font-semibold"
+                    style={{ color: '#34C75980' }}
+                  >
+                    R$
+                  </span>
+                  <input
+                    value={metaInput}
+                    onChange={(e) => setMetaInput(formatBRL(e.target.value))}
+                    placeholder="0,00"
+                    inputMode="decimal"
+                    autoFocus
+                    className="text-[16px] text-right bg-transparent outline-none tabular-nums font-semibold min-w-0 w-[130px] placeholder:text-black/20 dark:placeholder:text-white/20"
+                  />
+                </div>
+              </div>
+
+              <div className="h-px mx-4 bg-black/[0.07] dark:bg-white/[0.07]" />
+
+              {/* Saldo disponível atual como referência */}
+              <div className="flex items-center min-h-[44px] px-4 gap-3">
+                <span className="text-[13px] text-foreground/40 flex-shrink-0">
+                  Disponível hoje
+                </span>
+                <span
+                  className="flex-1 text-right text-[13px] font-semibold tabular-nums"
+                  style={{ color: totalDisponivel > 0 ? '#34C759' : undefined }}
+                >
+                  {formatCurrency(totalDisponivel)}
+                </span>
+              </div>
+
+              {/* Progresso se já houver meta e input preenchido */}
+              {parseCurrency(metaInput) > 0 && (
+                <>
+                  <div className="h-px mx-4 bg-black/[0.07] dark:bg-white/[0.07]" />
+                  <div className="flex items-center min-h-[44px] px-4 gap-3">
+                    <span className="text-[13px] text-foreground/40 flex-shrink-0">
+                      Progresso atual
+                    </span>
+                    <span className="flex-1 text-right text-[13px] font-semibold tabular-nums">
+                      {Math.min(
+                        Math.round((totalDisponivel / parseCurrency(metaInput)) * 100),
+                        100,
+                      )}
+                      %
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* ── CTA fixo no rodapé ── */}
+          <div className="flex-shrink-0 px-4 pt-3 pb-8 sm:pb-6 bg-[#F2F2F7] dark:bg-[#1C1C1E] border-t border-black/[0.05] dark:border-white/[0.05]">
+            <motion.button
+              whileTap={{ scale: parseCurrency(metaInput) > 0 ? 0.97 : 1 }}
+              disabled={parseCurrency(metaInput) <= 0}
+              onClick={() => {
+                const v = parseCurrency(metaInput)
+                if (v > 0) {
+                  setMeta(v)
+                  try { localStorage.setItem('financeiro_meta', String(v)) } catch {}
+                }
+                setMetaModalOpen(false)
+                setMetaInput('')
+              }}
+              className={cn(
+                'w-full flex items-center justify-center h-[54px] rounded-[14px] text-[17px] font-semibold tracking-tight transition-all',
+                parseCurrency(metaInput) > 0
+                  ? 'text-white'
+                  : 'bg-black/[0.07] dark:bg-white/[0.07] text-foreground/25 cursor-not-allowed',
+              )}
+              style={parseCurrency(metaInput) > 0 ? { backgroundColor: '#34C759' } : undefined}
+            >
+              Salvar Meta
+            </motion.button>
+
+            {/* Remover meta — só aparece se já existe uma */}
+            {meta > 0 && (
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={() => {
+                  setMeta(0)
+                  try { localStorage.removeItem('financeiro_meta') } catch {}
+                  setMetaModalOpen(false)
+                  setMetaInput('')
+                }}
+                className="w-full mt-3 flex items-center justify-center h-[44px] text-[15px] font-medium text-red-500/70 hover:text-red-500 transition-colors"
+              >
+                Remover Meta
+              </motion.button>
+            )}
           </div>
         </DialogContent>
       </Dialog>

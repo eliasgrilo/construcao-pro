@@ -19,6 +19,7 @@ import {
   Check,
   ChevronRight,
   Download,
+  Eye,
   File,
   FileArchive,
   FileAudio,
@@ -37,6 +38,7 @@ import {
   X,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 /* ═══════════════════════════════════════════════════════════
    Apple System Design Tokens
@@ -96,7 +98,149 @@ function fmtSize(bytes: number): string {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   FileRow — single document row (reused in every card)
+   ActionSheet — iOS UIActionSheet idêntico ao app Files da Apple
+   Renderizado em portal para z-index máximo, funciona em mobile/desktop
+   ═══════════════════════════════════════════════════════════ */
+
+interface SheetAction {
+  label: string
+  icon: React.ElementType
+  iconColor?: string
+  destructive?: boolean
+  onClick: () => void | Promise<void>
+}
+
+function ActionSheet({
+  open,
+  onClose,
+  title,
+  subtitle,
+  actions,
+}: {
+  open: boolean
+  onClose: () => void
+  title: string
+  subtitle?: string
+  actions: SheetAction[]
+}) {
+  useEffect(() => {
+    if (!open) return
+    const fn = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', fn)
+    return () => window.removeEventListener('keydown', fn)
+  }, [open, onClose])
+
+  if (typeof document === 'undefined') return null
+
+  const mainActions = actions.filter((a) => !a.destructive)
+  const destructiveActions = actions.filter((a) => a.destructive)
+
+  return createPortal(
+    <AnimatePresence>
+      {open && (
+        <>
+          {/* Backdrop escuro */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.45 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[300] bg-black"
+            onClick={onClose}
+          />
+
+          {/* Sheet deslizando de baixo — spring physics exato do iOS */}
+          <motion.div
+            initial={{ y: '110%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '110%' }}
+            transition={{ type: 'spring', damping: 32, stiffness: 340, mass: 0.85 }}
+            className="fixed bottom-0 left-0 right-0 z-[310] px-3 select-none"
+            style={{ paddingBottom: 'max(10px, env(safe-area-inset-bottom))' }}
+          >
+            {/* ── Grupo principal ── */}
+            <div className="rounded-[16px] overflow-hidden bg-[#F2F2F7]/[0.97] dark:bg-[#2C2C2E]/[0.97] backdrop-blur-3xl mb-[10px] shadow-2xl shadow-black/20">
+              {/* Cabeçalho: nome + subtítulo */}
+              <div className="px-5 pt-[14px] pb-[13px] text-center border-b border-black/[0.06] dark:border-white/[0.06]">
+                <p className="text-[13px] font-semibold text-foreground/70 leading-tight line-clamp-2 px-2">
+                  {title}
+                </p>
+                {subtitle && (
+                  <p className="text-[11px] text-muted-foreground/45 mt-[3px] truncate">
+                    {subtitle}
+                  </p>
+                )}
+              </div>
+
+              {/* Ações normais */}
+              {mainActions.map((action, i) => (
+                <button
+                  key={action.label}
+                  onClick={async () => { onClose(); await action.onClick() }}
+                  className={cn(
+                    'w-full flex items-center gap-[18px] px-5 transition-colors text-left',
+                    'active:bg-black/[0.06] dark:active:bg-white/[0.06]',
+                    i > 0 && 'border-t border-black/[0.06] dark:border-white/[0.06]',
+                  )}
+                  style={{ minHeight: 57 }}
+                >
+                  <action.icon
+                    className="h-[22px] w-[22px] flex-shrink-0"
+                    strokeWidth={1.55}
+                    style={{ color: action.iconColor ?? '#007AFF' }}
+                  />
+                  <span
+                    className="text-[17px] leading-tight"
+                    style={{ color: action.iconColor ?? '#007AFF' }}
+                  >
+                    {action.label}
+                  </span>
+                </button>
+              ))}
+
+              {/* Ações destrutivas — separadas por divisor mais escuro */}
+              {destructiveActions.map((action) => (
+                <button
+                  key={action.label}
+                  onClick={async () => { onClose(); await action.onClick() }}
+                  className={cn(
+                    'w-full flex items-center gap-[18px] px-5 transition-colors text-left',
+                    'border-t border-black/[0.06] dark:border-white/[0.06]',
+                    'active:bg-[#FF3B30]/[0.05]',
+                  )}
+                  style={{ minHeight: 57 }}
+                >
+                  <Trash2 className="h-[22px] w-[22px] flex-shrink-0 text-[#FF3B30]" strokeWidth={1.55} />
+                  <span className="text-[17px] text-[#FF3B30] leading-tight">{action.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* ── Cancelar — pílula separada (padrão iOS) ── */}
+            <button
+              onClick={onClose}
+              className={cn(
+                'w-full rounded-[16px]',
+                'bg-[#F2F2F7]/[0.97] dark:bg-[#2C2C2E]/[0.97] backdrop-blur-3xl',
+                'text-[17px] font-bold text-[#007AFF]',
+                'transition-colors active:bg-black/[0.06] dark:active:bg-white/[0.06]',
+                'shadow-xl shadow-black/10',
+              )}
+              style={{ minHeight: 57 }}
+            >
+              Cancelar
+            </button>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>,
+    document.body,
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FileRow — linha de documento, mobile-first
+   tap na linha → preview   ···  → iOS ActionSheet (funciona em touch)
    ═══════════════════════════════════════════════════════════ */
 
 function FileRow({
@@ -114,111 +258,90 @@ function FileRow({
 }) {
   const Icon = getFileIcon(doc.tipo_arquivo)
   const color = getFileColor(doc.tipo_arquivo)
-  const [menu, setMenu] = useState(false)
+  const [sheetOpen, setSheetOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
-  const handleDelete = async (e: React.MouseEvent) => {
-    e.stopPropagation()
-    setMenu(false)
+  const handleDelete = async () => {
     setDeleting(true)
-    try {
-      await onDelete()
-    } finally {
-      setDeleting(false)
-    }
+    try { await onDelete() } finally { setDeleting(false) }
   }
 
-  return (
-    <div
-      className={cn(
-        'group relative flex items-center gap-3 pl-4 pr-3 py-2.5 cursor-pointer',
-        'hover:bg-black/[0.015] dark:hover:bg-white/[0.025] transition-colors',
-        deleting && 'opacity-40 pointer-events-none',
-      )}
-      onClick={(e) => { e.stopPropagation(); onOpen() }}
-    >
-      {/* Icon */}
-      <div
-        className="flex h-9 w-9 items-center justify-center rounded-[10px] flex-shrink-0"
-        style={{ backgroundColor: `${color}10` }}
-      >
-        {deleting
-          ? <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground/70 animate-spin" />
-          : <Icon className="h-[18px] w-[18px]" style={{ color }} strokeWidth={1.5} />
-        }
-      </div>
+  const sheetActions: SheetAction[] = [
+    { label: 'Visualizar', icon: Eye, iconColor: '#007AFF', onClick: onOpen },
+    { label: 'Baixar', icon: Download, iconColor: '#007AFF', onClick: onDownload },
+    { label: 'Excluir', icon: Trash2, destructive: true, onClick: handleDelete },
+  ]
 
-      {/* Info + hairline */}
-      <div className={cn('flex-1 min-w-0 flex items-center gap-2 py-0.5', !last && 'border-b border-border/8 dark:border-white/[0.04] pb-2.5')}>
-        <div className="flex-1 min-w-0">
-          <p className="text-[14px] font-medium truncate leading-tight">{doc.nome}</p>
+  return (
+    <>
+      <div
+        className={cn(
+          'relative flex items-center gap-3.5 pl-4 pr-2',
+          'cursor-pointer select-none',
+          'hover:bg-black/[0.02] dark:hover:bg-white/[0.025]',
+          'active:bg-black/[0.04] dark:active:bg-white/[0.04]',
+          'transition-colors',
+          deleting && 'opacity-35 pointer-events-none',
+          !last && 'border-b border-border/8 dark:border-white/[0.04]',
+        )}
+        style={{ minHeight: 56 }}
+        onClick={onOpen}
+      >
+        {/* Ícone do tipo de arquivo */}
+        <div
+          className="flex h-10 w-10 items-center justify-center rounded-[12px] flex-shrink-0"
+          style={{ backgroundColor: `${color}12` }}
+        >
+          {deleting ? (
+            <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/25 border-t-muted-foreground/55 animate-spin" />
+          ) : (
+            <Icon className="h-[19px] w-[19px]" style={{ color }} strokeWidth={1.5} />
+          )}
+        </div>
+
+        {/* Nome + metadados */}
+        <div className="flex-1 min-w-0 py-3.5">
+          <p className="text-[14px] font-medium truncate leading-tight tracking-[-0.1px]">
+            {doc.nome}
+          </p>
           <div className="flex items-center gap-1.5 mt-[3px]">
             {doc.documento_categorias && (
               <span
-                className="inline-block h-[6px] w-[6px] rounded-full flex-shrink-0"
+                className="h-[5px] w-[5px] rounded-full flex-shrink-0"
                 style={{ backgroundColor: doc.documento_categorias.cor }}
               />
             )}
-            <span className="text-[12px] text-muted-foreground/60 truncate">
+            <span className="text-[12px] text-muted-foreground/50 truncate">
               {fmtSize(doc.tamanho)} · {formatDateShort(doc.created_at)}
             </span>
           </div>
         </div>
 
-        {/* Hover actions */}
-        <div className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={(e) => { e.stopPropagation(); onDownload() }}
-            className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-black/[0.05] dark:hover:bg-white/[0.08] transition-colors"
-          >
-            <Download className="h-3.5 w-3.5 text-muted-foreground/70" />
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); setMenu(true) }}
-            className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-black/[0.05] dark:hover:bg-white/[0.08] transition-colors"
-          >
-            <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground/70" />
-          </button>
-        </div>
+        {/* Botão ··· — sempre visível, alvo de toque mínimo 44px */}
+        <button
+          onClick={(e) => { e.stopPropagation(); setSheetOpen(true) }}
+          className={cn(
+            'flex h-9 w-9 items-center justify-center rounded-full flex-shrink-0',
+            'text-muted-foreground/30',
+            'hover:bg-black/[0.05] dark:hover:bg-white/[0.07]',
+            'active:bg-black/[0.09] dark:active:bg-white/[0.09]',
+            'transition-colors',
+          )}
+          aria-label="Opções"
+        >
+          <MoreHorizontal className="h-[18px] w-[18px]" />
+        </button>
       </div>
 
-      {/* Context menu */}
-      <AnimatePresence>
-        {menu && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40"
-              onClick={(e) => { e.stopPropagation(); setMenu(false) }}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.92 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.92 }}
-              transition={{ duration: 0.12 }}
-              className="absolute right-3 top-full z-50 w-[148px] rounded-xl bg-white dark:bg-[#2C2C2E] border border-border/15 shadow-xl shadow-black/8 overflow-hidden"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={(e) => { e.stopPropagation(); onDownload(); setMenu(false) }}
-                className="w-full flex items-center gap-2 px-3 py-2.5 text-[13px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
-              >
-                <Download className="h-3.5 w-3.5 text-[#007AFF]" />
-                Baixar
-              </button>
-              <div className="h-px bg-border/15 mx-2" />
-              <button
-                onClick={handleDelete}
-                className="w-full flex items-center gap-2 px-3 py-2.5 text-[13px] text-[#FF3B30] hover:bg-[#FF3B30]/6"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                Excluir
-              </button>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-    </div>
+      {/* iOS Action Sheet via portal */}
+      <ActionSheet
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        title={doc.nome}
+        subtitle={`${fmtSize(doc.tamanho)}${doc.documento_categorias ? ` · ${doc.documento_categorias.nome}` : ''}`}
+        actions={sheetActions}
+      />
+    </>
   )
 }
 

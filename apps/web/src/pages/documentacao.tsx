@@ -98,8 +98,15 @@ function fmtSize(bytes: number): string {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   ActionSheet — iOS UIActionSheet idêntico ao app Files da Apple
-   Renderizado em portal para z-index máximo, funciona em mobile/desktop
+   ContextMenu / ActionSheet — dual-mode, Apple platform-native
+
+   Desktop (hover:hover)  → macOS-style compact context menu
+                            ancorado no botão, surge junto ao cursor,
+                            highlight azul no hover, sem backdrop visível
+
+   Mobile  (hover:none)   → iOS UIActionSheet
+                            sheet deslizando de baixo com spring physics,
+                            pílula Cancelar separada, safe-area-inset
    ═══════════════════════════════════════════════════════════ */
 
 interface SheetAction {
@@ -108,6 +115,118 @@ interface SheetAction {
   iconColor?: string
   destructive?: boolean
   onClick: () => void | Promise<void>
+}
+
+function ContextMenu({
+  open,
+  onClose,
+  actions,
+  anchorRef,
+}: {
+  open: boolean
+  onClose: () => void
+  actions: SheetAction[]
+  anchorRef: React.RefObject<HTMLButtonElement | null>
+}) {
+  const [pos, setPos] = useState({ top: 0, left: 0 })
+
+  /* Calcular posição ancorada ao botão, smart flip se perto da borda */
+  useEffect(() => {
+    if (!open || !anchorRef.current) return
+    const r = anchorRef.current.getBoundingClientRect()
+    const W = 176
+    const H = actions.length * 34 + (actions.some(a => a.destructive) ? 12 : 0) + 10
+    const left = Math.max(8, Math.min(r.right - W, window.innerWidth - W - 8))
+    const showAbove = r.bottom + H + 8 > window.innerHeight
+    const top = showAbove ? r.top - H - 6 : r.bottom + 6
+    setPos({ top, left })
+  }, [open, anchorRef, actions.length])
+
+  useEffect(() => {
+    if (!open) return
+    const fn = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', fn)
+    return () => window.removeEventListener('keydown', fn)
+  }, [open, onClose])
+
+  if (typeof document === 'undefined') return null
+
+  const main = actions.filter(a => !a.destructive)
+  const destructive = actions.filter(a => a.destructive)
+
+  return createPortal(
+    <AnimatePresence>
+      {open && (
+        <>
+          {/* Backdrop invisível para capturar click-outside */}
+          <div className="fixed inset-0 z-[300]" onClick={onClose} />
+
+          {/* Menu compacto — macOS Finder style */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.94, y: -4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.94, y: -4 }}
+            transition={{ duration: 0.12, ease: [0.25, 0.1, 0.25, 1] }}
+            className={cn(
+              'fixed z-[310] w-[176px] rounded-[11px] overflow-hidden',
+              'bg-white dark:bg-[#2C2C2E]',
+              'border border-black/[0.08] dark:border-white/[0.1]',
+              'shadow-[0_2px_4px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.10),0_20px_48px_rgba(0,0,0,0.06)]',
+              'dark:shadow-[0_2px_4px_rgba(0,0,0,0.2),0_8px_24px_rgba(0,0,0,0.45)]',
+            )}
+            style={{ top: pos.top, left: pos.left }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="p-[5px]">
+              {/* Ações normais */}
+              {main.map((action) => (
+                <button
+                  key={action.label}
+                  onClick={async () => { onClose(); await action.onClick() }}
+                  className="group/item w-full flex items-center gap-[9px] px-[9px] h-[33px] rounded-[6px] text-[13px] leading-none text-left transition-colors hover:bg-[#007AFF]"
+                >
+                  <action.icon
+                    className="h-[15px] w-[15px] flex-shrink-0 transition-colors group-hover/item:!text-white"
+                    strokeWidth={1.7}
+                    style={{ color: action.iconColor ?? '#007AFF' }}
+                  />
+                  <span
+                    className="transition-colors group-hover/item:!text-white"
+                    style={{ color: action.iconColor ?? '#007AFF' }}
+                  >
+                    {action.label}
+                  </span>
+                </button>
+              ))}
+
+              {/* Divisor + ações destrutivas */}
+              {destructive.length > 0 && (
+                <>
+                  <div className="h-px bg-black/[0.07] dark:bg-white/[0.07] mx-0 my-[5px]" />
+                  {destructive.map((action) => (
+                    <button
+                      key={action.label}
+                      onClick={async () => { onClose(); await action.onClick() }}
+                      className="group/itemd w-full flex items-center gap-[9px] px-[9px] h-[33px] rounded-[6px] text-[13px] text-[#FF3B30] leading-none text-left transition-colors hover:bg-[#FF3B30]"
+                    >
+                      <Trash2
+                        className="h-[15px] w-[15px] flex-shrink-0 text-[#FF3B30] transition-colors group-hover/itemd:!text-white"
+                        strokeWidth={1.7}
+                      />
+                      <span className="transition-colors group-hover/itemd:!text-white">
+                        {action.label}
+                      </span>
+                    </button>
+                  ))}
+                </>
+              )}
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>,
+    document.body,
+  )
 }
 
 function ActionSheet({
@@ -132,24 +251,22 @@ function ActionSheet({
 
   if (typeof document === 'undefined') return null
 
-  const mainActions = actions.filter((a) => !a.destructive)
-  const destructiveActions = actions.filter((a) => a.destructive)
+  const main = actions.filter(a => !a.destructive)
+  const destructive = actions.filter(a => a.destructive)
 
   return createPortal(
     <AnimatePresence>
       {open && (
         <>
-          {/* Backdrop escuro */}
+          {/* Backdrop iOS */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.45 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 0.45 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.22 }}
             className="fixed inset-0 z-[300] bg-black"
             onClick={onClose}
           />
 
-          {/* Sheet deslizando de baixo — spring physics exato do iOS */}
+          {/* Sheet — spring iOS */}
           <motion.div
             initial={{ y: '110%' }}
             animate={{ y: 0 }}
@@ -158,56 +275,31 @@ function ActionSheet({
             className="fixed bottom-0 left-0 right-0 z-[310] px-3 select-none"
             style={{ paddingBottom: 'max(10px, env(safe-area-inset-bottom))' }}
           >
-            {/* ── Grupo principal ── */}
+            {/* Grupo principal */}
             <div className="rounded-[16px] overflow-hidden bg-[#F2F2F7]/[0.97] dark:bg-[#2C2C2E]/[0.97] backdrop-blur-3xl mb-[10px] shadow-2xl shadow-black/20">
-              {/* Cabeçalho: nome + subtítulo */}
               <div className="px-5 pt-[14px] pb-[13px] text-center border-b border-black/[0.06] dark:border-white/[0.06]">
-                <p className="text-[13px] font-semibold text-foreground/70 leading-tight line-clamp-2 px-2">
-                  {title}
-                </p>
-                {subtitle && (
-                  <p className="text-[11px] text-muted-foreground/45 mt-[3px] truncate">
-                    {subtitle}
-                  </p>
-                )}
+                <p className="text-[13px] font-semibold text-foreground/70 leading-tight line-clamp-2 px-2">{title}</p>
+                {subtitle && <p className="text-[11px] text-muted-foreground/45 mt-[3px] truncate">{subtitle}</p>}
               </div>
-
-              {/* Ações normais */}
-              {mainActions.map((action, i) => (
+              {main.map((action, i) => (
                 <button
                   key={action.label}
                   onClick={async () => { onClose(); await action.onClick() }}
                   className={cn(
-                    'w-full flex items-center gap-[18px] px-5 transition-colors text-left',
-                    'active:bg-black/[0.06] dark:active:bg-white/[0.06]',
+                    'w-full flex items-center gap-[18px] px-5 transition-colors text-left active:bg-black/[0.06] dark:active:bg-white/[0.06]',
                     i > 0 && 'border-t border-black/[0.06] dark:border-white/[0.06]',
                   )}
                   style={{ minHeight: 57 }}
                 >
-                  <action.icon
-                    className="h-[22px] w-[22px] flex-shrink-0"
-                    strokeWidth={1.55}
-                    style={{ color: action.iconColor ?? '#007AFF' }}
-                  />
-                  <span
-                    className="text-[17px] leading-tight"
-                    style={{ color: action.iconColor ?? '#007AFF' }}
-                  >
-                    {action.label}
-                  </span>
+                  <action.icon className="h-[22px] w-[22px] flex-shrink-0" strokeWidth={1.55} style={{ color: action.iconColor ?? '#007AFF' }} />
+                  <span className="text-[17px] leading-tight" style={{ color: action.iconColor ?? '#007AFF' }}>{action.label}</span>
                 </button>
               ))}
-
-              {/* Ações destrutivas — separadas por divisor mais escuro */}
-              {destructiveActions.map((action) => (
+              {destructive.map((action) => (
                 <button
                   key={action.label}
                   onClick={async () => { onClose(); await action.onClick() }}
-                  className={cn(
-                    'w-full flex items-center gap-[18px] px-5 transition-colors text-left',
-                    'border-t border-black/[0.06] dark:border-white/[0.06]',
-                    'active:bg-[#FF3B30]/[0.05]',
-                  )}
+                  className="w-full flex items-center gap-[18px] px-5 border-t border-black/[0.06] dark:border-white/[0.06] transition-colors text-left active:bg-[#FF3B30]/[0.05]"
                   style={{ minHeight: 57 }}
                 >
                   <Trash2 className="h-[22px] w-[22px] flex-shrink-0 text-[#FF3B30]" strokeWidth={1.55} />
@@ -215,17 +307,10 @@ function ActionSheet({
                 </button>
               ))}
             </div>
-
-            {/* ── Cancelar — pílula separada (padrão iOS) ── */}
+            {/* Cancelar — pílula separada */}
             <button
               onClick={onClose}
-              className={cn(
-                'w-full rounded-[16px]',
-                'bg-[#F2F2F7]/[0.97] dark:bg-[#2C2C2E]/[0.97] backdrop-blur-3xl',
-                'text-[17px] font-bold text-[#007AFF]',
-                'transition-colors active:bg-black/[0.06] dark:active:bg-white/[0.06]',
-                'shadow-xl shadow-black/10',
-              )}
+              className="w-full rounded-[16px] bg-[#F2F2F7]/[0.97] dark:bg-[#2C2C2E]/[0.97] backdrop-blur-3xl text-[17px] font-bold text-[#007AFF] transition-colors active:bg-black/[0.06] dark:active:bg-white/[0.06] shadow-xl shadow-black/10"
               style={{ minHeight: 57 }}
             >
               Cancelar
@@ -239,8 +324,9 @@ function ActionSheet({
 }
 
 /* ═══════════════════════════════════════════════════════════
-   FileRow — linha de documento, mobile-first
-   tap na linha → preview   ···  → iOS ActionSheet (funciona em touch)
+   FileRow — linha de documento
+   Desktop: hover revela ···, click → macOS ContextMenu
+   Mobile:  ··· sempre visível, tap → iOS ActionSheet
    ═══════════════════════════════════════════════════════════ */
 
 function FileRow({
@@ -258,15 +344,29 @@ function FileRow({
 }) {
   const Icon = getFileIcon(doc.tipo_arquivo)
   const color = getFileColor(doc.tipo_arquivo)
-  const [sheetOpen, setSheetOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const btnRef = useRef<HTMLButtonElement>(null)
+
+  /* Detectar pointer device: hover:hover = desktop/mouse */
+  const [isPointer, setIsPointer] = useState(() =>
+    typeof window !== 'undefined'
+      ? window.matchMedia('(hover: hover) and (pointer: fine)').matches
+      : false,
+  )
+  useEffect(() => {
+    const mq = window.matchMedia('(hover: hover) and (pointer: fine)')
+    const fn = (e: MediaQueryListEvent) => setIsPointer(e.matches)
+    mq.addEventListener('change', fn)
+    return () => mq.removeEventListener('change', fn)
+  }, [])
 
   const handleDelete = async () => {
     setDeleting(true)
     try { await onDelete() } finally { setDeleting(false) }
   }
 
-  const sheetActions: SheetAction[] = [
+  const actions: SheetAction[] = [
     { label: 'Visualizar', icon: Eye, iconColor: '#007AFF', onClick: onOpen },
     { label: 'Baixar', icon: Download, iconColor: '#007AFF', onClick: onDownload },
     { label: 'Excluir', icon: Trash2, destructive: true, onClick: handleDelete },
@@ -276,11 +376,9 @@ function FileRow({
     <>
       <div
         className={cn(
-          'relative flex items-center gap-3.5 pl-4 pr-2',
-          'cursor-pointer select-none',
+          'group relative flex items-center gap-3.5 pl-4 pr-2 cursor-pointer select-none transition-colors',
           'hover:bg-black/[0.02] dark:hover:bg-white/[0.025]',
           'active:bg-black/[0.04] dark:active:bg-white/[0.04]',
-          'transition-colors',
           deleting && 'opacity-35 pointer-events-none',
           !last && 'border-b border-border/8 dark:border-white/[0.04]',
         )}
@@ -301,15 +399,10 @@ function FileRow({
 
         {/* Nome + metadados */}
         <div className="flex-1 min-w-0 py-3.5">
-          <p className="text-[14px] font-medium truncate leading-tight tracking-[-0.1px]">
-            {doc.nome}
-          </p>
+          <p className="text-[14px] font-medium truncate leading-tight tracking-[-0.1px]">{doc.nome}</p>
           <div className="flex items-center gap-1.5 mt-[3px]">
             {doc.documento_categorias && (
-              <span
-                className="h-[5px] w-[5px] rounded-full flex-shrink-0"
-                style={{ backgroundColor: doc.documento_categorias.cor }}
-              />
+              <span className="h-[5px] w-[5px] rounded-full flex-shrink-0" style={{ backgroundColor: doc.documento_categorias.cor }} />
             )}
             <span className="text-[12px] text-muted-foreground/50 truncate">
               {fmtSize(doc.tamanho)} · {formatDateShort(doc.created_at)}
@@ -317,15 +410,27 @@ function FileRow({
           </div>
         </div>
 
-        {/* Botão ··· — sempre visível, alvo de toque mínimo 44px */}
+        {/*
+          ··· button
+          Desktop: opacity-0, aparece no hover da linha ou quando menu está aberto
+          Mobile:  sempre visível ([@media(hover:none)] override)
+        */}
         <button
-          onClick={(e) => { e.stopPropagation(); setSheetOpen(true) }}
+          ref={btnRef}
+          onClick={(e) => { e.stopPropagation(); setMenuOpen(true) }}
           className={cn(
-            'flex h-9 w-9 items-center justify-center rounded-full flex-shrink-0',
-            'text-muted-foreground/30',
-            'hover:bg-black/[0.05] dark:hover:bg-white/[0.07]',
-            'active:bg-black/[0.09] dark:active:bg-white/[0.09]',
-            'transition-colors',
+            'flex h-9 w-9 items-center justify-center rounded-full flex-shrink-0 transition-all',
+            menuOpen
+              ? 'opacity-100 bg-black/[0.05] dark:bg-white/[0.08] text-foreground/70'
+              : cn(
+                  'text-muted-foreground/40',
+                  // Desktop: surge no hover da linha
+                  'opacity-0 group-hover:opacity-100',
+                  // Mobile (touch): sempre visível
+                  '[@media(hover:none)]:opacity-100',
+                  'hover:bg-black/[0.05] dark:hover:bg-white/[0.07]',
+                  'active:bg-black/[0.09] dark:active:bg-white/[0.09]',
+                ),
           )}
           aria-label="Opções"
         >
@@ -333,14 +438,23 @@ function FileRow({
         </button>
       </div>
 
-      {/* iOS Action Sheet via portal */}
-      <ActionSheet
-        open={sheetOpen}
-        onClose={() => setSheetOpen(false)}
-        title={doc.nome}
-        subtitle={`${fmtSize(doc.tamanho)}${doc.documento_categorias ? ` · ${doc.documento_categorias.nome}` : ''}`}
-        actions={sheetActions}
-      />
+      {/* Desktop → macOS ContextMenu / Mobile → iOS ActionSheet */}
+      {isPointer ? (
+        <ContextMenu
+          open={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          actions={actions}
+          anchorRef={btnRef}
+        />
+      ) : (
+        <ActionSheet
+          open={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          title={doc.nome}
+          subtitle={`${fmtSize(doc.tamanho)}${doc.documento_categorias ? ` · ${doc.documento_categorias.nome}` : ''}`}
+          actions={actions}
+        />
+      )}
     </>
   )
 }

@@ -109,27 +109,43 @@ function FileRow({
   doc: Documento
   onOpen: () => void
   onDownload: () => void
-  onDelete: () => void
+  onDelete: () => Promise<void>
   last: boolean
 }) {
   const Icon = getFileIcon(doc.tipo_arquivo)
   const color = getFileColor(doc.tipo_arquivo)
   const [menu, setMenu] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setMenu(false)
+    setDeleting(true)
+    try {
+      await onDelete()
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   return (
     <div
       className={cn(
         'group relative flex items-center gap-3 pl-4 pr-3 py-2.5 cursor-pointer',
         'hover:bg-black/[0.015] dark:hover:bg-white/[0.025] transition-colors',
+        deleting && 'opacity-40 pointer-events-none',
       )}
-      onClick={onOpen}
+      onClick={(e) => { e.stopPropagation(); onOpen() }}
     >
       {/* Icon */}
       <div
         className="flex h-9 w-9 items-center justify-center rounded-[10px] flex-shrink-0"
         style={{ backgroundColor: `${color}10` }}
       >
-        <Icon className="h-[18px] w-[18px]" style={{ color }} strokeWidth={1.5} />
+        {deleting
+          ? <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground/70 animate-spin" />
+          : <Icon className="h-[18px] w-[18px]" style={{ color }} strokeWidth={1.5} />
+        }
       </div>
 
       {/* Info + hairline */}
@@ -184,7 +200,7 @@ function FileRow({
               onClick={(e) => e.stopPropagation()}
             >
               <button
-                onClick={() => { onDownload(); setMenu(false) }}
+                onClick={(e) => { e.stopPropagation(); onDownload(); setMenu(false) }}
                 className="w-full flex items-center gap-2 px-3 py-2.5 text-[13px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
               >
                 <Download className="h-3.5 w-3.5 text-[#007AFF]" />
@@ -192,7 +208,7 @@ function FileRow({
               </button>
               <div className="h-px bg-border/15 mx-2" />
               <button
-                onClick={() => { onDelete(); setMenu(false) }}
+                onClick={handleDelete}
                 className="w-full flex items-center gap-2 px-3 py-2.5 text-[13px] text-[#FF3B30] hover:bg-[#FF3B30]/6"
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -259,6 +275,7 @@ export function DocumentacaoPage() {
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [expandedObras, setExpandedObras] = useState<Set<string>>(new Set())
+  const [companyExpanded, setCompanyExpanded] = useState(true)
 
   // Upload modal
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
@@ -342,21 +359,35 @@ export function DocumentacaoPage() {
     }
   }
 
+  // Pre-open the tab synchronously (before await) so the browser won't
+  // treat the window.open as an unsolicited popup and block it.
   const openDoc = async (doc: Documento) => {
+    const tab = window.open('about:blank', '_blank')
     try {
       const url = await getUrlMut.mutateAsync(doc.storage_path)
-      window.open(url, '_blank')
-    } catch { /* */ }
+      if (tab) tab.location.href = url
+      else window.open(url, '_blank')
+    } catch (err) {
+      console.error('[openDoc]', err)
+      tab?.close()
+    }
   }
+
   const downloadDoc = async (doc: Documento) => {
     try {
       const url = await getUrlMut.mutateAsync(doc.storage_path)
-      Object.assign(document.createElement('a'), { href: url, download: doc.nome }).click()
-    } catch { /* */ }
+      const a = Object.assign(document.createElement('a'), { href: url, download: doc.nome })
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+    } catch (err) {
+      console.error('[downloadDoc]', err)
+    }
   }
-  const deleteDoc = async (doc: Documento) => {
-    try { await deleteMut.mutateAsync({ id: doc.id, storagePath: doc.storage_path }) }
-    catch { /* */ }
+
+  // Returns Promise so FileRow can show per-row loading spinner
+  const deleteDoc = async (doc: Documento): Promise<void> => {
+    await deleteMut.mutateAsync({ id: doc.id, storagePath: doc.storage_path })
   }
 
   const saveCategory = async () => {
@@ -446,10 +477,13 @@ export function DocumentacaoPage() {
             {dragOver === 'empresa' && <DropZoneOverlay label="Soltar na empresa" color="#007AFF" />}
           </AnimatePresence>
 
-          {/* Header */}
-          <div className="flex items-center justify-between px-5 pt-4 pb-3">
+          {/* Header — clicking the left side toggles expand/collapse */}
+          <div
+            className="flex items-center justify-between px-5 pt-4 pb-3 cursor-pointer hover:bg-black/[0.01] dark:hover:bg-white/[0.015] transition-colors select-none"
+            onClick={() => setCompanyExpanded((p) => !p)}
+          >
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-gradient-to-br from-[#007AFF]/15 to-[#007AFF]/5">
+              <div className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-gradient-to-br from-[#007AFF]/15 to-[#007AFF]/5 flex-shrink-0">
                 <Landmark className="h-[22px] w-[22px] text-[#007AFF]" strokeWidth={1.5} />
               </div>
               <div>
@@ -461,79 +495,104 @@ export function DocumentacaoPage() {
                 </p>
               </div>
             </div>
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              onClick={() => openUpload(null, 'Empresa')}
-              className="flex items-center gap-1.5 rounded-full bg-[#007AFF] pl-3.5 pr-4 py-[7px] text-[13px] font-semibold text-white shadow-sm shadow-[#007AFF]/20 hover:shadow-md hover:shadow-[#007AFF]/25 active:shadow-sm transition-all"
-            >
-              <Upload className="h-3.5 w-3.5" strokeWidth={2.5} />
-              Enviar
-            </motion.button>
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={(e) => { e.stopPropagation(); openUpload(null, 'Empresa') }}
+                className="flex items-center gap-1.5 rounded-full bg-[#007AFF] pl-3.5 pr-4 py-[7px] text-[13px] font-semibold text-white shadow-sm shadow-[#007AFF]/20 hover:shadow-md hover:shadow-[#007AFF]/25 active:shadow-sm transition-all"
+              >
+                <Upload className="h-3.5 w-3.5" strokeWidth={2.5} />
+                Enviar
+              </motion.button>
+
+              {/* Animated chevron */}
+              <motion.div
+                animate={{ rotate: companyExpanded ? 90 : 0 }}
+                transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
+                className="flex h-5 w-5 items-center justify-center"
+              >
+                <ChevronRight className="h-[14px] w-[14px] text-muted-foreground/35" />
+              </motion.div>
+            </div>
           </div>
 
-          {/* Category tags ribbon */}
-          {categorias.length > 0 && (
-            <div className="px-5 pb-2.5 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
-              {categorias.map((c) => (
-                <span
-                  key={c.id}
-                  className="flex items-center gap-[5px] rounded-full px-2.5 py-[3px] text-[11px] font-medium whitespace-nowrap flex-shrink-0"
-                  style={{ backgroundColor: `${c.cor}0D`, color: c.cor }}
-                >
-                  <span className="h-[5px] w-[5px] rounded-full" style={{ backgroundColor: c.cor }} />
-                  {c.nome}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* Divider */}
-          <div className="h-px bg-border/10 dark:bg-white/[0.04]" />
-
-          {/* Loading skeleton */}
-          {docsLoading && (
-            <div className="p-4 space-y-[14px]">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center gap-3 animate-pulse">
-                  <div className="h-9 w-9 rounded-[10px] bg-muted/30" />
-                  <div className="flex-1 space-y-1.5">
-                    <div className="h-[11px] w-3/5 rounded-full bg-muted/25" />
-                    <div className="h-[9px] w-2/5 rounded-full bg-muted/15" />
+          {/* Collapsible body with smooth height animation */}
+          <AnimatePresence initial={false}>
+            {companyExpanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
+                className="overflow-hidden"
+              >
+                {/* Category tags ribbon */}
+                {categorias.length > 0 && (
+                  <div className="px-5 pb-2.5 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+                    {categorias.map((c) => (
+                      <span
+                        key={c.id}
+                        className="flex items-center gap-[5px] rounded-full px-2.5 py-[3px] text-[11px] font-medium whitespace-nowrap flex-shrink-0"
+                        style={{ backgroundColor: `${c.cor}0D`, color: c.cor }}
+                      >
+                        <span className="h-[5px] w-[5px] rounded-full" style={{ backgroundColor: c.cor }} />
+                        {c.nome}
+                      </span>
+                    ))}
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                )}
 
-          {/* Empty state */}
-          {!docsLoading && empresaDocs.length === 0 && (
-            <button
-              onClick={() => openUpload(null, 'Empresa')}
-              className="w-full flex flex-col items-center py-10 px-4 group/empty"
-            >
-              <div className="flex h-16 w-16 items-center justify-center rounded-[20px] bg-[#007AFF]/[0.05] group-hover/empty:bg-[#007AFF]/[0.08] transition-colors">
-                <FolderOpen className="h-7 w-7 text-[#007AFF]/40 group-hover/empty:text-[#007AFF]/60 transition-colors" strokeWidth={1.5} />
-              </div>
-              <p className="text-[14px] font-medium text-muted-foreground/50 mt-4 group-hover/empty:text-muted-foreground/70 transition-colors">
-                Enviar primeiro documento
-              </p>
-              <p className="text-[12px] text-muted-foreground/30 mt-1">
-                Arraste arquivos ou clique aqui
-              </p>
-            </button>
-          )}
+                {/* Divider */}
+                <div className="h-px bg-border/10 dark:bg-white/[0.04]" />
 
-          {/* File rows */}
-          {!docsLoading && empresaDocs.length > 0 && empresaDocs.map((doc, i) => (
-            <FileRow
-              key={doc.id}
-              doc={doc}
-              onOpen={() => openDoc(doc)}
-              onDownload={() => downloadDoc(doc)}
-              onDelete={() => deleteDoc(doc)}
-              last={i === empresaDocs.length - 1}
-            />
-          ))}
+                {/* Loading skeleton */}
+                {docsLoading && (
+                  <div className="p-4 space-y-[14px]">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="flex items-center gap-3 animate-pulse">
+                        <div className="h-9 w-9 rounded-[10px] bg-muted/30" />
+                        <div className="flex-1 space-y-1.5">
+                          <div className="h-[11px] w-3/5 rounded-full bg-muted/25" />
+                          <div className="h-[9px] w-2/5 rounded-full bg-muted/15" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Empty state */}
+                {!docsLoading && empresaDocs.length === 0 && (
+                  <button
+                    onClick={() => openUpload(null, 'Empresa')}
+                    className="w-full flex flex-col items-center py-10 px-4 group/empty"
+                  >
+                    <div className="flex h-16 w-16 items-center justify-center rounded-[20px] bg-[#007AFF]/[0.05] group-hover/empty:bg-[#007AFF]/[0.08] transition-colors">
+                      <FolderOpen className="h-7 w-7 text-[#007AFF]/40 group-hover/empty:text-[#007AFF]/60 transition-colors" strokeWidth={1.5} />
+                    </div>
+                    <p className="text-[14px] font-medium text-muted-foreground/50 mt-4 group-hover/empty:text-muted-foreground/70 transition-colors">
+                      Enviar primeiro documento
+                    </p>
+                    <p className="text-[12px] text-muted-foreground/30 mt-1">
+                      Arraste arquivos ou clique aqui
+                    </p>
+                  </button>
+                )}
+
+                {/* File rows */}
+                {!docsLoading && empresaDocs.length > 0 && empresaDocs.map((doc, i) => (
+                  <FileRow
+                    key={doc.id}
+                    doc={doc}
+                    onOpen={() => openDoc(doc)}
+                    onDownload={() => downloadDoc(doc)}
+                    onDelete={() => deleteDoc(doc)}
+                    last={i === empresaDocs.length - 1}
+                  />
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       </div>
 

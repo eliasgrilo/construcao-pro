@@ -2,13 +2,13 @@ import { formatBRL, parseCurrency } from '@/components/ui/currency-input'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import {
   type FinanceiroConta,
+  useAllFinanceiroMovimentacoes,
   useCreateFinanceiroConta,
   useCreateFinanceiroMovimentacao,
   useDashboardStats,
   useDeleteFinanceiroConta,
   useEstoqueAlertas,
   useFinanceiroContas,
-  useMovimentacoesRecentes,
   useObras,
 } from '@/hooks/use-supabase'
 import { cn, formatCurrency, formatDate, formatNumber } from '@/lib/utils'
@@ -20,12 +20,12 @@ import {
   ArrowLeftRight,
   ArrowUpRight,
   CheckCircle2,
-  ChevronRight,
   CreditCard,
   FileText,
   Landmark,
   Package,
   Plus,
+  Receipt,
   Target,
   Trash2,
   Wallet,
@@ -105,16 +105,15 @@ export function FinanceiroPage() {
   const navigate = useNavigate()
 
   const { data: stats } = useDashboardStats()
-  const { data: recentMovs } = useMovimentacoesRecentes()
   const { data: alertasData } = useEstoqueAlertas()
   const { data: obrasData } = useObras()
   const { data: contas = [], isLoading: contasLoading } = useFinanceiroContas()
+  const { data: todasMovs = [], isLoading: movsLoading } = useAllFinanceiroMovimentacoes()
   const createConta = useCreateFinanceiroConta()
   const deleteConta = useDeleteFinanceiroConta()
   const createMov = useCreateFinanceiroMovimentacao()
 
   const s = stats
-  const movs = recentMovs || []
   const alertas = alertasData || []
   const pct =
     s?.orcamentoTotal && s.orcamentoTotal > 0
@@ -676,7 +675,7 @@ export function FinanceiroPage() {
         </div>
       </motion.div>
 
-      {/* ─── Atividade Recente ─── */}
+      {/* ─── Movimentações — todas as contas ─── */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -684,59 +683,97 @@ export function FinanceiroPage() {
         className="px-4 md:px-6 mt-10"
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-[20px] md:text-[22px] font-bold tracking-tight">Atividade Recente</h2>
-          <button
-            onClick={() => navigate({ to: '/movimentacoes' })}
-            className="flex items-center text-[15px] text-primary font-medium hover:text-primary/80 transition-colors min-h-[44px]"
-          >
-            Ver Todas
-            <ChevronRight className="h-4 w-4 ml-0.5" />
-          </button>
+          <h2 className="text-[20px] md:text-[22px] font-bold tracking-tight">Movimentações</h2>
+          {!movsLoading && todasMovs.length > 0 && (
+            <span className="text-[13px] text-muted-foreground font-medium tabular-nums">
+              {todasMovs.length} {todasMovs.length === 1 ? 'registro' : 'registros'}
+            </span>
+          )}
         </div>
 
         <div className="rounded-2xl bg-card border overflow-hidden">
-          {movs.length === 0 ? (
-            <p className="text-[15px] text-muted-foreground text-center py-12">
-              Nenhuma movimentação.
-            </p>
+          {movsLoading ? (
+            /* Skeletons durante carregamento */
+            [0, 1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className={cn(
+                  'flex items-center gap-3 md:gap-4 px-4 md:px-5 py-4',
+                  i > 0 && 'border-t border-border/20',
+                )}
+              >
+                <div className="h-10 w-10 rounded-xl bg-muted/50 animate-pulse flex-shrink-0" />
+                <div className="flex-1 space-y-2 min-w-0">
+                  <div className="h-[15px] w-36 rounded-md bg-muted/50 animate-pulse" />
+                  <div className="h-[12px] w-24 rounded-md bg-muted/40 animate-pulse" />
+                </div>
+                <div className="space-y-1.5 flex-shrink-0 text-right">
+                  <div className="h-[15px] w-20 rounded-md bg-muted/50 animate-pulse ml-auto" />
+                  <div className="h-[11px] w-14 rounded-md bg-muted/40 animate-pulse ml-auto" />
+                </div>
+              </div>
+            ))
+          ) : todasMovs.length === 0 ? (
+            /* Estado vazio */
+            <div className="flex flex-col items-center justify-center py-14 gap-3">
+              <span
+                className="flex h-14 w-14 items-center justify-center rounded-2xl"
+                style={{ backgroundColor: '#8E8E9314' }}
+              >
+                <Receipt className="h-7 w-7 text-muted-foreground/30" />
+              </span>
+              <p className="text-[17px] font-semibold">Sem movimentações</p>
+              <p className="text-[14px] text-muted-foreground text-center max-w-[220px] leading-relaxed">
+                As movimentações das suas contas aparecerão aqui
+              </p>
+            </div>
           ) : (
-            movs.map((mov: any, i: number) => {
+            todasMovs.map((mov: any, i: number) => {
               const t = tipos[mov.tipo] ?? tipos.ENTRADA
               const Icon = t.icon
-              const cost =
-                mov.quantidade *
-                (mov.precoUnitario ?? mov.preco_unitario ?? mov.material?.preco_unitario ?? 0)
+              const isEntrada = mov.tipo === 'ENTRADA'
+              const isSaida = mov.tipo === 'SAIDA'
+              const isTransf = mov.tipo === 'TRANSFERENCIA'
+              const banco = mov.financeiro_contas?.banco ?? '—'
+              const subconta = mov.subconta === 'CAIXA' ? 'Em Caixa' : 'Aplicações'
+              const amountColor = isTransf ? clr.blue : isSaida ? clr.red : clr.green
+
               return (
                 <div
                   key={mov.id}
                   className={cn(
-                    'flex items-center gap-3 md:gap-4 px-4 md:px-5 py-4',
+                    'flex items-center gap-3 md:gap-4 px-4 md:px-5 py-4 transition-colors hover:bg-black/[0.01] dark:hover:bg-white/[0.01]',
                     i > 0 && 'border-t border-border/20',
                   )}
                 >
+                  {/* Ícone colorido por tipo */}
                   <span
                     className="flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0"
                     style={{ backgroundColor: `${t.tint}14` }}
                   >
                     <Icon className="h-5 w-5" style={{ color: t.tint }} />
                   </span>
+
+                  {/* Motivo + banco · subconta */}
                   <div className="min-w-0 flex-1">
                     <p className="text-[15px] md:text-[16px] font-medium truncate leading-snug">
-                      {mov.material?.nome ?? '—'}
+                      {mov.motivo ?? '—'}
                     </p>
-                    <p className="text-[13px] text-muted-foreground mt-0.5">
-                      {t.label} · {formatNumber(mov.quantidade)} un
+                    <p className="text-[13px] text-muted-foreground mt-0.5 truncate">
+                      {banco}
+                      <span className="mx-1 opacity-40">·</span>
+                      {subconta}
                     </p>
                   </div>
+
+                  {/* Valor + data */}
                   <div className="text-right flex-shrink-0">
                     <p
-                      className={cn(
-                        'text-[16px] font-semibold tabular-nums',
-                        mov.tipo === 'SAIDA' ? 'text-destructive' : 'text-[#34C759]',
-                      )}
+                      className="text-[16px] font-semibold tabular-nums"
+                      style={{ color: amountColor }}
                     >
-                      {mov.tipo === 'SAIDA' ? '−' : '+'}
-                      {formatCurrency(cost)}
+                      {isTransf ? '' : isEntrada ? '+' : '−'}
+                      {formatCurrency(mov.valor ?? 0)}
                     </p>
                     <p className="text-[12px] text-muted-foreground tabular-nums mt-0.5">
                       {formatDate(mov.created_at)}

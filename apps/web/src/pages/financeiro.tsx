@@ -250,7 +250,7 @@ export function FinanceiroPage() {
               {contasLoading ? (
                 <div className="h-[30px] w-36 rounded-md bg-muted/60 animate-pulse" />
               ) : (
-                <p className="text-[24px] md:text-[32px] font-bold tabular-nums tracking-tight leading-none">
+                <p className="text-[24px] md:text-[32px] font-bold tabular-nums tracking-tight leading-none whitespace-nowrap">
                   {formatCurrency(totalDisponivel)}
                 </p>
               )}
@@ -271,26 +271,26 @@ export function FinanceiroPage() {
                 </motion.button>
               )}
 
-              {/* Saldo consolidado em contas bancárias */}
-              <div className="flex items-stretch gap-3 mt-4 pt-4 border-t border-border/20">
+              {/* Saldo consolidado em contas bancárias
+                  Layout vertical (Apple Wallet): ícone + label à esquerda, valor à direita.
+                  Evita colunas side-by-side que ficam estreitas demais no mobile. */}
+              <div className="flex flex-col gap-2.5 mt-4 pt-4 border-t border-border/20">
                 {/* Em Caixa */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <span
-                      className="flex h-5 w-5 items-center justify-center rounded-md flex-shrink-0"
-                      style={{ backgroundColor: '#34C75914' }}
-                    >
-                      <Wallet className="h-3 w-3" style={{ color: '#34C759' }} />
-                    </span>
-                    <p className="text-[11px] font-semibold text-muted-foreground whitespace-nowrap">
-                      Em Caixa
-                    </p>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <span
+                    className="flex h-5 w-5 items-center justify-center rounded-md flex-shrink-0"
+                    style={{ backgroundColor: '#34C75914' }}
+                  >
+                    <Wallet className="h-3 w-3" style={{ color: '#34C759' }} />
+                  </span>
+                  <p className="text-[11px] font-semibold text-muted-foreground flex-1">
+                    Em Caixa
+                  </p>
                   {contasLoading ? (
                     <div className="h-[18px] w-20 rounded-md bg-muted/60 animate-pulse" />
                   ) : (
                     <p
-                      className="text-[15px] md:text-[17px] font-bold tabular-nums tracking-tight leading-none"
+                      className="text-[15px] font-bold tabular-nums tracking-tight leading-none whitespace-nowrap flex-shrink-0"
                       style={{ color: '#34C759' }}
                     >
                       {formatCurrency(totalCaixa)}
@@ -298,26 +298,22 @@ export function FinanceiroPage() {
                   )}
                 </div>
 
-                <div className="w-px bg-border/20 self-stretch" />
-
                 {/* Aplicações */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <span
-                      className="flex h-5 w-5 items-center justify-center rounded-md flex-shrink-0"
-                      style={{ backgroundColor: '#007AFF14' }}
-                    >
-                      <FileText className="h-3 w-3" style={{ color: '#007AFF' }} />
-                    </span>
-                    <p className="text-[11px] font-semibold text-muted-foreground whitespace-nowrap">
-                      Aplicações
-                    </p>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <span
+                    className="flex h-5 w-5 items-center justify-center rounded-md flex-shrink-0"
+                    style={{ backgroundColor: '#007AFF14' }}
+                  >
+                    <FileText className="h-3 w-3" style={{ color: '#007AFF' }} />
+                  </span>
+                  <p className="text-[11px] font-semibold text-muted-foreground flex-1">
+                    Aplicações
+                  </p>
                   {contasLoading ? (
                     <div className="h-[18px] w-20 rounded-md bg-muted/60 animate-pulse" />
                   ) : (
                     <p
-                      className="text-[15px] md:text-[17px] font-bold tabular-nums tracking-tight leading-none"
+                      className="text-[15px] font-bold tabular-nums tracking-tight leading-none whitespace-nowrap flex-shrink-0"
                       style={{ color: '#007AFF' }}
                     >
                       {formatCurrency(totalAplicado)}
@@ -523,7 +519,7 @@ export function FinanceiroPage() {
                     )}
 
                     {/* Total */}
-                    <p className="text-[26px] md:text-[28px] font-bold tabular-nums tracking-tight leading-none mt-3">
+                    <p className="text-[26px] md:text-[28px] font-bold tabular-nums tracking-tight leading-none mt-3 whitespace-nowrap">
                       {formatCurrency(total)}
                     </p>
 
@@ -540,7 +536,7 @@ export function FinanceiroPage() {
                           <p className="text-[11px] text-muted-foreground">Em Caixa</p>
                         </div>
                         <p
-                          className="text-[14px] font-semibold tabular-nums leading-none"
+                          className="text-[14px] font-semibold tabular-nums leading-none whitespace-nowrap"
                           style={{ color: '#34C759' }}
                         >
                           {formatCurrency(Number(conta.valor_caixa) || 0)}
@@ -558,7 +554,7 @@ export function FinanceiroPage() {
                           <p className="text-[11px] text-muted-foreground">Aplicações</p>
                         </div>
                         <p
-                          className="text-[14px] font-semibold tabular-nums leading-none"
+                          className="text-[14px] font-semibold tabular-nums leading-none whitespace-nowrap"
                           style={{ color: '#007AFF' }}
                         >
                           {formatCurrency(Number(conta.valor_aplicado) || 0)}

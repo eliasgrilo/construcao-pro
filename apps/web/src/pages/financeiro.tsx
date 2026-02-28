@@ -974,81 +974,106 @@ export function FinanceiroPage() {
         }}
       >
         <DialogContent className={modalCn}>
-          {/* ── Drag handle + título ── */}
-          <div className="flex-shrink-0 relative flex items-center justify-center px-5 pt-5 pb-0">
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 w-9 h-[5px] rounded-full bg-black/[0.12] dark:bg-white/[0.18]" />
-            <DialogTitle className="text-[17px] font-semibold tracking-tight">
+          {/* ── Drag handle ── */}
+          <div className="flex-shrink-0 pt-[10px] pb-0 flex justify-center">
+            <div className="w-9 h-[5px] rounded-full bg-black/[0.15] dark:bg-white/[0.22]" />
+          </div>
+
+          {/* ── Título ── */}
+          <div className="flex-shrink-0 relative flex items-center justify-center px-5 pt-3 pb-3">
+            <DialogTitle className="text-[17px] font-semibold text-[#1C1C1E] dark:text-white tracking-tight">
               Meta Financeira
             </DialogTitle>
             <DialogDescription className="sr-only">Defina sua meta de capital disponível.</DialogDescription>
             <motion.button
               whileTap={{ scale: 0.86 }}
               onClick={() => { setMetaModalOpen(false); setMetaInput('') }}
-              className="absolute right-4 flex h-[30px] w-[30px] items-center justify-center rounded-full bg-black/[0.08] dark:bg-white/[0.12] transition-colors"
+              className="absolute right-4 flex h-[30px] w-[30px] items-center justify-center rounded-full bg-black/[0.08] dark:bg-white/[0.12]"
             >
-              <X className="h-[14px] w-[14px] text-foreground/60" />
+              <X className="h-[14px] w-[14px]" style={{ color: '#3C3C43' }} />
             </motion.button>
           </div>
 
-          {/* ── Hero: input centralizado — estilo Apple Pay ── */}
-          <div className="flex-shrink-0 flex flex-col items-center px-6 pt-8 pb-6">
-            <p className="text-[13px] font-medium text-muted-foreground/60 mb-3 tracking-wide uppercase">
-              {meta > 0 ? 'Atualizar meta' : 'Definir meta'}
-            </p>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-[28px] font-semibold text-foreground/40">R$</span>
-              <input
-                value={metaInput}
-                onChange={(e) => setMetaInput(formatBRL(e.target.value))}
-                placeholder="0,00"
-                inputMode="decimal"
-                autoFocus
-                className="text-[48px] font-bold tabular-nums tracking-tight bg-transparent outline-none min-w-[8ch] max-w-full text-center placeholder:text-foreground/20"
-                style={{ width: `${Math.max(metaInput.length + 1, 5)}ch` }}
-              />
-            </div>
+          {/* ── Card branco: input de valor — sempre legível ── */}
+          <div className="flex-shrink-0 px-4 pt-1 pb-3">
+            <div className="rounded-2xl bg-white dark:bg-[#2C2C2E] px-5 pt-5 pb-5">
+              <p className="text-[11px] font-semibold uppercase tracking-widest mb-4" style={{ color: '#8E8E93' }}>
+                {meta > 0 ? 'Atualizar meta' : 'Definir meta'}
+              </p>
 
-            {/* Disponível hoje — contexto sutil */}
-            <p className="text-[13px] text-muted-foreground/50 mt-3 tabular-nums">
-              Disponível hoje:{' '}
-              <span
-                className="font-semibold"
-                style={{ color: totalDisponivel > 0 ? '#34C759' : undefined }}
+              {/* Amount row — R$ alinhado à esquerda, input ocupa o restante */}
+              <div className="flex items-baseline gap-2">
+                <span className="text-[22px] font-semibold flex-shrink-0" style={{ color: '#8E8E93' }}>
+                  R$
+                </span>
+                <input
+                  value={metaInput}
+                  onChange={(e) => setMetaInput(formatBRL(e.target.value))}
+                  placeholder="0,00"
+                  inputMode="decimal"
+                  autoFocus
+                  className="flex-1 min-w-0 text-[40px] font-bold tabular-nums tracking-tight outline-none bg-transparent text-[#1C1C1E] dark:text-white placeholder:text-[#C7C7CC] dark:placeholder:text-[#48484A] caret-[#007AFF]"
+                />
+              </div>
+
+              {/* Disponível hoje — divider interno Apple style */}
+              <div
+                className="flex items-center justify-between mt-4 pt-4"
+                style={{ borderTop: '1px solid rgba(60,60,67,0.1)' }}
               >
-                {formatCurrency(totalDisponivel)}
-              </span>
-            </p>
+                <span className="text-[13px]" style={{ color: '#8E8E93' }}>
+                  Disponível hoje
+                </span>
+                <span
+                  className="text-[13px] font-semibold tabular-nums"
+                  style={{ color: totalDisponivel > 0 ? '#34C759' : '#8E8E93' }}
+                >
+                  {formatCurrency(totalDisponivel)}
+                </span>
+              </div>
+            </div>
+          </div>
 
-            {/* Mini progress preview — só aparece quando o usuário digita */}
-            {parseCurrency(metaInput) > 0 && (() => {
-              const previewPct = Math.min(Math.round((totalDisponivel / parseCurrency(metaInput)) * 100), 100)
-              const previewColor = previewPct >= 100 ? '#34C759' : '#007AFF'
-              return (
-                <div className="w-full mt-5">
-                  <div className="h-[6px] rounded-full overflow-hidden bg-black/[0.06] dark:bg-white/[0.08]">
+          {/* ── Card branco: preview de progresso (condicional) ── */}
+          {parseCurrency(metaInput) > 0 && (() => {
+            const previewPct = Math.min(Math.round((totalDisponivel / parseCurrency(metaInput)) * 100), 100)
+            const previewColor = previewPct >= 100 ? '#34C759' : '#007AFF'
+            return (
+              <div className="flex-shrink-0 px-4 pb-3">
+                <div className="rounded-2xl bg-white dark:bg-[#2C2C2E] px-5 py-4">
+                  <div className="flex items-center justify-between mb-[10px]">
+                    <span className="text-[13px]" style={{ color: '#8E8E93' }}>Progresso</span>
+                    <span className="text-[13px] font-semibold tabular-nums" style={{ color: previewColor }}>
+                      {previewPct}%
+                    </span>
+                  </div>
+                  <div
+                    className="h-[6px] rounded-full overflow-hidden"
+                    style={{ backgroundColor: 'rgba(60,60,67,0.08)' }}
+                  >
                     <motion.div
                       className="h-full rounded-full"
                       initial={{ width: '0%' }}
                       animate={{ width: `${previewPct}%` }}
-                      transition={{ duration: 0.6, ease: [0.34, 1.56, 0.64, 1] }}
+                      transition={{ duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}
                       style={{ backgroundColor: previewColor }}
                     />
                   </div>
-                  <div className="flex items-center justify-between mt-1.5">
-                    <span className="text-[12px] text-muted-foreground/50 tabular-nums">
-                      {formatCurrency(totalDisponivel)}
-                    </span>
-                    <span className="text-[12px] font-semibold tabular-nums" style={{ color: previewColor }}>
-                      {previewPct}%
-                    </span>
-                  </div>
+                  <p className="text-[12px] tabular-nums mt-2" style={{ color: previewPct >= 100 ? '#34C759' : '#8E8E93', fontWeight: previewPct >= 100 ? 600 : 400 }}>
+                    {previewPct >= 100
+                      ? 'Meta já atingida com o saldo atual'
+                      : `Faltam ${formatCurrency(Math.max(parseCurrency(metaInput) - totalDisponivel, 0))}`}
+                  </p>
                 </div>
-              )
-            })()}
-          </div>
+              </div>
+            )
+          })()}
 
-          {/* ── Rodapé com CTA ── */}
-          <div className="flex-shrink-0 px-4 pt-2 pb-8 sm:pb-5 space-y-2">
+          {/* spacer empurra CTA para baixo */}
+          <div className="flex-1 min-h-[12px]" />
+
+          {/* ── CTA ── */}
+          <div className="flex-shrink-0 px-4 pb-8 sm:pb-6 space-y-2">
             <motion.button
               whileTap={{ scale: parseCurrency(metaInput) > 0 ? 0.97 : 1 }}
               disabled={parseCurrency(metaInput) <= 0}
@@ -1061,13 +1086,12 @@ export function FinanceiroPage() {
                 setMetaModalOpen(false)
                 setMetaInput('')
               }}
-              className={cn(
-                'w-full flex items-center justify-center h-[54px] rounded-[14px] text-[17px] font-semibold tracking-tight transition-all',
+              className="w-full flex items-center justify-center h-[54px] rounded-[14px] text-[17px] font-semibold tracking-tight transition-all"
+              style={
                 parseCurrency(metaInput) > 0
-                  ? 'text-white'
-                  : 'bg-black/[0.07] dark:bg-white/[0.07] text-foreground/25 cursor-not-allowed',
-              )}
-              style={parseCurrency(metaInput) > 0 ? { backgroundColor: '#007AFF' } : undefined}
+                  ? { backgroundColor: '#007AFF', color: '#FFFFFF' }
+                  : { backgroundColor: 'rgba(60,60,67,0.08)', color: '#C7C7CC', cursor: 'not-allowed' }
+              }
             >
               Salvar Meta
             </motion.button>
@@ -1081,7 +1105,7 @@ export function FinanceiroPage() {
                   setMetaModalOpen(false)
                   setMetaInput('')
                 }}
-                className="w-full flex items-center justify-center h-[44px] text-[15px] font-medium transition-colors"
+                className="w-full flex items-center justify-center h-[44px] text-[15px] font-medium"
                 style={{ color: '#FF3B30' }}
               >
                 Remover Meta

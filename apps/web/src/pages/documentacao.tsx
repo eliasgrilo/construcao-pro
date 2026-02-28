@@ -124,6 +124,7 @@ export function DocumentacaoPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [isDragging, setIsDragging] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   // Modals
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
@@ -144,6 +145,9 @@ export function DocumentacaoPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const dropZoneRef = useRef<HTMLDivElement>(null)
+  const uploadModalOpenRef = useRef(false)
+  // Keep ref in sync so handleFileSelect closure always has the latest value
+  uploadModalOpenRef.current = uploadModalOpen
 
   // ── Filtered documents ──
   const filtered = useMemo(() => {
@@ -214,8 +218,14 @@ export function DocumentacaoPage() {
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     if (files.length > 0) {
-      setUploadFiles(files)
-      setUploadModalOpen(true)
+      if (uploadModalOpenRef.current) {
+        // Modal already open — append files to the existing list
+        setUploadFiles((prev) => [...prev, ...files])
+      } else {
+        // First selection — set files and open modal
+        setUploadFiles(files)
+        setUploadModalOpen(true)
+      }
     }
     // Reset so re-selecting the same file works
     e.target.value = ''
@@ -225,6 +235,7 @@ export function DocumentacaoPage() {
   const handleUpload = async () => {
     if (uploadFiles.length === 0) return
     setUploading(true)
+    setUploadError(null)
     try {
       for (const file of uploadFiles) {
         await uploadMut.mutateAsync({
@@ -235,14 +246,18 @@ export function DocumentacaoPage() {
           obra_id: uploadObraId,
         })
       }
-      // Reset
+      // Reset on success
       setUploadFiles([])
       setUploadCategoriaId(null)
       setUploadObraId(null)
       setUploadDescricao('')
+      setUploadError(null)
       setUploadModalOpen(false)
-    } catch (err) {
+    } catch (err: any) {
       console.error('Upload failed:', err)
+      const msg =
+        err?.message || err?.error_description || 'Erro ao enviar arquivo. Tente novamente.'
+      setUploadError(msg)
     } finally {
       setUploading(false)
     }
@@ -885,7 +900,13 @@ export function DocumentacaoPage() {
       {/* ═══════════════════════════════════════════════════════════
           UPLOAD MODAL
           ═══════════════════════════════════════════════════════════ */}
-      <Dialog open={uploadModalOpen} onOpenChange={setUploadModalOpen}>
+      <Dialog
+        open={uploadModalOpen}
+        onOpenChange={(open) => {
+          setUploadModalOpen(open)
+          if (!open) setUploadError(null)
+        }}
+      >
         <DialogContent className={modalCn}>
           {/* Header */}
           <div className="sticky top-0 z-10 bg-[#F2F2F7] dark:bg-[#1C1C1E] px-5 pt-5 pb-3">
@@ -910,6 +931,23 @@ export function DocumentacaoPage() {
           </div>
 
           <div className="flex-1 overflow-y-auto px-5 pb-[env(safe-area-inset-bottom)] pb-5">
+            {/* Error banner */}
+            <AnimatePresence>
+              {uploadError && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mb-3 overflow-hidden"
+                >
+                  <div className="rounded-[14px] bg-[#FF3B30]/10 border border-[#FF3B30]/20 px-4 py-3 flex items-start gap-2.5">
+                    <X className="h-4 w-4 text-[#FF3B30] flex-shrink-0 mt-0.5" />
+                    <p className="text-[13px] text-[#FF3B30] leading-snug">{uploadError}</p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Files preview */}
             <div className="rounded-[14px] bg-white dark:bg-white/[0.07] overflow-hidden">
               {uploadFiles.length === 0 ? (

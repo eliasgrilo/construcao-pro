@@ -204,242 +204,204 @@ export function FinanceiroPage() {
 
   return (
     <div className="pb-20 pt-8 md:pt-10">
-      {/* ─── Orçamento Geral ─── */}
+      {/* ─── Saldo Disponível — Apple Wallet hero card ─── */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.1 }}
         className="px-4 md:px-6"
       >
-        <h2 className="text-[20px] md:text-[22px] font-bold tracking-tight mb-4">
-          Orçamento Geral
-        </h2>
-        <div className="rounded-2xl bg-card border p-5 md:p-6">
-          <div className="flex items-center gap-5 md:gap-8">
-            {/* Ring — meta % alcançada · clicável para definir/editar meta */}
-            <motion.button
-              whileTap={{ scale: 0.93 }}
-              onClick={() => {
-                setMetaInput(meta > 0 ? formatBRL(meta.toFixed(2).replace('.', ',')) : '')
-                setMetaModalOpen(true)
-              }}
-              className="relative flex-shrink-0 focus:outline-none rounded-full"
-              aria-label="Definir meta financeira"
-            >
-              <Ring percent={metaPct} size={100} stroke={9} color={metaRingColor} />
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                {meta > 0 ? (
-                  <>
-                    <span className="text-[22px] font-bold tabular-nums leading-none">{metaPct}%</span>
-                    <span className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-wider">
-                      meta
-                    </span>
-                  </>
+        <div className="rounded-2xl bg-card border p-6 md:p-8">
+          {/* Label + hero amount */}
+          <p className="text-[13px] font-medium text-muted-foreground tracking-wide uppercase">
+            Saldo Disponível
+          </p>
+          {contasLoading ? (
+            <div className="h-[38px] w-48 rounded-lg bg-muted/60 animate-pulse mt-2" />
+          ) : (
+            <p className="text-[34px] md:text-[40px] font-bold tabular-nums tracking-tight leading-none mt-2">
+              {formatCurrency(totalDisponivel)}
+            </p>
+          )}
+
+          {/* Breakdown: Em Caixa · Aplicações — inline Apple style */}
+          <div className="flex items-center gap-5 mt-4">
+            <div className="flex items-center gap-2">
+              <span
+                className="flex h-[22px] w-[22px] items-center justify-center rounded-[7px]"
+                style={{ backgroundColor: '#34C75912' }}
+              >
+                <Wallet className="h-3 w-3" style={{ color: '#34C759' }} />
+              </span>
+              <div className="flex flex-col">
+                <span className="text-[11px] text-muted-foreground/70 leading-none">Em Caixa</span>
+                {contasLoading ? (
+                  <div className="h-[16px] w-16 rounded bg-muted/60 animate-pulse mt-0.5" />
                 ) : (
-                  <>
-                    <Target className="h-5 w-5 text-muted-foreground/40 mb-0.5" />
-                    <span className="text-[9px] text-muted-foreground/50 uppercase tracking-wider leading-none">
-                      meta
-                    </span>
-                  </>
+                  <span className="text-[15px] font-semibold tabular-nums leading-tight mt-0.5" style={{ color: '#34C759' }}>
+                    {formatCurrency(totalCaixa)}
+                  </span>
                 )}
               </div>
-            </motion.button>
-
-            <div className="min-w-0 flex-1">
-              {contasLoading ? (
-                <div className="h-[30px] w-36 rounded-md bg-muted/60 animate-pulse" />
-              ) : (
-                <p className="text-[24px] md:text-[32px] font-bold tabular-nums tracking-tight leading-none whitespace-nowrap">
-                  {formatCurrency(totalDisponivel)}
-                </p>
-              )}
-              {meta > 0 ? (
-                <>
-                  {/* ── Barra de progresso slim (Apple Savings Goal) ── */}
-                  <div className="mt-3 h-[5px] rounded-full overflow-hidden bg-border/30">
-                    <motion.div
-                      className="h-full rounded-full"
-                      initial={{ width: '0%' }}
-                      animate={{ width: `${metaPct}%` }}
-                      transition={{ duration: 1.1, ease: [0.34, 1.56, 0.64, 1] }}
-                      style={{ backgroundColor: metaRingColor }}
-                    />
-                  </div>
-
-                  {/* ── Quanto falta / meta atingida ── */}
-                  <div className="flex items-center justify-between mt-[7px]">
-                    {metaPct >= 100 ? (
-                      <span className="text-[12px] font-semibold" style={{ color: '#34C759' }}>
-                        Meta atingida!
-                      </span>
-                    ) : (
-                      <span className="text-[12px] text-muted-foreground/70 tabular-nums">
-                        faltam{' '}
-                        <span
-                          className="font-semibold"
-                          style={{ color: metaPct >= 80 ? '#FF9500' : '#007AFF' }}
-                        >
-                          {formatCurrency(Math.max(meta - totalDisponivel, 0))}
-                        </span>
-                      </span>
-                    )}
-                    {/* Tap para editar meta — alvo sutil, sem destaque */}
-                    <motion.button
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => {
-                        setMetaInput(formatBRL(meta.toFixed(2).replace('.', ',')))
-                        setMetaModalOpen(true)
-                      }}
-                      className="text-[11px] text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors focus:outline-none min-h-[28px] flex items-center tabular-nums"
-                    >
-                      de {formatCurrency(meta)}
-                    </motion.button>
-                  </div>
-                </>
-              ) : (
-                <motion.button
-                  whileTap={{ scale: 0.96 }}
-                  onClick={() => { setMetaInput(''); setMetaModalOpen(true) }}
-                  className="mt-1.5 flex items-center gap-1.5 text-[13px] text-primary/60 hover:text-primary transition-colors focus:outline-none"
-                >
-                  <Target className="h-3 w-3 flex-shrink-0" />
-                  <span>Definir meta financeira</span>
-                </motion.button>
-              )}
-
-              {/* Saldo consolidado em contas bancárias
-                  Layout vertical (Apple Wallet): ícone + label à esquerda, valor à direita.
-                  Evita colunas side-by-side que ficam estreitas demais no mobile. */}
-              <div className="flex flex-col gap-2.5 mt-4 pt-4 border-t border-border/20">
-                {/* Em Caixa */}
-                <div className="flex items-center gap-2">
-                  <span
-                    className="flex h-5 w-5 items-center justify-center rounded-md flex-shrink-0"
-                    style={{ backgroundColor: '#34C75914' }}
-                  >
-                    <Wallet className="h-3 w-3" style={{ color: '#34C759' }} />
+            </div>
+            <div className="w-px h-8 bg-border/40" />
+            <div className="flex items-center gap-2">
+              <span
+                className="flex h-[22px] w-[22px] items-center justify-center rounded-[7px]"
+                style={{ backgroundColor: '#007AFF12' }}
+              >
+                <FileText className="h-3 w-3" style={{ color: '#007AFF' }} />
+              </span>
+              <div className="flex flex-col">
+                <span className="text-[11px] text-muted-foreground/70 leading-none">Aplicações</span>
+                {contasLoading ? (
+                  <div className="h-[16px] w-16 rounded bg-muted/60 animate-pulse mt-0.5" />
+                ) : (
+                  <span className="text-[15px] font-semibold tabular-nums leading-tight mt-0.5" style={{ color: '#007AFF' }}>
+                    {formatCurrency(totalAplicado)}
                   </span>
-                  <p className="text-[11px] font-semibold text-muted-foreground flex-1">
-                    Em Caixa
-                  </p>
-                  {contasLoading ? (
-                    <div className="h-[18px] w-20 rounded-md bg-muted/60 animate-pulse" />
-                  ) : (
-                    <p
-                      className="text-[15px] font-bold tabular-nums tracking-tight leading-none whitespace-nowrap flex-shrink-0"
-                      style={{ color: '#34C759' }}
-                    >
-                      {formatCurrency(totalCaixa)}
-                    </p>
-                  )}
-                </div>
-
-                {/* Aplicações */}
-                <div className="flex items-center gap-2">
-                  <span
-                    className="flex h-5 w-5 items-center justify-center rounded-md flex-shrink-0"
-                    style={{ backgroundColor: '#007AFF14' }}
-                  >
-                    <FileText className="h-3 w-3" style={{ color: '#007AFF' }} />
-                  </span>
-                  <p className="text-[11px] font-semibold text-muted-foreground flex-1">
-                    Aplicações
-                  </p>
-                  {contasLoading ? (
-                    <div className="h-[18px] w-20 rounded-md bg-muted/60 animate-pulse" />
-                  ) : (
-                    <p
-                      className="text-[15px] font-bold tabular-nums tracking-tight leading-none whitespace-nowrap flex-shrink-0"
-                      style={{ color: '#007AFF' }}
-                    >
-                      {formatCurrency(totalAplicado)}
-                    </p>
-                  )}
-                </div>
+                )}
               </div>
             </div>
           </div>
+
+          {/* Meta — Apple Savings Goal: clean progress section */}
+          {meta > 0 ? (
+            <div className="mt-6 pt-5 border-t border-border/15">
+              <div className="flex items-center justify-between mb-2.5">
+                <span className="text-[13px] font-medium text-muted-foreground">Meta</span>
+                <motion.button
+                  whileTap={{ scale: 0.96 }}
+                  onClick={() => {
+                    setMetaInput(formatBRL(meta.toFixed(2).replace('.', ',')))
+                    setMetaModalOpen(true)
+                  }}
+                  className="text-[13px] font-medium transition-colors focus:outline-none min-h-[28px] flex items-center tabular-nums"
+                  style={{ color: '#007AFF' }}
+                >
+                  {formatCurrency(meta)}
+                </motion.button>
+              </div>
+              <div className="h-[6px] rounded-full overflow-hidden bg-border/20">
+                <motion.div
+                  className="h-full rounded-full"
+                  initial={{ width: '0%' }}
+                  animate={{ width: `${metaPct}%` }}
+                  transition={{ duration: 1.1, ease: [0.34, 1.56, 0.64, 1] }}
+                  style={{ backgroundColor: metaPct >= 100 ? '#34C759' : '#007AFF' }}
+                />
+              </div>
+              <div className="flex items-center justify-between mt-2">
+                {metaPct >= 100 ? (
+                  <span className="text-[12px] font-medium flex items-center gap-1" style={{ color: '#34C759' }}>
+                    <CheckCircle2 className="h-3 w-3" />
+                    Meta atingida
+                  </span>
+                ) : (
+                  <span className="text-[12px] text-muted-foreground/60 tabular-nums">
+                    Faltam <span className="font-semibold text-foreground/70">{formatCurrency(Math.max(meta - totalDisponivel, 0))}</span>
+                  </span>
+                )}
+                <span className="text-[12px] font-semibold tabular-nums" style={{ color: metaPct >= 100 ? '#34C759' : '#007AFF' }}>
+                  {metaPct}%
+                </span>
+              </div>
+            </div>
+          ) : (
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={() => { setMetaInput(''); setMetaModalOpen(true) }}
+              className="mt-6 pt-5 border-t border-border/15 w-full flex items-center gap-2 text-[14px] font-medium transition-colors focus:outline-none min-h-[44px]"
+              style={{ color: '#007AFF' }}
+            >
+              <Target className="h-4 w-4 flex-shrink-0" />
+              Definir meta financeira
+            </motion.button>
+          )}
         </div>
       </motion.div>
 
-      {/* ─── Insights row ─── */}
+      {/* ─── Insights row — Apple compact metric cards ─── */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.2 }}
-        className="px-4 md:px-6 mt-5 grid grid-cols-2 gap-3"
+        className="px-4 md:px-6 mt-4 grid grid-cols-2 gap-3"
       >
-        {/* Orçamento Geral */}
+        {/* Orçamento Obras */}
         <motion.div
-          className="rounded-2xl bg-card border p-4 md:p-5 flex flex-col justify-between cursor-pointer h-full"
+          className="rounded-2xl bg-card border p-4 md:p-5 cursor-pointer"
           whileTap={{ scale: 0.97 }}
           onClick={() => navigate({ to: '/obras' })}
         >
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2.5 mb-4">
             <span
-              className="flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0"
-              style={{ backgroundColor: '#007AFF15' }}
+              className="flex h-9 w-9 items-center justify-center rounded-[10px] flex-shrink-0"
+              style={{ backgroundColor: '#007AFF10' }}
             >
-              <Wallet className="h-5 w-5" style={{ color: '#007AFF' }} />
+              <Wallet className="h-[17px] w-[17px]" style={{ color: '#007AFF' }} />
             </span>
-            <div className="relative flex items-center justify-center">
-              <Ring percent={pct} size={46} stroke={4} color={ringColor(pct)} />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-[12px] font-bold tabular-nums leading-none tracking-tight">
-                  {pct}%
-                </span>
-              </div>
-            </div>
+            <span className="text-[13px] font-medium text-muted-foreground leading-tight">
+              Orçamento Obras
+            </span>
           </div>
-          <div>
-            <p className="text-[13px] md:text-[14px] text-muted-foreground font-medium mb-1">
-              Orçamento Geral
-            </p>
-            <p className="text-[20px] md:text-[24px] font-bold tabular-nums leading-none tracking-tight mb-1.5">
-              {formatCurrency(s?.custoTotal ?? 0)}
-            </p>
-            <p className="text-[12px] md:text-[13px] text-muted-foreground leading-tight truncate">
-              de {formatCurrency(s?.orcamentoTotal ?? 0)}
-            </p>
+          <p className="text-[22px] md:text-[26px] font-bold tabular-nums leading-none tracking-tight">
+            {formatCurrency(s?.custoTotal ?? 0)}
+          </p>
+          <div className="mt-3">
+            <div className="h-[4px] rounded-full overflow-hidden bg-border/20">
+              <motion.div
+                className="h-full rounded-full"
+                initial={{ width: '0%' }}
+                animate={{ width: `${Math.min(pct, 100)}%` }}
+                transition={{ duration: 1, ease: [0.34, 1.56, 0.64, 1] }}
+                style={{ backgroundColor: ringColor(pct) }}
+              />
+            </div>
+            <div className="flex items-center justify-between mt-1.5">
+              <span className="text-[11px] text-muted-foreground/60 tabular-nums">
+                de {formatCurrency(s?.orcamentoTotal ?? 0)}
+              </span>
+              <span className="text-[11px] font-semibold tabular-nums" style={{ color: ringColor(pct) }}>
+                {pct}%
+              </span>
+            </div>
           </div>
         </motion.div>
 
         {/* Terrenos em Standby */}
         <motion.div
-          className="rounded-2xl bg-card border p-4 md:p-5 flex flex-col justify-between cursor-pointer h-full"
+          className="rounded-2xl bg-card border p-4 md:p-5 cursor-pointer"
           whileTap={{ scale: 0.97 }}
           onClick={() => navigate({ to: '/obras' })}
         >
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2.5 mb-4">
             <span
-              className="flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0"
-              style={{ backgroundColor: '#AF52DE15' }}
+              className="flex h-9 w-9 items-center justify-center rounded-[10px] flex-shrink-0"
+              style={{ backgroundColor: '#AF52DE10' }}
             >
-              <Landmark className="h-5 w-5" style={{ color: '#AF52DE' }} />
+              <Landmark className="h-[17px] w-[17px]" style={{ color: '#AF52DE' }} />
             </span>
+            <span className="text-[13px] font-medium text-muted-foreground leading-tight">
+              Terrenos Standby
+            </span>
+          </div>
+          <p
+            className="text-[22px] md:text-[26px] font-bold tabular-nums leading-none tracking-tight"
+            style={{ color: terrenosStandby.length > 0 ? '#AF52DE' : undefined }}
+          >
+            {formatCurrency(totalTerrenos)}
+          </p>
+          <div className="flex items-center justify-between mt-3">
+            <span className="text-[11px] text-muted-foreground/60">Capital imobilizado</span>
             {terrenosStandby.length > 0 && (
               <span
-                className="flex items-center justify-center h-[26px] min-w-[26px] rounded-full text-[13px] font-bold px-2.5"
-                style={{ backgroundColor: '#AF52DE15', color: '#AF52DE' }}
+                className="text-[11px] font-semibold tabular-nums px-2 py-0.5 rounded-full"
+                style={{ backgroundColor: '#AF52DE10', color: '#AF52DE' }}
               >
-                {terrenosStandby.length}
+                {terrenosStandby.length} {terrenosStandby.length === 1 ? 'terreno' : 'terrenos'}
               </span>
             )}
-          </div>
-          <div>
-            <p className="text-[13px] md:text-[14px] text-muted-foreground font-medium mb-1">
-              Terrenos Standby
-            </p>
-            <p
-              className="text-[20px] md:text-[24px] font-bold tabular-nums leading-none tracking-tight mb-1.5"
-              style={{ color: terrenosStandby.length > 0 ? '#AF52DE' : undefined }}
-            >
-              {formatCurrency(totalTerrenos)}
-            </p>
-            <p className="text-[12px] md:text-[13px] text-muted-foreground leading-tight truncate">
-              Capital imobilizado
-            </p>
           </div>
         </motion.div>
       </motion.div>

@@ -502,7 +502,7 @@ export function ObrasPage() {
       </div>
 
       {/* Create Dialog */}
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset() }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Nova Obra</DialogTitle>

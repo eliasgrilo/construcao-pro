@@ -149,11 +149,11 @@ function StatusSwitcher({
           'flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide border transition-all select-none',
           isUpdating ? 'opacity-50 cursor-wait' : 'cursor-pointer',
           current?.variant === 'success' &&
-            'bg-success/12 text-success border-success/20 hover:bg-success/20',
+          'bg-success/12 text-success border-success/20 hover:bg-success/20',
           current?.variant === 'warning' &&
-            'bg-warning/12 text-warning border-warning/20 hover:bg-warning/20',
+          'bg-warning/12 text-warning border-warning/20 hover:bg-warning/20',
           current?.variant === 'secondary' &&
-            'bg-secondary text-secondary-foreground border-border hover:bg-accent',
+          'bg-secondary text-secondary-foreground border-border hover:bg-accent',
         )}
       >
         <span
@@ -1418,7 +1418,7 @@ export function ObraDetailPage() {
       </motion.div>
 
       {/* ── Dialogs ── */}
-      <Dialog open={createAlmoxOpen} onOpenChange={setCreateAlmoxOpen}>
+      <Dialog open={createAlmoxOpen} onOpenChange={(v) => { setCreateAlmoxOpen(v); if (!v) setNewAlmoxName('') }}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Novo Almoxarifado</DialogTitle>
@@ -1557,7 +1557,7 @@ export function ObraDetailPage() {
                 step="any"
                 className={cn(
                   Number(baixaQty.replace(',', '.')) > (baixaTarget?.quantidadeDisponivel ?? 0) &&
-                    'border-destructive focus-visible:ring-destructive',
+                  'border-destructive focus-visible:ring-destructive',
                 )}
               />
               {Number(baixaQty.replace(',', '.')) > (baixaTarget?.quantidadeDisponivel ?? 0) && (
@@ -1574,7 +1574,7 @@ export function ObraDetailPage() {
                     <span className="font-semibold tabular-nums">
                       {formatNumber(
                         (baixaTarget?.quantidadeDisponivel ?? 0) -
-                          Number(baixaQty.replace(',', '.')),
+                        Number(baixaQty.replace(',', '.')),
                       )}
                     </span>{' '}
                     {baixaTarget?.unidade}
@@ -1921,7 +1921,7 @@ export function ObraDetailPage() {
                 <span className="text-[18px] sm:text-[17px] font-bold tabular-nums">
                   {formatCurrency(
                     Number(entQty.replace(',', '.')) *
-                      (parseCurrency(entPreco) || selectedEntMaterial?.preco_unitario || 0),
+                    (parseCurrency(entPreco) || selectedEntMaterial?.preco_unitario || 0),
                   )}
                 </span>
               </div>
@@ -2193,9 +2193,9 @@ export function ObraDetailPage() {
                 step="any"
                 className={cn(
                   movTipo === 'TRANSFERENCIA' &&
-                    movTransfDisponivel &&
-                    Number(movQty.replace(',', '.')) > movTransfDisponivel.quantidade &&
-                    'border-destructive focus-visible:ring-destructive',
+                  movTransfDisponivel &&
+                  Number(movQty.replace(',', '.')) > movTransfDisponivel.quantidade &&
+                  'border-destructive focus-visible:ring-destructive',
                 )}
               />
               {movTipo === 'TRANSFERENCIA' &&

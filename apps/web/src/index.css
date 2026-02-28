@@ -96,7 +96,10 @@ body {
   overflow-x: hidden;
   overscroll-behavior-y: contain;
   touch-action: manipulation;
+  /* Safe area insets for devices with notch/home bar */
   padding-bottom: env(safe-area-inset-bottom, 0px);
+  /* Momentum scrolling on iOS */
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ─── Typography ───────────────────────────────────── */
@@ -222,4 +225,22 @@ h6 {
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+/* ─── iOS momentum scroll ──────────────────────────── */
+.scroll-ios {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* ─── Prevent iOS 16+ text size adjustment ─────────── */
+@supports (-webkit-touch-callout: none) {
+  input, textarea, select {
+    font-size: max(16px, 1em);
+  }
+}
+
+/* ─── Safe-area bottom padding utility ─────────────── */
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }

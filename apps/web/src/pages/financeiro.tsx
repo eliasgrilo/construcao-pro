@@ -1,5 +1,5 @@
 import { formatBRL, parseCurrency } from '@/components/ui/currency-input'
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import {
   type FinanceiroConta,
   useAllFinanceiroMovimentacoes,
@@ -802,6 +802,7 @@ export function FinanceiroPage() {
             <DialogTitle className="text-[17px] font-semibold tracking-tight">
               Nova Conta
             </DialogTitle>
+            <DialogDescription className="sr-only">Preencha os dados da nova conta bancária.</DialogDescription>
             <motion.button
               whileTap={{ scale: 0.86 }}
               onClick={() => {
@@ -881,13 +882,17 @@ export function FinanceiroPage() {
 
             {/* Grupo 2: saldo inicial — subconta picker + valor único */}
             <div className="rounded-[14px] overflow-hidden bg-white dark:bg-white/[0.07]">
-              {/* Segmented control — Em Caixa | Aplicações */}
+              {/* Segmented control — Em Caixa | Aplicações (CSS-only indicator, no layoutId to avoid Portal freeze) */}
               <div className="px-3 py-[10px]">
-                <div className="flex gap-0.5 p-[3px] rounded-[10px] bg-black/[0.06] dark:bg-white/[0.08]">
+                <div className="relative flex gap-0.5 p-[3px] rounded-[10px] bg-black/[0.06] dark:bg-white/[0.08]">
+                  {/* Sliding indicator — pure CSS */}
+                  <div
+                    className="absolute top-[3px] bottom-[3px] w-[calc(50%-3px)] bg-white dark:bg-white/[0.14] rounded-[8px] shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)] pointer-events-none"
+                    style={{ transform: subcontaNova === 'APLICADO' ? 'translateX(calc(100% + 3px))' : 'translateX(0)' }}
+                  />
                   {/* Em Caixa */}
-                  <motion.button
+                  <button
                     type="button"
-                    whileTap={{ scale: 0.96 }}
                     onClick={() => setSubcontaNova('CAIXA')}
                     className={cn(
                       'relative flex-1 flex items-center justify-center gap-1.5 rounded-[8px] py-[9px] text-[14px] font-medium transition-colors z-10',
@@ -895,21 +900,13 @@ export function FinanceiroPage() {
                     )}
                     style={{ color: subcontaNova === 'CAIXA' ? '#34C759' : undefined }}
                   >
-                    {subcontaNova === 'CAIXA' && (
-                      <motion.div
-                        layoutId="nova-conta-sc"
-                        className="absolute inset-0 bg-white dark:bg-white/[0.14] rounded-[8px] shadow-sm -z-10"
-                        transition={{ type: 'spring', bounce: 0.18, duration: 0.36 }}
-                      />
-                    )}
                     <Wallet className="h-3.5 w-3.5 flex-shrink-0" />
                     <span>Em Caixa</span>
-                  </motion.button>
+                  </button>
 
                   {/* Aplicações */}
-                  <motion.button
+                  <button
                     type="button"
-                    whileTap={{ scale: 0.96 }}
                     onClick={() => setSubcontaNova('APLICADO')}
                     className={cn(
                       'relative flex-1 flex items-center justify-center gap-1.5 rounded-[8px] py-[9px] text-[14px] font-medium transition-colors z-10',
@@ -917,16 +914,9 @@ export function FinanceiroPage() {
                     )}
                     style={{ color: subcontaNova === 'APLICADO' ? '#007AFF' : undefined }}
                   >
-                    {subcontaNova === 'APLICADO' && (
-                      <motion.div
-                        layoutId="nova-conta-sc"
-                        className="absolute inset-0 bg-white dark:bg-white/[0.14] rounded-[8px] shadow-sm -z-10"
-                        transition={{ type: 'spring', bounce: 0.18, duration: 0.36 }}
-                      />
-                    )}
                     <FileText className="h-3.5 w-3.5 flex-shrink-0" />
                     <span>Aplicações</span>
-                  </motion.button>
+                  </button>
                 </div>
               </div>
 
@@ -994,6 +984,7 @@ export function FinanceiroPage() {
             <DialogTitle className="text-[17px] font-semibold tracking-tight">
               Meta Financeira
             </DialogTitle>
+            <DialogDescription className="sr-only">Defina ou atualize sua meta financeira.</DialogDescription>
             <motion.button
               whileTap={{ scale: 0.86 }}
               onClick={() => { setMetaModalOpen(false); setMetaInput('') }}
@@ -1094,7 +1085,7 @@ export function FinanceiroPage() {
                 const v = parseCurrency(metaInput)
                 if (v > 0) {
                   setMeta(v)
-                  try { localStorage.setItem('financeiro_meta', String(v)) } catch {}
+                  try { localStorage.setItem('financeiro_meta', String(v)) } catch { }
                 }
                 setMetaModalOpen(false)
                 setMetaInput('')
@@ -1116,7 +1107,7 @@ export function FinanceiroPage() {
                 whileTap={{ scale: 0.97 }}
                 onClick={() => {
                   setMeta(0)
-                  try { localStorage.removeItem('financeiro_meta') } catch {}
+                  try { localStorage.removeItem('financeiro_meta') } catch { }
                   setMetaModalOpen(false)
                   setMetaInput('')
                 }}

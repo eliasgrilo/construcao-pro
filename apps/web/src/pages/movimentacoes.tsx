@@ -1,10 +1,12 @@
-import { DataTable } from '@/components/data-table'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { useAllFinanceiroMovimentacoes, useMovimentacoes } from '@/hooks/use-supabase'
 import { formatCurrency, formatDate, formatNumber } from '@/lib/utils'
+import { AnimatePresence, motion } from 'framer-motion'
+import { ArrowDownRight, ArrowLeftRight, ArrowUpRight, Search } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { DataTable } from '@/components/data-table'
 import type { ColumnDef } from '@tanstack/react-table'
-import { ArrowDownRight, ArrowLeftRight, ArrowUpRight } from 'lucide-react'
-import { useMemo } from 'react'
 
 const tipoConfig: Record<
   string,
@@ -32,13 +34,12 @@ const statusAprovacao: Record<
 export function MovimentacoesPage() {
   const { data: movsData, isLoading: isLoadingMovs } = useMovimentacoes()
   const { data: finMovsData, isLoading: isLoadingFin } = useAllFinanceiroMovimentacoes()
+  const [search, setSearch] = useState('')
 
   const isLoading = isLoadingMovs || isLoadingFin
 
   const unifiedData = useMemo(() => {
     const sbData = movsData || []
-
-    // Map financeiro_movimentacoes rows to the same shape the table expects
     const financialMovs = (finMovsData || []).map((m: any) => ({
       id: m.id,
       tipo: m.tipo,
@@ -54,14 +55,29 @@ export function MovimentacoesPage() {
         m.created_at || (m.data ? new Date(m.data).toISOString() : new Date().toISOString()),
       isFinancial: true,
     }))
-
-    return [...sbData, ...financialMovs].sort((a, b) => {
-      const dA = new Date(a.created_at).getTime()
-      const dB = new Date(b.created_at).getTime()
-      return dB - dA
+    return [...sbData, ...financialMovs].sort((a: any, b: any) => {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     })
   }, [movsData, finMovsData])
 
+  const filtered = useMemo(() => {
+    if (!search.trim()) return unifiedData
+    const q = search.toLowerCase()
+    return unifiedData.filter((m: any) =>
+      [
+        m.material?.nome,
+        m.material?.codigo,
+        m.almoxarifado?.nome,
+        m.almoxarifado?.obra?.nome,
+        m.fornecedor?.nome,
+        tipoConfig[m.tipo]?.label,
+      ]
+        .filter(Boolean)
+        .some((v: any) => String(v).toLowerCase().includes(q)),
+    )
+  }, [unifiedData, search])
+
+  /* Desktop columns */
   const columns: ColumnDef<any>[] = [
     {
       accessorKey: 'tipo',
@@ -99,18 +115,6 @@ export function MovimentacoesPage() {
       ),
     },
     {
-      accessorKey: 'preco_unitario',
-      header: 'Valor Un.',
-      cell: ({ row }) => {
-        const p = row.original.preco_unitario
-        return p ? (
-          <span className="text-[13px] tabular-nums">{formatCurrency(p)}</span>
-        ) : (
-          <span className="text-muted-foreground">—</span>
-        )
-      },
-    },
-    {
       id: 'total',
       header: 'Total',
       cell: ({ row }) => {
@@ -141,56 +145,16 @@ export function MovimentacoesPage() {
       ),
     },
     {
-      id: 'status',
-      header: 'Status',
-      cell: ({ row }) => {
-        const st = row.original.status_transferencia
-        if (!st) return <span className="text-muted-foreground">—</span>
-        const cfg = statusAprovacao[st] || statusAprovacao.PENDENTE
-        return <Badge variant={cfg.variant}>{cfg.label}</Badge>
-      },
-    },
-    {
       accessorKey: 'fornecedor.nome',
       header: 'Fornecedor',
       cell: ({ row }) => {
         const f = row.original.fornecedor
         return f ? (
-          <div>
-            <span className="text-[13px]">{f.nome}</span>
-            {f.cnpj && <p className="text-[11px] text-muted-foreground font-mono">{f.cnpj}</p>}
-          </div>
+          <span className="text-[13px]">{f.nome}</span>
         ) : (
           <span className="text-muted-foreground">—</span>
         )
       },
-    },
-    {
-      accessorKey: 'forma_pagamento',
-      header: 'Pagamento',
-      cell: ({ row }) => {
-        const fp = row.original.forma_pagamento
-        if (!fp) return <span className="text-muted-foreground">—</span>
-        const labels: Record<string, string> = {
-          PIX: 'PIX',
-          CARTAO_CREDITO: 'Cartão Créd.',
-          CARTAO_DEBITO: 'Cartão Déb.',
-          BOLETO: 'Boleto',
-          TRANSFERENCIA: 'Transf.',
-          DINHEIRO: 'Dinheiro',
-          CHEQUE: 'Cheque',
-        }
-        return <span className="text-[13px]">{labels[fp] || fp}</span>
-      },
-    },
-    {
-      accessorKey: 'usuario.nome',
-      header: 'Usuário',
-      cell: ({ row }) => (
-        <span className="text-[13px] text-muted-foreground">
-          {row.original.usuario?.nome || '—'}
-        </span>
-      ),
     },
     {
       accessorKey: 'created_at',
@@ -223,13 +187,135 @@ export function MovimentacoesPage() {
         </div>
       </div>
 
-      <div className="px-4 md:px-8">
+      {/* ── Desktop: full DataTable ── */}
+      <div className="hidden sm:block px-4 md:px-8">
         <DataTable
           columns={columns}
           data={unifiedData}
           isLoading={isLoading}
           searchPlaceholder="Buscar movimentações..."
         />
+      </div>
+
+      {/* ── Mobile: compact card list ── */}
+      <div className="sm:hidden px-4">
+        {/* Search */}
+        <div className="mb-4">
+          <Input
+            placeholder="Buscar movimentações..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            icon={Search}
+          />
+          <p className="text-[12px] text-muted-foreground mt-2 tabular-nums">
+            {filtered.length} registro{filtered.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+
+        {isLoading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="rounded-2xl bg-card border p-4 space-y-2 animate-pulse">
+                <div className="flex items-center justify-between">
+                  <div className="h-4 w-20 bg-muted rounded-lg" />
+                  <div className="h-4 w-16 bg-muted rounded-lg" />
+                </div>
+                <div className="h-5 w-3/4 bg-muted rounded-lg" />
+                <div className="h-3 w-1/2 bg-muted rounded-lg" />
+              </div>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-16 text-muted-foreground">
+            <ArrowLeftRight className="h-9 w-9 mx-auto opacity-30 mb-3" />
+            <p className="text-[17px] font-medium">Nenhuma movimentação</p>
+            <p className="text-[14px] opacity-70 mt-1">Tente ajustar os filtros</p>
+          </div>
+        ) : (
+          <AnimatePresence initial={false}>
+            <div className="space-y-3">
+              {filtered.map((mov: any, i: number) => {
+                const cfg = tipoConfig[mov.tipo] || tipoConfig.ENTRADA
+                const Icon = cfg.icon
+                const total = (mov.preco_unitario ?? 0) * (mov.quantidade ?? 0)
+                return (
+                  <motion.div
+                    key={mov.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: Math.min(i * 0.03, 0.3) }}
+                    className="rounded-2xl bg-card border"
+                  >
+                    {/* Top row */}
+                    <div className="flex items-center gap-3 px-4 pt-4 pb-3">
+                      <span
+                        className="flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0"
+                        style={{ backgroundColor: `${cfg.tint}14` }}
+                      >
+                        <Icon className="h-5 w-5" style={{ color: cfg.tint }} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[15px] font-semibold truncate leading-snug">
+                          {mov.material?.nome || '—'}
+                        </p>
+                        <p className="text-[12px] text-muted-foreground">
+                          {cfg.label} · {formatDate(mov.created_at)}
+                        </p>
+                      </div>
+                      {total > 0 && (
+                        <span
+                          className="text-[15px] font-bold tabular-nums flex-shrink-0"
+                          style={{ color: mov.tipo === 'SAIDA' ? '#FF3B30' : '#34C759' }}
+                        >
+                          {mov.tipo === 'SAIDA' ? '−' : '+'}
+                          {formatCurrency(total)}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Detail rows */}
+                    <div className="border-t border-border/40 px-4 py-3 space-y-2">
+                      <div className="flex items-center justify-between text-[13px]">
+                        <span className="text-muted-foreground">Qtd.</span>
+                        <span className="font-medium tabular-nums">
+                          {formatNumber(mov.quantidade)}
+                        </span>
+                      </div>
+                      {mov.almoxarifado?.nome && (
+                        <div className="flex items-start justify-between text-[13px] gap-2">
+                          <span className="text-muted-foreground flex-shrink-0">Almoxarifado</span>
+                          <span className="font-medium text-right truncate">
+                            {mov.almoxarifado.nome}
+                          </span>
+                        </div>
+                      )}
+                      {mov.almoxarifado?.obra?.nome && (
+                        <div className="flex items-center justify-between text-[13px]">
+                          <span className="text-muted-foreground">Obra</span>
+                          <span className="font-medium">{mov.almoxarifado.obra.nome}</span>
+                        </div>
+                      )}
+                      {mov.fornecedor?.nome && (
+                        <div className="flex items-center justify-between text-[13px]">
+                          <span className="text-muted-foreground">Fornecedor</span>
+                          <span className="font-medium">{mov.fornecedor.nome}</span>
+                        </div>
+                      )}
+                      {mov.status_transferencia && (
+                        <div className="flex items-center justify-between text-[13px]">
+                          <span className="text-muted-foreground">Status</span>
+                          <Badge variant={statusAprovacao[mov.status_transferencia]?.variant ?? 'secondary'}>
+                            {statusAprovacao[mov.status_transferencia]?.label ?? mov.status_transferencia}
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )
+              })}
+            </div>
+          </AnimatePresence>
+        )}
       </div>
     </div>
   )

@@ -61,8 +61,9 @@ export function DataTable<TData, TValue>({
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-10 w-64 rounded-xl" />
-        <div className="rounded-2xl border overflow-hidden">
+        <Skeleton className="h-12 sm:h-10 w-64 rounded-xl" />
+        {/* Desktop skeleton */}
+        <div className="hidden sm:block rounded-xl border overflow-hidden">
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="flex gap-4 p-4 border-b last:border-b-0">
               <Skeleton className="h-5 flex-1" />
@@ -72,9 +73,35 @@ export function DataTable<TData, TValue>({
             </div>
           ))}
         </div>
+        {/* Mobile skeleton cards */}
+        <div className="sm:hidden space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-2xl bg-card border p-4 space-y-3">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
+
+  const rows = table.getRowModel().rows
+  const headerGroups = table.getHeaderGroups()
+
+  // Build column header labels for mobile cards
+  const headerLabels = headerGroups[0]?.headers
+    .filter((h) => !h.isPlaceholder)
+    .map((h) => ({
+      id: h.id,
+      label:
+        typeof h.column.columnDef.header === 'string'
+          ? h.column.columnDef.header
+          : h.id,
+    })) ?? []
+
+  const filteredCount = table.getFilteredRowModel().rows.length
 
   return (
     <div className="space-y-4">
@@ -88,16 +115,63 @@ export function DataTable<TData, TValue>({
           icon={Search}
         />
         <span className="text-[13px] text-muted-foreground tabular-nums">
-          {table.getFilteredRowModel().rows.length} registro
-          {table.getFilteredRowModel().rows.length !== 1 ? 's' : ''}
+          {filteredCount} registro{filteredCount !== 1 ? 's' : ''}
         </span>
       </div>
 
-      {/* Table */}
-      <div className="rounded-xl border overflow-x-auto bg-card">
+      {/* ── Mobile: card list ── */}
+      <div className="sm:hidden space-y-3">
+        {rows.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 py-16 text-muted-foreground">
+            <Inbox className="h-9 w-9 opacity-30" />
+            <p className="text-[15px] font-medium">Nenhum registro encontrado</p>
+            <p className="text-[13px] opacity-70">Tente ajustar os filtros de busca</p>
+          </div>
+        ) : (
+          rows.map((row) => {
+            const cells = row.getVisibleCells()
+            // First non-empty cell is the "primary" row, rest are details
+            const [primaryCell, ...detailCells] = cells
+            return (
+              <div
+                key={row.id}
+                className="rounded-2xl bg-card border px-4 py-4 space-y-3"
+              >
+                {/* Primary info (first column) */}
+                <div className="text-[15px] font-semibold leading-snug">
+                  {flexRender(primaryCell.column.columnDef.cell, primaryCell.getContext())}
+                </div>
+                {/* Detail rows: label + value pairs */}
+                <div className="space-y-2">
+                  {detailCells.map((cell) => {
+                    const headerLabel = headerLabels.find((h) => h.id === cell.column.id)?.label
+                    const rendered = flexRender(cell.column.columnDef.cell, cell.getContext())
+                    // Skip empty/null/dash cells
+                    return (
+                      <div key={cell.id} className="flex items-start justify-between gap-4 min-h-[22px]">
+                        {headerLabel && (
+                          <span className="text-[12px] text-muted-foreground flex-shrink-0 pt-0.5 w-[90px]">
+                            {headerLabel}
+                          </span>
+                        )}
+                        <span className="text-[13px] text-right flex-1 min-w-0">
+                          {rendered}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })
+        )}
+      </div>
+
+      {/* ── Desktop: table ── */}
+      <div className="hidden sm:block rounded-xl border overflow-x-auto bg-card">
         <Table>
           <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
+            {headerGroups.map((headerGroup) => (
               <TableRow key={headerGroup.id} className="hover:bg-transparent">
                 {headerGroup.headers.map((header) => (
                   <TableHead
@@ -125,8 +199,8 @@ export function DataTable<TData, TValue>({
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
+            {rows.length ? (
+              rows.map((row) => (
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && 'selected'}
@@ -159,7 +233,7 @@ export function DataTable<TData, TValue>({
         <p className="text-[13px] text-muted-foreground tabular-nums">
           Página {table.getState().pagination.pageIndex + 1} de {table.getPageCount()}
         </p>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"

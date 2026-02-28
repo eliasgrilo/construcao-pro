@@ -578,71 +578,94 @@ function FilePreviewModal({
         </button>
       </motion.div>
 
-      {/* ── Área de conteúdo ── */}
-      <div className="relative z-10 flex-1 flex items-center justify-center min-h-0 p-4">
+      {/* ── Área de conteúdo ──────────────────────────────────────
+          CRÍTICO: relative + overflow-hidden, nunca flex-1 com altura fixa.
+          Cada tipo usa absolute inset-0 para preencher EXATAMENTE o espaço
+          disponível após a nav bar — sem overflow, sem zoom acidental no mobile.
+          O 100vh do Safari mobile ≠ espaço real (inclui chrome bar).
+          Absolute positioning é a única forma 100% confiável.
+          ──────────────────────────────────────────────────────── */}
+      <div className="relative z-10 flex-1 overflow-hidden" style={{ minHeight: 0 }}>
 
-        {/* Spinner de carregamento */}
+        {/* Spinner */}
         {loading && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex flex-col items-center gap-3"
+            className="absolute inset-0 flex flex-col items-center justify-center gap-3"
           >
             <div className="h-9 w-9 rounded-full border-[2.5px] border-white/15 border-t-white/70 animate-spin" />
             <p className="text-[13px] text-white/35">Carregando...</p>
           </motion.div>
         )}
 
-        {/* Imagem */}
+        {/* ── Imagem ──
+            absolute inset-4: 16px de respiro em todos os lados,
+            a imagem fica contida com object-contain sem estouro */}
         {!loading && url && isImage && (
-          <motion.img
+          <motion.div
             initial={{ opacity: 0, scale: 0.94 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
-            src={url}
-            alt={doc.nome}
-            className="max-w-full max-h-full object-contain rounded-xl shadow-2xl shadow-black/60"
-            style={{ maxHeight: 'calc(100vh - 100px)' }}
-          />
-        )}
-
-        {/* PDF */}
-        {!loading && url && isPdf && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.97 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
-            className="w-full h-full max-w-4xl flex flex-col rounded-xl overflow-hidden shadow-2xl shadow-black/60"
-            style={{ height: 'calc(100vh - 100px)' }}
+            className="absolute inset-4 md:inset-8 flex items-center justify-center"
           >
-            <iframe
+            <img
               src={url}
-              className="w-full flex-1 border-0 bg-white"
-              title={doc.nome}
+              alt={doc.nome}
+              draggable={false}
+              className="max-w-full max-h-full object-contain rounded-xl shadow-2xl shadow-black/60"
+              style={{ touchAction: 'pan-x pan-y pinch-zoom' }}
             />
           </motion.div>
         )}
 
-        {/* Vídeo */}
+        {/* ── PDF — full-bleed ──
+            absolute inset-0: o iframe preenche pixels perfeitos da área disponível.
+            No mobile iOS, o Safari renderiza o PDF nativo dentro do iframe;
+            com inset-0 garante que a página inteira fica visível sem zoom forçado.
+            Nada de maxWidth, nada de height calculada — só o espaço real. */}
+        {!loading && url && isPdf && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+            className="absolute inset-0"
+          >
+            <iframe
+              src={url}
+              title={doc.nome}
+              allow="fullscreen"
+              className="block w-full h-full border-0 bg-white"
+            />
+          </motion.div>
+        )}
+
+        {/* ── Vídeo ──
+            playsInline é obrigatório no iOS para não forçar fullscreen nativo */}
         {!loading && url && isVideo && (
-          <motion.video
+          <motion.div
             initial={{ opacity: 0, scale: 0.94 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.28 }}
-            src={url}
-            controls
-            className="max-w-full max-h-full rounded-xl shadow-2xl shadow-black/60"
-            style={{ maxHeight: 'calc(100vh - 100px)' }}
-          />
+            className="absolute inset-4 flex items-center justify-center"
+          >
+            <video
+              src={url}
+              controls
+              playsInline
+              className="max-w-full max-h-full rounded-xl shadow-2xl shadow-black/60 bg-black"
+              style={{ touchAction: 'pan-x pan-y' }}
+            />
+          </motion.div>
         )}
 
-        {/* Áudio */}
+        {/* ── Áudio ── */}
         {!loading && url && isAudio && (
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.28 }}
-            className="flex flex-col items-center gap-7 px-8"
+            className="absolute inset-0 flex flex-col items-center justify-center gap-7 px-8"
           >
             <div
               className="flex h-28 w-28 items-center justify-center rounded-[32px] shadow-2xl shadow-black/60"
@@ -654,17 +677,17 @@ function FilePreviewModal({
               <p className="text-[18px] font-semibold text-white tracking-[-0.2px]">{doc.nome}</p>
               <p className="text-[13px] text-white/35 mt-1">{fmtSize(doc.tamanho)}</p>
             </div>
-            <audio src={url} controls className="w-full max-w-xs" />
+            <audio src={url} controls className="w-full max-w-sm" />
           </motion.div>
         )}
 
-        {/* Tipo não previewável — placeholder elegante */}
+        {/* ── Tipo sem pré-visualização ── */}
         {!loading && url && !isImage && !isPdf && !isVideo && !isAudio && (
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.28 }}
-            className="flex flex-col items-center gap-6 px-8 text-center"
+            className="absolute inset-0 flex flex-col items-center justify-center gap-6 px-8 text-center"
           >
             <div
               className="flex h-28 w-28 items-center justify-center rounded-[32px] shadow-2xl shadow-black/60"

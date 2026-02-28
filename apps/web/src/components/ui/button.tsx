@@ -3,23 +3,23 @@ import { type VariantProps, cva } from 'class-variance-authority'
 import * as React from 'react'
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center whitespace-nowrap text-[13px] font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-40 cursor-pointer select-none active:opacity-80',
+  'inline-flex items-center justify-center whitespace-nowrap text-[15px] sm:text-[13px] font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-40 cursor-pointer select-none active:opacity-80',
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground rounded-lg shadow-sm hover:bg-primary/90',
+        default: 'bg-primary text-primary-foreground rounded-xl sm:rounded-lg shadow-sm hover:bg-primary/90',
         destructive:
-          'bg-destructive text-destructive-foreground rounded-lg shadow-sm hover:bg-destructive/90',
-        outline: 'border bg-transparent rounded-lg hover:bg-accent',
-        secondary: 'bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80',
-        ghost: 'rounded-lg hover:bg-accent',
+          'bg-destructive text-destructive-foreground rounded-xl sm:rounded-lg shadow-sm hover:bg-destructive/90',
+        outline: 'border bg-transparent rounded-xl sm:rounded-lg hover:bg-accent',
+        secondary: 'bg-secondary text-secondary-foreground rounded-xl sm:rounded-lg hover:bg-secondary/80',
+        ghost: 'rounded-xl sm:rounded-lg hover:bg-accent',
         link: 'text-primary underline-offset-4 hover:underline',
       },
       size: {
-        default: 'h-9 px-4',
-        sm: 'h-8 px-3 text-[12px]',
+        default: 'h-11 sm:h-9 px-4',
+        sm: 'h-10 sm:h-8 px-3 text-[14px] sm:text-[12px]',
         lg: 'h-12 px-6 text-[15px] rounded-xl',
-        icon: 'h-9 w-9',
+        icon: 'h-11 w-11 sm:h-9 sm:w-9',
       },
     },
     defaultVariants: { variant: 'default', size: 'default' },
@@ -28,7 +28,7 @@ const buttonVariants = cva(
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+  VariantProps<typeof buttonVariants> {
   loading?: boolean
 }
 

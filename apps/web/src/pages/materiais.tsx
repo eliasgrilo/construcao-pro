@@ -177,6 +177,9 @@ function MateriaisTab() {
   const [quickCatNome, setQuickCatNome] = useState('')
   const [quickCatUnidade, setQuickCatUnidade] = useState('')
 
+  /* Track if we should return to the material dialog after category creation */
+  const [returnToMaterialDialog, setReturnToMaterialDialog] = useState(false)
+
   const { data: materiaisData, isLoading } = useMateriais()
   const { data: categoriasData } = useCategorias()
   const createMutation = useCreateMaterial()
@@ -370,7 +373,12 @@ function MateriaisTab() {
                   variant="outline"
                   size="icon"
                   className="h-12 w-12 sm:h-10 sm:w-10 flex-shrink-0 rounded-xl sm:rounded-lg"
-                  onClick={() => setQuickAddCatOpen(true)}
+                  onClick={() => {
+                    // Close parent dialog first to avoid dual-Portal focus-lock conflict
+                    setOpen(false)
+                    setReturnToMaterialDialog(true)
+                    setQuickAddCatOpen(true)
+                  }}
                   title="Criar nova categoria"
                 >
                   <Plus className="h-4 w-4" />
@@ -439,6 +447,12 @@ function MateriaisTab() {
           if (!v) {
             setQuickCatNome('')
             setQuickCatUnidade('')
+            // Reopen parent material dialog if we came from there
+            if (returnToMaterialDialog) {
+              setReturnToMaterialDialog(false)
+              // Small delay to let this dialog fully close before reopening parent
+              setTimeout(() => setOpen(true), 120)
+            }
           }
         }}
       >
@@ -518,6 +532,11 @@ function MateriaisTab() {
                           setValue('categoriaId', data.id)
                         }
                         toast({ title: 'Categoria criada e selecionada', variant: 'success' })
+                        // Reopen parent material dialog
+                        if (returnToMaterialDialog) {
+                          setReturnToMaterialDialog(false)
+                          setTimeout(() => setOpen(true), 120)
+                        }
                       },
                       onError: () => toast({ title: 'Erro ao criar categoria', variant: 'error' }),
                     },

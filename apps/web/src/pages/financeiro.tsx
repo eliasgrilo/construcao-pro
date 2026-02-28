@@ -974,105 +974,81 @@ export function FinanceiroPage() {
         }}
       >
         <DialogContent className={modalCn}>
-          {/* ── Cabeçalho fixo ── */}
-          <div className="flex-shrink-0 relative flex items-center justify-center px-5 pt-4 pb-2">
+          {/* ── Drag handle + título ── */}
+          <div className="flex-shrink-0 relative flex items-center justify-center px-5 pt-5 pb-0">
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 w-9 h-[5px] rounded-full bg-black/[0.12] dark:bg-white/[0.18]" />
             <DialogTitle className="text-[17px] font-semibold tracking-tight">
               Meta Financeira
             </DialogTitle>
-            <DialogDescription className="sr-only">Defina ou atualize sua meta financeira.</DialogDescription>
+            <DialogDescription className="sr-only">Defina sua meta de capital disponível.</DialogDescription>
             <motion.button
               whileTap={{ scale: 0.86 }}
               onClick={() => { setMetaModalOpen(false); setMetaInput('') }}
-              className="absolute right-4 flex h-[30px] w-[30px] items-center justify-center rounded-full bg-black/[0.08] dark:bg-white/[0.12] hover:bg-black/[0.13] dark:hover:bg-white/[0.18] transition-colors"
+              className="absolute right-4 flex h-[30px] w-[30px] items-center justify-center rounded-full bg-black/[0.08] dark:bg-white/[0.12] transition-colors"
             >
               <X className="h-[14px] w-[14px] text-foreground/60" />
             </motion.button>
           </div>
 
-          {/* ── Ícone + subtítulo ── */}
-          <div className="flex-shrink-0 flex flex-col items-center pt-4 pb-7">
-            <motion.div
-              initial={{ scale: 0.7, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', bounce: 0.4, duration: 0.5 }}
-              className="flex h-[64px] w-[64px] items-center justify-center rounded-[20px] mb-3 flex-shrink-0"
-              style={{
-                background: 'linear-gradient(145deg, #34C759 0%, #248A3D 100%)',
-                boxShadow: '0 10px 30px rgba(52,199,89,0.38)',
-              }}
-            >
-              <Target className="h-[28px] w-[28px] text-white" />
-            </motion.div>
-            <p className="text-[13px] text-foreground/40">
-              {meta > 0 ? 'Atualize sua meta de capital' : 'Quanto quer acumular?'}
+          {/* ── Hero: input centralizado — estilo Apple Pay ── */}
+          <div className="flex-shrink-0 flex flex-col items-center px-6 pt-8 pb-6">
+            <p className="text-[13px] font-medium text-muted-foreground/60 mb-3 tracking-wide uppercase">
+              {meta > 0 ? 'Atualizar meta' : 'Definir meta'}
             </p>
-          </div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-[28px] font-semibold text-foreground/40">R$</span>
+              <input
+                value={metaInput}
+                onChange={(e) => setMetaInput(formatBRL(e.target.value))}
+                placeholder="0,00"
+                inputMode="decimal"
+                autoFocus
+                className="text-[48px] font-bold tabular-nums tracking-tight bg-transparent outline-none min-w-[8ch] max-w-full text-center placeholder:text-foreground/20"
+                style={{ width: `${Math.max(metaInput.length + 1, 5)}ch` }}
+              />
+            </div>
 
-          {/* ── Formulário rolável ── */}
-          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 space-y-[10px] pb-3">
-            {/* Grupo: Valor da meta + referência atual */}
-            <div className="rounded-[14px] overflow-hidden bg-white dark:bg-white/[0.07]">
-              {/* Input meta */}
-              <div className="flex items-center min-h-[52px] px-4 gap-3">
-                <span className="text-[16px] font-medium flex-shrink-0 text-foreground/55">
-                  Meta
-                </span>
-                <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
-                  <span
-                    className="text-[14px] flex-shrink-0 font-semibold"
-                    style={{ color: '#34C75980' }}
-                  >
-                    R$
-                  </span>
-                  <input
-                    value={metaInput}
-                    onChange={(e) => setMetaInput(formatBRL(e.target.value))}
-                    placeholder="0,00"
-                    inputMode="decimal"
-                    autoFocus
-                    className="text-[16px] text-right bg-transparent outline-none tabular-nums font-semibold min-w-0 w-[130px] placeholder:text-black/20 dark:placeholder:text-white/20"
-                  />
-                </div>
-              </div>
+            {/* Disponível hoje — contexto sutil */}
+            <p className="text-[13px] text-muted-foreground/50 mt-3 tabular-nums">
+              Disponível hoje:{' '}
+              <span
+                className="font-semibold"
+                style={{ color: totalDisponivel > 0 ? '#34C759' : undefined }}
+              >
+                {formatCurrency(totalDisponivel)}
+              </span>
+            </p>
 
-              <div className="h-px mx-4 bg-black/[0.07] dark:bg-white/[0.07]" />
-
-              {/* Saldo disponível atual como referência */}
-              <div className="flex items-center min-h-[44px] px-4 gap-3">
-                <span className="text-[13px] text-foreground/40 flex-shrink-0">
-                  Disponível hoje
-                </span>
-                <span
-                  className="flex-1 text-right text-[13px] font-semibold tabular-nums"
-                  style={{ color: totalDisponivel > 0 ? '#34C759' : undefined }}
-                >
-                  {formatCurrency(totalDisponivel)}
-                </span>
-              </div>
-
-              {/* Progresso se já houver meta e input preenchido */}
-              {parseCurrency(metaInput) > 0 && (
-                <>
-                  <div className="h-px mx-4 bg-black/[0.07] dark:bg-white/[0.07]" />
-                  <div className="flex items-center min-h-[44px] px-4 gap-3">
-                    <span className="text-[13px] text-foreground/40 flex-shrink-0">
-                      Progresso atual
+            {/* Mini progress preview — só aparece quando o usuário digita */}
+            {parseCurrency(metaInput) > 0 && (() => {
+              const previewPct = Math.min(Math.round((totalDisponivel / parseCurrency(metaInput)) * 100), 100)
+              const previewColor = previewPct >= 100 ? '#34C759' : '#007AFF'
+              return (
+                <div className="w-full mt-5">
+                  <div className="h-[6px] rounded-full overflow-hidden bg-black/[0.06] dark:bg-white/[0.08]">
+                    <motion.div
+                      className="h-full rounded-full"
+                      initial={{ width: '0%' }}
+                      animate={{ width: `${previewPct}%` }}
+                      transition={{ duration: 0.6, ease: [0.34, 1.56, 0.64, 1] }}
+                      style={{ backgroundColor: previewColor }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between mt-1.5">
+                    <span className="text-[12px] text-muted-foreground/50 tabular-nums">
+                      {formatCurrency(totalDisponivel)}
                     </span>
-                    <span className="flex-1 text-right text-[13px] font-semibold tabular-nums">
-                      {Math.min(
-                        Math.round((totalDisponivel / parseCurrency(metaInput)) * 100),
-                        100,
-                      )}
-                      %
+                    <span className="text-[12px] font-semibold tabular-nums" style={{ color: previewColor }}>
+                      {previewPct}%
                     </span>
                   </div>
-                </>
-              )}
-            </div>
+                </div>
+              )
+            })()}
           </div>
 
-          {/* ── CTA fixo no rodapé ── */}
-          <div className="flex-shrink-0 px-4 pt-3 pb-8 sm:pb-6 bg-[#F2F2F7] dark:bg-[#1C1C1E] border-t border-black/[0.05] dark:border-white/[0.05]">
+          {/* ── Rodapé com CTA ── */}
+          <div className="flex-shrink-0 px-4 pt-2 pb-8 sm:pb-5 space-y-2">
             <motion.button
               whileTap={{ scale: parseCurrency(metaInput) > 0 ? 0.97 : 1 }}
               disabled={parseCurrency(metaInput) <= 0}
@@ -1091,12 +1067,11 @@ export function FinanceiroPage() {
                   ? 'text-white'
                   : 'bg-black/[0.07] dark:bg-white/[0.07] text-foreground/25 cursor-not-allowed',
               )}
-              style={parseCurrency(metaInput) > 0 ? { backgroundColor: '#34C759' } : undefined}
+              style={parseCurrency(metaInput) > 0 ? { backgroundColor: '#007AFF' } : undefined}
             >
               Salvar Meta
             </motion.button>
 
-            {/* Remover meta — só aparece se já existe uma */}
             {meta > 0 && (
               <motion.button
                 whileTap={{ scale: 0.97 }}
@@ -1106,7 +1081,8 @@ export function FinanceiroPage() {
                   setMetaModalOpen(false)
                   setMetaInput('')
                 }}
-                className="w-full mt-3 flex items-center justify-center h-[44px] text-[15px] font-medium text-red-500/70 hover:text-red-500 transition-colors"
+                className="w-full flex items-center justify-center h-[44px] text-[15px] font-medium transition-colors"
+                style={{ color: '#FF3B30' }}
               >
                 Remover Meta
               </motion.button>

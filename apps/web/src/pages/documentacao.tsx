@@ -36,7 +36,7 @@ import {
   Upload,
   X,
 } from 'lucide-react'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 /* ═══════════════════════════════════════════════════════════
    Apple System Design Tokens
@@ -256,6 +256,206 @@ function DropZoneOverlay({ label, color }: { label: string; color: string }) {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   FilePreviewModal — iOS Quick Look style in-app preview
+   ═══════════════════════════════════════════════════════════ */
+
+function FilePreviewModal({
+  doc,
+  url,
+  loading,
+  onClose,
+  onDownload,
+}: {
+  doc: Documento
+  url: string | null
+  loading: boolean
+  onClose: () => void
+  onDownload: () => void
+}) {
+  const isImage = doc.tipo_arquivo.startsWith('image/')
+  const isPdf = doc.tipo_arquivo.includes('pdf')
+  const isVideo = doc.tipo_arquivo.startsWith('video/')
+  const isAudio = doc.tipo_arquivo.startsWith('audio/')
+  const Icon = getFileIcon(doc.tipo_arquivo)
+  const color = getFileColor(doc.tipo_arquivo)
+
+  /* Fechar com Escape */
+  useEffect(() => {
+    const fn = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', fn)
+    return () => window.removeEventListener('keydown', fn)
+  }, [onClose])
+
+  /* Travar scroll do body enquanto preview está aberto */
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = '' }
+  }, [])
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 z-[200] flex flex-col"
+    >
+      {/* Camada de fundo — vidro fosco escuro */}
+      <div className="absolute inset-0 bg-black/88 backdrop-blur-3xl" />
+
+      {/* ── Barra de navegação superior (iOS Quick Look style) ── */}
+      <motion.div
+        initial={{ opacity: 0, y: -16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.08, duration: 0.24, ease: [0.25, 0.1, 0.25, 1] }}
+        className="relative z-10 flex items-center gap-3 px-4 pb-3 border-b border-white/[0.06]"
+        style={{ paddingTop: 'max(16px, env(safe-area-inset-top))' }}
+      >
+        {/* Botão fechar */}
+        <button
+          onClick={onClose}
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/[0.15] active:bg-white/[0.08] transition-colors flex-shrink-0"
+        >
+          <X className="h-[17px] w-[17px] text-white" strokeWidth={2} />
+        </button>
+
+        {/* Nome do arquivo */}
+        <div className="flex-1 min-w-0 text-center">
+          <p className="text-[15px] font-semibold text-white leading-tight truncate tracking-[-0.1px]">
+            {doc.nome}
+          </p>
+          <p className="text-[11px] text-white/35 mt-[2px]">
+            {fmtSize(doc.tamanho)}
+            {doc.documento_categorias && (
+              <> · <span style={{ color: doc.documento_categorias.cor }}>{doc.documento_categorias.nome}</span></>
+            )}
+          </p>
+        </div>
+
+        {/* Botão download */}
+        <button
+          onClick={onDownload}
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/[0.15] active:bg-white/[0.08] transition-colors flex-shrink-0"
+        >
+          <Download className="h-[17px] w-[17px] text-white" strokeWidth={1.75} />
+        </button>
+      </motion.div>
+
+      {/* ── Área de conteúdo ── */}
+      <div className="relative z-10 flex-1 flex items-center justify-center min-h-0 p-4">
+
+        {/* Spinner de carregamento */}
+        {loading && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex flex-col items-center gap-3"
+          >
+            <div className="h-9 w-9 rounded-full border-[2.5px] border-white/15 border-t-white/70 animate-spin" />
+            <p className="text-[13px] text-white/35">Carregando...</p>
+          </motion.div>
+        )}
+
+        {/* Imagem */}
+        {!loading && url && isImage && (
+          <motion.img
+            initial={{ opacity: 0, scale: 0.94 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
+            src={url}
+            alt={doc.nome}
+            className="max-w-full max-h-full object-contain rounded-xl shadow-2xl shadow-black/60"
+            style={{ maxHeight: 'calc(100vh - 100px)' }}
+          />
+        )}
+
+        {/* PDF */}
+        {!loading && url && isPdf && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
+            className="w-full h-full max-w-4xl flex flex-col rounded-xl overflow-hidden shadow-2xl shadow-black/60"
+            style={{ height: 'calc(100vh - 100px)' }}
+          >
+            <iframe
+              src={url}
+              className="w-full flex-1 border-0 bg-white"
+              title={doc.nome}
+            />
+          </motion.div>
+        )}
+
+        {/* Vídeo */}
+        {!loading && url && isVideo && (
+          <motion.video
+            initial={{ opacity: 0, scale: 0.94 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.28 }}
+            src={url}
+            controls
+            className="max-w-full max-h-full rounded-xl shadow-2xl shadow-black/60"
+            style={{ maxHeight: 'calc(100vh - 100px)' }}
+          />
+        )}
+
+        {/* Áudio */}
+        {!loading && url && isAudio && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28 }}
+            className="flex flex-col items-center gap-7 px-8"
+          >
+            <div
+              className="flex h-28 w-28 items-center justify-center rounded-[32px] shadow-2xl shadow-black/60"
+              style={{ backgroundColor: `${color}22`, border: `1.5px solid ${color}30` }}
+            >
+              <Icon className="h-12 w-12" style={{ color }} strokeWidth={1.25} />
+            </div>
+            <div className="text-center">
+              <p className="text-[18px] font-semibold text-white tracking-[-0.2px]">{doc.nome}</p>
+              <p className="text-[13px] text-white/35 mt-1">{fmtSize(doc.tamanho)}</p>
+            </div>
+            <audio src={url} controls className="w-full max-w-xs" />
+          </motion.div>
+        )}
+
+        {/* Tipo não previewável — placeholder elegante */}
+        {!loading && url && !isImage && !isPdf && !isVideo && !isAudio && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28 }}
+            className="flex flex-col items-center gap-6 px-8 text-center"
+          >
+            <div
+              className="flex h-28 w-28 items-center justify-center rounded-[32px] shadow-2xl shadow-black/60"
+              style={{ backgroundColor: `${color}22`, border: `1.5px solid ${color}30` }}
+            >
+              <Icon className="h-12 w-12" style={{ color }} strokeWidth={1.25} />
+            </div>
+            <div>
+              <p className="text-[18px] font-semibold text-white tracking-[-0.2px]">{doc.nome}</p>
+              <p className="text-[13px] text-white/35 mt-1.5">{fmtSize(doc.tamanho)}</p>
+              <p className="text-[12px] text-white/25 mt-1">Pré-visualização não disponível</p>
+            </div>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={onDownload}
+              className="flex items-center gap-2.5 rounded-full bg-white/10 hover:bg-white/[0.15] px-6 py-3 text-[15px] font-semibold text-white transition-colors"
+            >
+              <Download className="h-4 w-4" strokeWidth={2} />
+              Baixar arquivo
+            </motion.button>
+          </motion.div>
+        )}
+      </div>
+    </motion.div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════
    MAIN PAGE
    ═══════════════════════════════════════════════════════════ */
 
@@ -274,6 +474,11 @@ export function DocumentacaoPage() {
   /* ── state ── */
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+
+  // Preview (iOS Quick Look)
+  const [previewDoc, setPreviewDoc] = useState<Documento | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
   const [expandedObras, setExpandedObras] = useState<Set<string>>(new Set())
   const [companyExpanded, setCompanyExpanded] = useState(true)
 
@@ -359,17 +564,19 @@ export function DocumentacaoPage() {
     }
   }
 
-  // Pre-open the tab synchronously (before await) so the browser won't
-  // treat the window.open as an unsolicited popup and block it.
+  // Abre o preview in-app (iOS Quick Look) — nunca abre nova aba
   const openDoc = async (doc: Documento) => {
-    const tab = window.open('about:blank', '_blank')
+    setPreviewDoc(doc)
+    setPreviewUrl(null)
+    setPreviewLoading(true)
     try {
       const url = await getUrlMut.mutateAsync(doc.storage_path)
-      if (tab) tab.location.href = url
-      else window.open(url, '_blank')
+      setPreviewUrl(url)
     } catch (err) {
       console.error('[openDoc]', err)
-      tab?.close()
+      setPreviewDoc(null)
+    } finally {
+      setPreviewLoading(false)
     }
   }
 
@@ -870,6 +1077,21 @@ export function DocumentacaoPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* ══════════════════════════════════════════════════════
+          FILE PREVIEW MODAL — iOS Quick Look in-app
+          ══════════════════════════════════════════════════════ */}
+      <AnimatePresence>
+        {previewDoc && (
+          <FilePreviewModal
+            doc={previewDoc}
+            url={previewUrl}
+            loading={previewLoading}
+            onClose={() => { setPreviewDoc(null); setPreviewUrl(null) }}
+            onDownload={() => previewDoc && downloadDoc(previewDoc)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* ══════════════════════════════════════════════════════
           CATEGORY MODAL (iOS Sheet)

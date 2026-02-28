@@ -255,11 +255,48 @@ export function FinanceiroPage() {
                 </p>
               )}
               {meta > 0 ? (
-                <p className="text-[14px] md:text-[15px] text-muted-foreground mt-1.5 tabular-nums">
-                  de{' '}
-                  <span className="font-semibold text-foreground/70">{formatCurrency(meta)}</span>
-                  <span className="ml-1 text-muted-foreground/50">de meta</span>
-                </p>
+                <>
+                  {/* ── Barra de progresso slim (Apple Savings Goal) ── */}
+                  <div className="mt-3 h-[5px] rounded-full overflow-hidden bg-border/30">
+                    <motion.div
+                      className="h-full rounded-full"
+                      initial={{ width: '0%' }}
+                      animate={{ width: `${metaPct}%` }}
+                      transition={{ duration: 1.1, ease: [0.34, 1.56, 0.64, 1] }}
+                      style={{ backgroundColor: metaRingColor }}
+                    />
+                  </div>
+
+                  {/* ── Quanto falta / meta atingida ── */}
+                  <div className="flex items-center justify-between mt-[7px]">
+                    {metaPct >= 100 ? (
+                      <span className="text-[12px] font-semibold" style={{ color: '#34C759' }}>
+                        Meta atingida!
+                      </span>
+                    ) : (
+                      <span className="text-[12px] text-muted-foreground/70 tabular-nums">
+                        faltam{' '}
+                        <span
+                          className="font-semibold"
+                          style={{ color: metaPct >= 80 ? '#FF9500' : '#007AFF' }}
+                        >
+                          {formatCurrency(Math.max(meta - totalDisponivel, 0))}
+                        </span>
+                      </span>
+                    )}
+                    {/* Tap para editar meta — alvo sutil, sem destaque */}
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => {
+                        setMetaInput(formatBRL(meta.toFixed(2).replace('.', ',')))
+                        setMetaModalOpen(true)
+                      }}
+                      className="text-[11px] text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors focus:outline-none min-h-[28px] flex items-center tabular-nums"
+                    >
+                      de {formatCurrency(meta)}
+                    </motion.button>
+                  </div>
+                </>
               ) : (
                 <motion.button
                   whileTap={{ scale: 0.96 }}

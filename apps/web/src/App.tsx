@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { ConfiguracoesPage } from '@/pages/configuracoes'
 import { ContaDetailPage } from '@/pages/conta-detail'
 import { DashboardPage } from '@/pages/dashboard'
+import { DocumentacaoPage } from '@/pages/documentacao'
 import { EstoquePage } from '@/pages/estoque'
 import { FinanceiroPage } from '@/pages/financeiro'
 import { FornecedoresPage } from '@/pages/fornecedores'
@@ -176,6 +177,16 @@ const contaDetailRoute = createRoute({
   ),
 })
 
+const documentacaoRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/documentacao',
+  component: () => (
+    <AuthGuard>
+      <DocumentacaoPage />
+    </AuthGuard>
+  ),
+})
+
 // Categorias route removed — now integrated into /materiais via segmented control
 
 // 404 catch-all
@@ -197,6 +208,7 @@ const routeTree = rootRoute.addChildren([
   fornecedoresRoute,
   financeiroRoute,
   contaDetailRoute,
+  documentacaoRoute,
   configuracoesRoute,
 ])
 

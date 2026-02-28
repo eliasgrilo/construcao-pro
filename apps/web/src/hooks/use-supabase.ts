@@ -870,6 +870,190 @@ export function useAllFinanceiroMovimentacoes() {
 }
 
 // ═══════════════════════════════════════════════════════════
+// Documentos — Gestão documental (categorias + upload/storage)
+// ═══════════════════════════════════════════════════════════
+
+export interface DocumentoCategoria {
+  id: string
+  nome: string
+  cor: string
+  icone: string
+  created_at: string
+}
+
+export interface Documento {
+  id: string
+  nome: string
+  descricao: string | null
+  storage_path: string
+  categoria_id: string | null
+  obra_id: string | null
+  tipo_arquivo: string
+  tamanho: number
+  created_at: string
+  // Joined
+  documento_categorias?: DocumentoCategoria | null
+  obras?: { id: string; nome: string } | null
+}
+
+/* ── Categorias de Documento ── */
+
+export function useDocumentoCategorias() {
+  return useQuery({
+    queryKey: ['documentos', 'categorias'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('documento_categorias' as any)
+        .select('*')
+        .order('nome')
+      if (error) throw error
+      return (data || []) as any as DocumentoCategoria[]
+    },
+  })
+}
+
+export function useCreateDocumentoCategoria() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (body: { nome: string; cor?: string; icone?: string }) => {
+      const { data, error } = await supabase
+        .from('documento_categorias' as any)
+        .insert(body)
+        .select()
+        .single()
+      if (error) throw error
+      return data as any as DocumentoCategoria
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['documentos', 'categorias'] }),
+  })
+}
+
+export function useUpdateDocumentoCategoria() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, ...body }: { id: string; nome?: string; cor?: string; icone?: string }) => {
+      const { data, error } = await supabase
+        .from('documento_categorias' as any)
+        .update(body as any)
+        .eq('id', id)
+        .select()
+        .single()
+      if (error) throw error
+      return data as any as DocumentoCategoria
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['documentos', 'categorias'] }),
+  })
+}
+
+export function useDeleteDocumentoCategoria() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('documento_categorias' as any)
+        .delete()
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['documentos', 'categorias'] })
+      qc.invalidateQueries({ queryKey: ['documentos', 'lista'] })
+    },
+  })
+}
+
+/* ── Documentos ── */
+
+export function useDocumentos() {
+  return useQuery({
+    queryKey: ['documentos', 'lista'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('documentos' as any)
+        .select('*, documento_categorias(*), obras(id, nome)')
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return (data || []) as any as Documento[]
+    },
+  })
+}
+
+export function useUploadDocumento() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      file,
+      nome,
+      descricao,
+      categoria_id,
+      obra_id,
+    }: {
+      file: File
+      nome: string
+      descricao?: string
+      categoria_id?: string | null
+      obra_id?: string | null
+    }) => {
+      // 1. Upload file to Supabase Storage
+      const ext = file.name.split('.').pop() || 'bin'
+      const storagePath = `${crypto.randomUUID()}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('documentos')
+        .upload(storagePath, file, { contentType: file.type })
+      if (uploadError) throw uploadError
+
+      // 2. Insert document record
+      const { data, error } = await supabase
+        .from('documentos' as any)
+        .insert({
+          nome,
+          descricao: descricao || null,
+          storage_path: storagePath,
+          categoria_id: categoria_id || null,
+          obra_id: obra_id || null,
+          tipo_arquivo: file.type || 'application/octet-stream',
+          tamanho: file.size,
+        })
+        .select('*, documento_categorias(*), obras(id, nome)')
+        .single()
+      if (error) throw error
+      return data as any as Documento
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['documentos', 'lista'] }),
+  })
+}
+
+export function useDeleteDocumento() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, storagePath }: { id: string; storagePath: string }) => {
+      // 1. Delete from storage
+      await supabase.storage.from('documentos').remove([storagePath])
+      // 2. Delete record
+      const { error } = await supabase
+        .from('documentos' as any)
+        .delete()
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['documentos', 'lista'] }),
+  })
+}
+
+/** Get a signed URL for a document (valid for 1 hour) */
+export function useDocumentoUrl() {
+  return useMutation({
+    mutationFn: async (storagePath: string) => {
+      const { data, error } = await supabase.storage
+        .from('documentos')
+        .createSignedUrl(storagePath, 3600) // 1 hour
+      if (error) throw error
+      return data.signedUrl
+    },
+  })
+}
+
+// ═══════════════════════════════════════════════════════════
 // Notas Fiscais
 // ═══════════════════════════════════════════════════════════
 

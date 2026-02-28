@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   FileText,
+  FolderOpen,
   LayoutDashboard,
   LogOut,
   Package,
@@ -27,6 +28,7 @@ const nav = [
   { path: '/estoque', label: 'Estoque', icon: Boxes },
   { path: '/movimentacoes', label: 'Movimentações', icon: ArrowLeftRight },
   { path: '/notas-fiscais', label: 'Notas Fiscais', icon: FileText },
+  { path: '/documentacao', label: 'Documentação', icon: FolderOpen },
   { path: '/configuracoes', label: 'Configurações', icon: Settings },
 ]
 

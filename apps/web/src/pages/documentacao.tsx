@@ -17,9 +17,8 @@ import { AnimatePresence, motion } from 'framer-motion'
 import {
   Building2,
   Check,
-  ChevronDown,
+  ChevronRight,
   Download,
-  Eye,
   File,
   FileArchive,
   FileAudio,
@@ -29,86 +28,225 @@ import {
   FileVideo,
   FolderOpen,
   FolderPlus,
-  Grid3X3,
-  List,
+  Landmark,
   MoreHorizontal,
   Pencil,
   Plus,
-  Search,
-  Tag,
   Trash2,
   Upload,
   X,
 } from 'lucide-react'
 import { useCallback, useMemo, useRef, useState } from 'react'
 
-// ═══════════════════════════════════════════════════════════
-// Constants
-// ═══════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════
+   Apple System Design Tokens
+   ═══════════════════════════════════════════════════════════ */
 
 const modalCn =
-  'p-0 gap-0 border-0 dark:border dark:border-white/[0.07] sm:max-w-[390px] sm:rounded-[28px] bg-[#F2F2F7] dark:bg-[#1C1C1E] flex flex-col overflow-y-hidden'
+  'p-0 gap-0 border-0 dark:border dark:border-white/[0.07] sm:max-w-[390px] sm:rounded-[28px] bg-[#F2F2F7] dark:bg-[#1C1C1E] flex flex-col max-h-[85vh] overflow-y-hidden'
+
+const cardCn =
+  'rounded-2xl bg-white dark:bg-white/[0.05] border border-border/15 dark:border-white/[0.06] overflow-hidden'
 
 const CATEGORY_COLORS = [
   '#007AFF', '#34C759', '#FF9500', '#FF3B30', '#AF52DE',
   '#5856D6', '#FF2D55', '#00C7BE', '#FF6482', '#30B0C7',
 ]
 
-const CATEGORY_ICONS = [
-  'Folder', 'FileText', 'Building2', 'Tag', 'FileSpreadsheet',
-  'FileImage', 'FileArchive', 'Receipt', 'Shield', 'Landmark',
-]
+const STATUS_COLORS: Record<string, string> = {
+  ATIVA: '#34C759',
+  FINALIZADA: '#8E8E93',
+  PAUSADA: '#FF9500',
+  VENDIDO: '#5856D6',
+  TERRENO: '#AF52DE',
+}
 
-// ═══════════════════════════════════════════════════════════
-// Helpers
-// ═══════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════
+   Helpers
+   ═══════════════════════════════════════════════════════════ */
 
-function getFileIcon(mimeType: string) {
-  if (mimeType.startsWith('image/')) return FileImage
-  if (mimeType.startsWith('video/')) return FileVideo
-  if (mimeType.startsWith('audio/')) return FileAudio
-  if (mimeType.includes('pdf')) return FileText
-  if (mimeType.includes('spreadsheet') || mimeType.includes('excel') || mimeType.includes('csv'))
+function getFileIcon(mime: string) {
+  if (mime.startsWith('image/')) return FileImage
+  if (mime.startsWith('video/')) return FileVideo
+  if (mime.startsWith('audio/')) return FileAudio
+  if (mime.includes('pdf')) return FileText
+  if (mime.includes('spreadsheet') || mime.includes('excel') || mime.includes('csv'))
     return FileSpreadsheet
-  if (mimeType.includes('zip') || mimeType.includes('rar') || mimeType.includes('tar') || mimeType.includes('gz'))
+  if (mime.includes('zip') || mime.includes('rar') || mime.includes('tar'))
     return FileArchive
-  if (mimeType.includes('text') || mimeType.includes('document') || mimeType.includes('word'))
-    return FileText
   return File
 }
 
-function getFileIconColor(mimeType: string) {
-  if (mimeType.startsWith('image/')) return '#FF9500'
-  if (mimeType.startsWith('video/')) return '#AF52DE'
-  if (mimeType.startsWith('audio/')) return '#FF2D55'
-  if (mimeType.includes('pdf')) return '#FF3B30'
-  if (mimeType.includes('spreadsheet') || mimeType.includes('excel') || mimeType.includes('csv'))
-    return '#34C759'
-  if (mimeType.includes('zip') || mimeType.includes('rar')) return '#8E8E93'
+function getFileColor(mime: string) {
+  if (mime.startsWith('image/')) return '#FF9500'
+  if (mime.startsWith('video/')) return '#AF52DE'
+  if (mime.startsWith('audio/')) return '#FF2D55'
+  if (mime.includes('pdf')) return '#FF3B30'
+  if (mime.includes('spreadsheet') || mime.includes('excel')) return '#34C759'
+  if (mime.includes('zip') || mime.includes('rar')) return '#8E8E93'
   return '#007AFF'
 }
 
-function formatFileSize(bytes: number): string {
+function fmtSize(bytes: number): string {
   if (bytes === 0) return '0 B'
   const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB']
+  const s = ['B', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return `${(bytes / k ** i).toFixed(i > 0 ? 1 : 0)} ${sizes[i]}`
+  return `${(bytes / k ** i).toFixed(i > 0 ? 1 : 0)} ${s[i]}`
 }
 
-function getFileExtension(nome: string): string {
-  const parts = nome.split('.')
-  return parts.length > 1 ? parts.pop()!.toUpperCase() : ''
+/* ═══════════════════════════════════════════════════════════
+   FileRow — single document row (reused in every card)
+   ═══════════════════════════════════════════════════════════ */
+
+function FileRow({
+  doc,
+  onOpen,
+  onDownload,
+  onDelete,
+  last,
+}: {
+  doc: Documento
+  onOpen: () => void
+  onDownload: () => void
+  onDelete: () => void
+  last: boolean
+}) {
+  const Icon = getFileIcon(doc.tipo_arquivo)
+  const color = getFileColor(doc.tipo_arquivo)
+  const [menu, setMenu] = useState(false)
+
+  return (
+    <div
+      className={cn(
+        'group relative flex items-center gap-3 pl-4 pr-3 py-2.5 cursor-pointer',
+        'hover:bg-black/[0.015] dark:hover:bg-white/[0.025] transition-colors',
+      )}
+      onClick={onOpen}
+    >
+      {/* Icon */}
+      <div
+        className="flex h-9 w-9 items-center justify-center rounded-[10px] flex-shrink-0"
+        style={{ backgroundColor: `${color}10` }}
+      >
+        <Icon className="h-[18px] w-[18px]" style={{ color }} strokeWidth={1.5} />
+      </div>
+
+      {/* Info + hairline */}
+      <div className={cn('flex-1 min-w-0 flex items-center gap-2 py-0.5', !last && 'border-b border-border/8 dark:border-white/[0.04] pb-2.5')}>
+        <div className="flex-1 min-w-0">
+          <p className="text-[14px] font-medium truncate leading-tight">{doc.nome}</p>
+          <div className="flex items-center gap-1.5 mt-[3px]">
+            {doc.documento_categorias && (
+              <span
+                className="inline-block h-[6px] w-[6px] rounded-full flex-shrink-0"
+                style={{ backgroundColor: doc.documento_categorias.cor }}
+              />
+            )}
+            <span className="text-[12px] text-muted-foreground/60 truncate">
+              {fmtSize(doc.tamanho)} · {formatDateShort(doc.created_at)}
+            </span>
+          </div>
+        </div>
+
+        {/* Hover actions */}
+        <div className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={(e) => { e.stopPropagation(); onDownload() }}
+            className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-black/[0.05] dark:hover:bg-white/[0.08] transition-colors"
+          >
+            <Download className="h-3.5 w-3.5 text-muted-foreground/70" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); setMenu(true) }}
+            className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-black/[0.05] dark:hover:bg-white/[0.08] transition-colors"
+          >
+            <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground/70" />
+          </button>
+        </div>
+      </div>
+
+      {/* Context menu */}
+      <AnimatePresence>
+        {menu && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40"
+              onClick={(e) => { e.stopPropagation(); setMenu(false) }}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.92 }}
+              transition={{ duration: 0.12 }}
+              className="absolute right-3 top-full z-50 w-[148px] rounded-xl bg-white dark:bg-[#2C2C2E] border border-border/15 shadow-xl shadow-black/8 overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => { onDownload(); setMenu(false) }}
+                className="w-full flex items-center gap-2 px-3 py-2.5 text-[13px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+              >
+                <Download className="h-3.5 w-3.5 text-[#007AFF]" />
+                Baixar
+              </button>
+              <div className="h-px bg-border/15 mx-2" />
+              <button
+                onClick={() => { onDelete(); setMenu(false) }}
+                className="w-full flex items-center gap-2 px-3 py-2.5 text-[13px] text-[#FF3B30] hover:bg-[#FF3B30]/6"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Excluir
+              </button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  )
 }
 
-// ═══════════════════════════════════════════════════════════
-// Main Page Component
-// ═══════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════
+   DropZoneOverlay — shown when dragging files over a card
+   ═══════════════════════════════════════════════════════════ */
+
+function DropZoneOverlay({ label, color }: { label: string; color: string }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-2xl backdrop-blur-sm"
+      style={{ backgroundColor: `${color}08`, borderColor: color }}
+    >
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+        className="flex flex-col items-center gap-2"
+      >
+        <div
+          className="flex h-12 w-12 items-center justify-center rounded-2xl"
+          style={{ backgroundColor: `${color}15` }}
+        >
+          <Upload className="h-5 w-5" style={{ color }} strokeWidth={1.5} />
+        </div>
+        <p className="text-[13px] font-semibold" style={{ color }}>
+          {label}
+        </p>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MAIN PAGE
+   ═══════════════════════════════════════════════════════════ */
 
 export function DocumentacaoPage() {
-  // ── Data hooks ──
+  /* ── hooks ── */
   const { data: documentos = [], isLoading: docsLoading } = useDocumentos()
-  const { data: categorias = [], isLoading: catsLoading } = useDocumentoCategorias()
+  const { data: categorias = [] } = useDocumentoCategorias()
   const { data: obras = [] } = useObras()
   const uploadMut = useUploadDocumento()
   const deleteMut = useDeleteDocumento()
@@ -117,830 +255,453 @@ export function DocumentacaoPage() {
   const updateCatMut = useUpdateDocumentoCategoria()
   const deleteCatMut = useDeleteDocumentoCategoria()
 
-  // ── UI state ──
-  const [search, setSearch] = useState('')
-  const [selectedCategoria, setSelectedCategoria] = useState<string | null>(null)
-  const [selectedObra, setSelectedObra] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-  const [isDragging, setIsDragging] = useState(false)
+  /* ── state ── */
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [expandedObras, setExpandedObras] = useState<Set<string>>(new Set())
 
-  // Modals
+  // Upload modal
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
-  const [categoryModalOpen, setCategoryModalOpen] = useState(false)
-  const [editCategory, setEditCategory] = useState<DocumentoCategoria | null>(null)
-  const [docMenuOpen, setDocMenuOpen] = useState<string | null>(null)
-  const [obraDropdownOpen, setObraDropdownOpen] = useState(false)
-
-  // Upload form state
+  const [uploadTarget, setUploadTarget] = useState<string | null>(null)
+  const [uploadTargetLabel, setUploadTargetLabel] = useState('Empresa')
   const [uploadFiles, setUploadFiles] = useState<File[]>([])
   const [uploadCategoriaId, setUploadCategoriaId] = useState<string | null>(null)
-  const [uploadObraId, setUploadObraId] = useState<string | null>(null)
   const [uploadDescricao, setUploadDescricao] = useState('')
 
-  // Category form
+  // Category modal
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false)
+  const [editCategory, setEditCategory] = useState<DocumentoCategoria | null>(null)
   const [catNome, setCatNome] = useState('')
   const [catCor, setCatCor] = useState('#007AFF')
 
+  // Drag per-card
+  const [dragOver, setDragOver] = useState<string | null>(null) // "empresa" | obraId | null
+
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const dropZoneRef = useRef<HTMLDivElement>(null)
-  const uploadModalOpenRef = useRef(false)
-  // Keep ref in sync so handleFileSelect closure always has the latest value
-  uploadModalOpenRef.current = uploadModalOpen
+  const modalOpenRef = useRef(false)
+  modalOpenRef.current = uploadModalOpen
 
-  // ── Filtered documents ──
-  const filtered = useMemo(() => {
-    let result = documentos
-    if (selectedCategoria) {
-      result = result.filter((d) => d.categoria_id === selectedCategoria)
-    }
-    if (selectedObra) {
-      result = result.filter((d) => d.obra_id === selectedObra)
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase()
-      result = result.filter(
-        (d) =>
-          d.nome.toLowerCase().includes(q) ||
-          d.descricao?.toLowerCase().includes(q) ||
-          d.tipo_arquivo.toLowerCase().includes(q),
-      )
-    }
-    return result
-  }, [documentos, selectedCategoria, selectedObra, search])
-
-  // ── Category counts ──
-  const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = {}
-    for (const d of documentos) {
-      if (d.categoria_id) {
-        counts[d.categoria_id] = (counts[d.categoria_id] || 0) + 1
-      }
-    }
-    return counts
-  }, [documentos])
-
-  // ── Drag & Drop ──
-  const handleDragEnter = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragging(true)
-  }, [])
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (dropZoneRef.current && !dropZoneRef.current.contains(e.relatedTarget as Node)) {
-      setIsDragging(false)
-    }
-  }, [])
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-  }, [])
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault()
-      e.stopPropagation()
-      setIsDragging(false)
-      const files = Array.from(e.dataTransfer.files)
-      if (files.length > 0) {
-        setUploadFiles(files)
-        setUploadModalOpen(true)
-      }
-    },
-    [],
+  /* ── computed ── */
+  const empresaDocs = useMemo(
+    () => documentos.filter((d) => !d.obra_id),
+    [documentos],
   )
 
+  const obraDocs = useMemo(() => {
+    const m: Record<string, Documento[]> = {}
+    for (const d of documentos) if (d.obra_id) (m[d.obra_id] ??= []).push(d)
+    return m
+  }, [documentos])
+
+  const catCounts = useMemo(() => {
+    const c: Record<string, number> = {}
+    for (const d of documentos) if (d.categoria_id) c[d.categoria_id] = (c[d.categoria_id] || 0) + 1
+    return c
+  }, [documentos])
+
+  /* ── actions ── */
+  const openUpload = (targetId: string | null, label: string) => {
+    setUploadTarget(targetId)
+    setUploadTargetLabel(label)
+    setUploadFiles([])
+    setUploadCategoriaId(null)
+    setUploadDescricao('')
+    setUploadError(null)
+    setUploadModalOpen(true)
+  }
+
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || [])
-    if (files.length > 0) {
-      if (uploadModalOpenRef.current) {
-        // Modal already open — append files to the existing list
-        setUploadFiles((prev) => [...prev, ...files])
-      } else {
-        // First selection — set files and open modal
-        setUploadFiles(files)
-        setUploadModalOpen(true)
-      }
+    const f = Array.from(e.target.files || [])
+    if (f.length > 0) {
+      if (modalOpenRef.current) setUploadFiles((p) => [...p, ...f])
+      else { setUploadFiles(f); setUploadModalOpen(true) }
     }
-    // Reset so re-selecting the same file works
     e.target.value = ''
   }, [])
 
-  // ── Upload handler ──
   const handleUpload = async () => {
-    if (uploadFiles.length === 0) return
+    if (!uploadFiles.length) return
     setUploading(true)
     setUploadError(null)
     try {
       for (const file of uploadFiles) {
         await uploadMut.mutateAsync({
-          file,
-          nome: file.name,
+          file, nome: file.name,
           descricao: uploadDescricao || undefined,
           categoria_id: uploadCategoriaId,
-          obra_id: uploadObraId,
+          obra_id: uploadTarget,
         })
       }
-      // Reset on success
-      setUploadFiles([])
-      setUploadCategoriaId(null)
-      setUploadObraId(null)
-      setUploadDescricao('')
-      setUploadError(null)
-      setUploadModalOpen(false)
+      setUploadFiles([]); setUploadCategoriaId(null); setUploadDescricao('')
+      setUploadError(null); setUploadModalOpen(false)
+      if (uploadTarget) setExpandedObras((p) => new Set(p).add(uploadTarget))
     } catch (err: any) {
-      console.error('Upload failed:', err)
-      const msg =
-        err?.message || err?.error_description || 'Erro ao enviar arquivo. Tente novamente.'
-      setUploadError(msg)
+      setUploadError(err?.message || 'Erro ao enviar. Tente novamente.')
     } finally {
       setUploading(false)
     }
   }
 
-  // ── Download/Preview handler ──
-  const handleOpenDoc = async (doc: Documento) => {
+  const openDoc = async (doc: Documento) => {
     try {
       const url = await getUrlMut.mutateAsync(doc.storage_path)
       window.open(url, '_blank')
-    } catch (err) {
-      console.error('Failed to get URL:', err)
-    }
+    } catch { /* */ }
   }
-
-  const handleDownloadDoc = async (doc: Documento) => {
+  const downloadDoc = async (doc: Documento) => {
     try {
       const url = await getUrlMut.mutateAsync(doc.storage_path)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = doc.nome
-      a.click()
-    } catch (err) {
-      console.error('Download failed:', err)
-    }
+      Object.assign(document.createElement('a'), { href: url, download: doc.nome }).click()
+    } catch { /* */ }
+  }
+  const deleteDoc = async (doc: Documento) => {
+    try { await deleteMut.mutateAsync({ id: doc.id, storagePath: doc.storage_path }) }
+    catch { /* */ }
   }
 
-  // ── Delete doc ──
-  const handleDeleteDoc = async (doc: Documento) => {
-    try {
-      await deleteMut.mutateAsync({ id: doc.id, storagePath: doc.storage_path })
-      setDocMenuOpen(null)
-    } catch (err) {
-      console.error('Delete failed:', err)
-    }
-  }
-
-  // ── Save category ──
-  const handleSaveCategory = async () => {
+  const saveCategory = async () => {
     if (!catNome.trim()) return
     try {
-      if (editCategory) {
-        await updateCatMut.mutateAsync({
-          id: editCategory.id,
-          nome: catNome.trim(),
-          cor: catCor,
-        })
-      } else {
-        await createCatMut.mutateAsync({
-          nome: catNome.trim(),
-          cor: catCor,
-        })
-      }
-      setCatNome('')
-      setCatCor('#007AFF')
-      setEditCategory(null)
-      setCategoryModalOpen(false)
-    } catch (err) {
-      console.error('Category save failed:', err)
-    }
+      if (editCategory) await updateCatMut.mutateAsync({ id: editCategory.id, nome: catNome.trim(), cor: catCor })
+      else await createCatMut.mutateAsync({ nome: catNome.trim(), cor: catCor })
+      setCatNome(''); setCatCor('#007AFF'); setEditCategory(null); setCategoryModalOpen(false)
+    } catch { /* */ }
   }
 
-  const handleDeleteCategory = async (id: string) => {
+  const deleteCategory = async (id: string) => {
     try {
       await deleteCatMut.mutateAsync(id)
-      if (selectedCategoria === id) setSelectedCategoria(null)
-      setCategoryModalOpen(false)
-      setEditCategory(null)
-    } catch (err) {
-      console.error('Category delete failed:', err)
+      setCategoryModalOpen(false); setEditCategory(null)
+    } catch { /* */ }
+  }
+
+  /* ── drag handlers ── */
+  const onDragEnter = (e: React.DragEvent, id: string) => {
+    e.preventDefault(); e.stopPropagation(); setDragOver(id)
+  }
+  const onDragLeave = (e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation()
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    const { clientX: cx, clientY: cy } = e
+    if (cx < rect.left || cx > rect.right || cy < rect.top || cy > rect.bottom) setDragOver(null)
+  }
+  const onDragOver = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation() }
+  const onDrop = (e: React.DragEvent, targetId: string | null, label: string) => {
+    e.preventDefault(); e.stopPropagation(); setDragOver(null)
+    const f = Array.from(e.dataTransfer.files)
+    if (f.length) {
+      setUploadTarget(targetId); setUploadTargetLabel(label)
+      setUploadFiles(f); setUploadCategoriaId(null); setUploadDescricao('')
+      setUploadError(null); setUploadModalOpen(true)
     }
   }
 
-  const isLoading = docsLoading || catsLoading
+  const toggleObra = (id: string) =>
+    setExpandedObras((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
 
-  // ═══════════════════════════════════════════════════════════
-  // RENDER
-  // ═══════════════════════════════════════════════════════════
+  /* ═══════════════════════════════════════════════════════════
+     RENDER
+     ═══════════════════════════════════════════════════════════ */
 
   return (
-    <div
-      className="pb-10 min-h-screen relative"
-      ref={dropZoneRef}
-      onDragEnter={handleDragEnter}
-      onDragLeave={handleDragLeave}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
-    >
-      {/* ── Drag overlay ── */}
-      <AnimatePresence>
-        {isDragging && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-xl"
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="flex flex-col items-center gap-4"
-            >
-              <div className="flex h-24 w-24 items-center justify-center rounded-[28px] bg-[#007AFF]/10">
-                <Upload className="h-10 w-10 text-[#007AFF]" strokeWidth={1.5} />
-              </div>
-              <div className="text-center">
-                <p className="text-[20px] font-semibold">Solte os arquivos aqui</p>
-                <p className="text-[14px] text-muted-foreground mt-1">
-                  Seus documentos serão enviados automaticamente
-                </p>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+    <div className="pb-12 min-h-screen">
+      <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
 
-      {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        className="hidden"
-        onChange={handleFileSelect}
-      />
-
-      {/* ── Header ── */}
-      <div className="px-4 md:px-8 pt-10 pb-2">
+      {/* ── Page header ── */}
+      <div className="px-4 md:px-8 pt-10 pb-5">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-[28px] md:text-[34px] font-bold tracking-tight">
-              Documentação
-            </h1>
-            <p className="text-[14px] text-muted-foreground mt-0.5">
-              {documentos.length === 0
-                ? 'Gerencie todos os documentos da empresa e obras'
-                : `${documentos.length} documento${documentos.length !== 1 ? 's' : ''} arquivado${documentos.length !== 1 ? 's' : ''}`}
+            <h1 className="text-[28px] md:text-[34px] font-bold tracking-tight">Documentação</h1>
+            <p className="text-[14px] text-muted-foreground/70 mt-0.5">
+              Documentos da empresa e das obras
             </p>
           </div>
           <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-2 rounded-full bg-[#007AFF] px-5 py-2.5 text-[14px] font-semibold text-white shadow-sm hover:bg-[#0066D6] transition-colors flex-shrink-0"
-          >
-            <Plus className="h-4 w-4" strokeWidth={2.5} />
-            <span className="hidden sm:inline">Enviar</span>
-          </motion.button>
-        </div>
-      </div>
-
-      {/* ── Search & View Toggle ── */}
-      <div className="px-4 md:px-8 py-3">
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-            <input
-              type="text"
-              placeholder="Buscar documentos..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full h-10 pl-10 pr-4 rounded-xl bg-black/[0.03] dark:bg-white/[0.06] border-0 text-[14px] placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 transition-all"
-            />
-          </div>
-          <div className="flex rounded-xl bg-black/[0.03] dark:bg-white/[0.06] p-0.5">
-            <button
-              onClick={() => setViewMode('grid')}
-              className={cn(
-                'flex h-9 w-9 items-center justify-center rounded-[10px] transition-all',
-                viewMode === 'grid'
-                  ? 'bg-white dark:bg-white/15 shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              <Grid3X3 className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={cn(
-                'flex h-9 w-9 items-center justify-center rounded-[10px] transition-all',
-                viewMode === 'list'
-                  ? 'bg-white dark:bg-white/15 shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              <List className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Filter Pills ── */}
-      <div className="px-4 md:px-8 pb-4">
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {/* All */}
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={() => {
-              setSelectedCategoria(null)
-              setSelectedObra(null)
-            }}
-            className={cn(
-              'flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-all whitespace-nowrap flex-shrink-0',
-              !selectedCategoria && !selectedObra
-                ? 'bg-[#007AFF] text-white shadow-sm'
-                : 'bg-black/[0.04] dark:bg-white/[0.06] text-muted-foreground hover:bg-black/[0.06] dark:hover:bg-white/[0.08]',
-            )}
-          >
-            <FolderOpen className="h-3.5 w-3.5" />
-            Todos
-          </motion.button>
-
-          {/* Category pills */}
-          {categorias.map((cat) => (
-            <motion.button
-              key={cat.id}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => {
-                setSelectedCategoria(selectedCategoria === cat.id ? null : cat.id)
-                setSelectedObra(null)
-              }}
-              className={cn(
-                'flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-all whitespace-nowrap flex-shrink-0',
-                selectedCategoria === cat.id
-                  ? 'text-white shadow-sm'
-                  : 'bg-black/[0.04] dark:bg-white/[0.06] text-muted-foreground hover:bg-black/[0.06] dark:hover:bg-white/[0.08]',
-              )}
-              style={
-                selectedCategoria === cat.id
-                  ? { backgroundColor: cat.cor }
-                  : undefined
-              }
-            >
-              <Tag className="h-3.5 w-3.5" />
-              {cat.nome}
-              {categoryCounts[cat.id] ? (
-                <span className={cn(
-                  'text-[11px] px-1.5 rounded-full',
-                  selectedCategoria === cat.id
-                    ? 'bg-white/25'
-                    : 'bg-black/[0.06] dark:bg-white/[0.08]',
-                )}>
-                  {categoryCounts[cat.id]}
-                </span>
-              ) : null}
-            </motion.button>
-          ))}
-
-          {/* Manage categories */}
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={() => {
-              setEditCategory(null)
-              setCatNome('')
-              setCatCor('#007AFF')
-              setCategoryModalOpen(true)
-            }}
-            className="flex items-center gap-1 rounded-full px-3 py-1.5 text-[13px] font-medium text-[#007AFF] bg-[#007AFF]/8 hover:bg-[#007AFF]/12 transition-colors whitespace-nowrap flex-shrink-0"
+            whileTap={{ scale: 0.93 }}
+            onClick={() => { setEditCategory(null); setCatNome(''); setCatCor('#007AFF'); setCategoryModalOpen(true) }}
+            className="flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-medium text-[#007AFF] bg-[#007AFF]/8 hover:bg-[#007AFF]/12 transition-colors flex-shrink-0 mt-1"
           >
             <FolderPlus className="h-3.5 w-3.5" />
-            Categoria
+            Categorias
           </motion.button>
-
-          {/* Divider */}
-          {obras.length > 0 && (
-            <div className="h-5 w-px bg-border/50 flex-shrink-0 mx-0.5" />
-          )}
-
-          {/* Obra filter dropdown */}
-          {obras.length > 0 && (
-            <div className="relative flex-shrink-0">
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setObraDropdownOpen(!obraDropdownOpen)}
-                className={cn(
-                  'flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-all whitespace-nowrap',
-                  selectedObra
-                    ? 'bg-[#FF9500] text-white shadow-sm'
-                    : 'bg-black/[0.04] dark:bg-white/[0.06] text-muted-foreground hover:bg-black/[0.06] dark:hover:bg-white/[0.08]',
-                )}
-              >
-                <Building2 className="h-3.5 w-3.5" />
-                {selectedObra
-                  ? obras.find((o) => o.id === selectedObra)?.nome || 'Obra'
-                  : 'Obra'}
-                <ChevronDown className="h-3 w-3" />
-              </motion.button>
-
-              <AnimatePresence>
-                {obraDropdownOpen && (
-                  <>
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="fixed inset-0 z-40"
-                      onClick={() => setObraDropdownOpen(false)}
-                    />
-                    <motion.div
-                      initial={{ opacity: 0, y: -4, scale: 0.96 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -4, scale: 0.96 }}
-                      transition={{ duration: 0.15 }}
-                      className="absolute left-0 top-full mt-1.5 z-50 min-w-[200px] rounded-2xl bg-white dark:bg-[#2C2C2E] border border-border/30 shadow-xl overflow-hidden"
-                    >
-                      <button
-                        onClick={() => {
-                          setSelectedObra(null)
-                          setObraDropdownOpen(false)
-                        }}
-                        className={cn(
-                          'w-full flex items-center gap-2.5 px-4 py-2.5 text-[14px] text-left transition-colors hover:bg-black/[0.04] dark:hover:bg-white/[0.06]',
-                          !selectedObra && 'text-[#007AFF] font-medium',
-                        )}
-                      >
-                        <FolderOpen className="h-4 w-4" />
-                        Todas as obras
-                        {!selectedObra && <Check className="h-4 w-4 ml-auto" />}
-                      </button>
-                      <div className="h-px bg-border/30" />
-                      {obras.map((obra) => (
-                        <button
-                          key={obra.id}
-                          onClick={() => {
-                            setSelectedObra(obra.id)
-                            setSelectedCategoria(null)
-                            setObraDropdownOpen(false)
-                          }}
-                          className={cn(
-                            'w-full flex items-center gap-2.5 px-4 py-2.5 text-[14px] text-left transition-colors hover:bg-black/[0.04] dark:hover:bg-white/[0.06]',
-                            selectedObra === obra.id && 'text-[#FF9500] font-medium',
-                          )}
-                        >
-                          <Building2 className="h-4 w-4" />
-                          <span className="truncate">{obra.nome}</span>
-                          {selectedObra === obra.id && <Check className="h-4 w-4 ml-auto flex-shrink-0" />}
-                        </button>
-                      ))}
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* ── Content ── */}
-      <div className="px-4 md:px-8">
-        {/* Loading skeletons */}
-        {isLoading && (
-          <div className={cn(
-            viewMode === 'grid'
-              ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3'
-              : 'space-y-2',
-          )}>
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div
-                key={i}
-                className={cn(
-                  'animate-pulse rounded-2xl bg-black/[0.03] dark:bg-white/[0.04]',
-                  viewMode === 'grid' ? 'aspect-[4/5] p-4' : 'h-16 px-4',
-                )}
-              >
-                <div className={cn(
-                  'rounded-xl bg-muted/50',
-                  viewMode === 'grid' ? 'h-12 w-12 mb-3' : 'h-8 w-8',
-                )} />
-                <div className="rounded bg-muted/40 h-3 w-3/4 mt-2" />
-                <div className="rounded bg-muted/30 h-2.5 w-1/2 mt-1.5" />
+      {/* ══════════════════════════════════════════════════════
+          CARD — DOCUMENTAÇÃO DA EMPRESA
+          ══════════════════════════════════════════════════════ */}
+      <div className="px-4 md:px-8 mb-6">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
+          className={cn(cardCn, 'relative')}
+          onDragEnter={(e) => onDragEnter(e, 'empresa')}
+          onDragLeave={onDragLeave}
+          onDragOver={onDragOver}
+          onDrop={(e) => onDrop(e, null, 'Empresa')}
+        >
+          {/* Drag overlay */}
+          <AnimatePresence>
+            {dragOver === 'empresa' && <DropZoneOverlay label="Soltar na empresa" color="#007AFF" />}
+          </AnimatePresence>
+
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 pt-4 pb-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-gradient-to-br from-[#007AFF]/15 to-[#007AFF]/5">
+                <Landmark className="h-[22px] w-[22px] text-[#007AFF]" strokeWidth={1.5} />
               </div>
-            ))}
+              <div>
+                <h2 className="text-[17px] font-semibold leading-tight tracking-[-0.2px]">
+                  Documentação da Empresa
+                </h2>
+                <p className="text-[12px] text-muted-foreground/50 mt-[2px]">
+                  {empresaDocs.length} {empresaDocs.length === 1 ? 'arquivo' : 'arquivos'}
+                </p>
+              </div>
+            </div>
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => openUpload(null, 'Empresa')}
+              className="flex items-center gap-1.5 rounded-full bg-[#007AFF] pl-3.5 pr-4 py-[7px] text-[13px] font-semibold text-white shadow-sm shadow-[#007AFF]/20 hover:shadow-md hover:shadow-[#007AFF]/25 active:shadow-sm transition-all"
+            >
+              <Upload className="h-3.5 w-3.5" strokeWidth={2.5} />
+              Enviar
+            </motion.button>
+          </div>
+
+          {/* Category tags ribbon */}
+          {categorias.length > 0 && (
+            <div className="px-5 pb-2.5 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+              {categorias.map((c) => (
+                <span
+                  key={c.id}
+                  className="flex items-center gap-[5px] rounded-full px-2.5 py-[3px] text-[11px] font-medium whitespace-nowrap flex-shrink-0"
+                  style={{ backgroundColor: `${c.cor}0D`, color: c.cor }}
+                >
+                  <span className="h-[5px] w-[5px] rounded-full" style={{ backgroundColor: c.cor }} />
+                  {c.nome}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Divider */}
+          <div className="h-px bg-border/10 dark:bg-white/[0.04]" />
+
+          {/* Loading skeleton */}
+          {docsLoading && (
+            <div className="p-4 space-y-[14px]">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-3 animate-pulse">
+                  <div className="h-9 w-9 rounded-[10px] bg-muted/30" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-[11px] w-3/5 rounded-full bg-muted/25" />
+                    <div className="h-[9px] w-2/5 rounded-full bg-muted/15" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!docsLoading && empresaDocs.length === 0 && (
+            <button
+              onClick={() => openUpload(null, 'Empresa')}
+              className="w-full flex flex-col items-center py-10 px-4 group/empty"
+            >
+              <div className="flex h-16 w-16 items-center justify-center rounded-[20px] bg-[#007AFF]/[0.05] group-hover/empty:bg-[#007AFF]/[0.08] transition-colors">
+                <FolderOpen className="h-7 w-7 text-[#007AFF]/40 group-hover/empty:text-[#007AFF]/60 transition-colors" strokeWidth={1.5} />
+              </div>
+              <p className="text-[14px] font-medium text-muted-foreground/50 mt-4 group-hover/empty:text-muted-foreground/70 transition-colors">
+                Enviar primeiro documento
+              </p>
+              <p className="text-[12px] text-muted-foreground/30 mt-1">
+                Arraste arquivos ou clique aqui
+              </p>
+            </button>
+          )}
+
+          {/* File rows */}
+          {!docsLoading && empresaDocs.length > 0 && empresaDocs.map((doc, i) => (
+            <FileRow
+              key={doc.id}
+              doc={doc}
+              onOpen={() => openDoc(doc)}
+              onDownload={() => downloadDoc(doc)}
+              onDelete={() => deleteDoc(doc)}
+              last={i === empresaDocs.length - 1}
+            />
+          ))}
+        </motion.div>
+      </div>
+
+      {/* ══════════════════════════════════════════════════════
+          SECTION — OBRAS
+          ══════════════════════════════════════════════════════ */}
+      <div className="px-4 md:px-8">
+        <p className="text-[12px] font-semibold text-muted-foreground/50 uppercase tracking-[0.5px] mb-3 px-1">
+          Documentação por Obra
+        </p>
+
+        {obras.length === 0 && !docsLoading && (
+          <div className={cn(cardCn, 'flex flex-col items-center py-10')}>
+            <Building2 className="h-10 w-10 text-muted-foreground/15" strokeWidth={1.5} />
+            <p className="text-[14px] text-muted-foreground/40 mt-3">Nenhuma obra cadastrada</p>
           </div>
         )}
 
-        {/* Empty state */}
-        {!isLoading && filtered.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center justify-center py-20"
-          >
-            <div className="flex h-20 w-20 items-center justify-center rounded-[24px] bg-black/[0.03] dark:bg-white/[0.04]">
-              <FolderOpen className="h-9 w-9 text-muted-foreground/40" strokeWidth={1.5} />
-            </div>
-            <p className="text-[16px] font-semibold mt-5">
-              {search || selectedCategoria || selectedObra
-                ? 'Nenhum documento encontrado'
-                : 'Nenhum documento ainda'}
-            </p>
-            <p className="text-[13px] text-muted-foreground mt-1 text-center max-w-[280px]">
-              {search || selectedCategoria || selectedObra
-                ? 'Tente ajustar os filtros ou buscar por outro termo'
-                : 'Arraste arquivos para cá ou clique em Enviar para começar'}
-            </p>
-            {!search && !selectedCategoria && !selectedObra && (
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-2 mt-6 rounded-full bg-[#007AFF] px-6 py-2.5 text-[14px] font-semibold text-white shadow-sm hover:bg-[#0066D6] transition-colors"
+        <div className="space-y-3">
+          {obras.map((obra, obraIdx) => {
+            const docs = obraDocs[obra.id] || []
+            const expanded = expandedObras.has(obra.id)
+            const hovering = dragOver === obra.id
+            const statusColor = STATUS_COLORS[obra.status] || '#8E8E93'
+
+            return (
+              <motion.div
+                key={obra.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: obraIdx * 0.04, ease: [0.25, 0.1, 0.25, 1] }}
+                className={cn(cardCn, 'relative')}
+                onDragEnter={(e) => onDragEnter(e, obra.id)}
+                onDragLeave={onDragLeave}
+                onDragOver={onDragOver}
+                onDrop={(e) => onDrop(e, obra.id, obra.nome)}
               >
-                <Upload className="h-4 w-4" />
-                Enviar Documentos
-              </motion.button>
-            )}
-          </motion.div>
-        )}
+                {/* Drag overlay */}
+                <AnimatePresence>
+                  {hovering && <DropZoneOverlay label={`Soltar em ${obra.nome}`} color="#FF9500" />}
+                </AnimatePresence>
 
-        {/* Grid View */}
-        {!isLoading && filtered.length > 0 && viewMode === 'grid' && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3"
-          >
-            {filtered.map((doc, i) => {
-              const Icon = getFileIcon(doc.tipo_arquivo)
-              const color = getFileIconColor(doc.tipo_arquivo)
-              const ext = getFileExtension(doc.nome)
-              return (
-                <motion.div
-                  key={doc.id}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.03, duration: 0.25 }}
-                  className="group relative rounded-2xl bg-white dark:bg-white/[0.05] border border-border/20 dark:border-white/[0.06] overflow-hidden hover:shadow-lg hover:shadow-black/[0.04] dark:hover:shadow-none hover:border-border/40 transition-all cursor-pointer"
-                  onClick={() => handleOpenDoc(doc)}
+                {/* Obra header */}
+                <div
+                  className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-black/[0.01] dark:hover:bg-white/[0.015] transition-colors"
+                  onClick={() => toggleObra(obra.id)}
                 >
-                  {/* File thumbnail area */}
-                  <div className="aspect-[4/3] flex flex-col items-center justify-center bg-black/[0.015] dark:bg-white/[0.02] relative">
-                    <div
-                      className="flex h-14 w-14 items-center justify-center rounded-2xl"
-                      style={{ backgroundColor: `${color}12` }}
-                    >
-                      <Icon className="h-7 w-7" style={{ color }} strokeWidth={1.5} />
+                  {/* Obra icon with status indicator */}
+                  <div className="relative flex-shrink-0">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-gradient-to-br from-[#FF9500]/12 to-[#FF9500]/4">
+                      <Building2 className="h-[22px] w-[22px] text-[#FF9500]" strokeWidth={1.5} />
                     </div>
-                    {ext && (
-                      <span
-                        className="mt-2 text-[10px] font-bold tracking-wider rounded-md px-2 py-0.5"
-                        style={{ color, backgroundColor: `${color}10` }}
-                      >
-                        {ext}
-                      </span>
-                    )}
-
-                    {/* Actions overlay */}
-                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setDocMenuOpen(docMenuOpen === doc.id ? null : doc.id)
-                        }}
-                        className="flex h-7 w-7 items-center justify-center rounded-full bg-white/90 dark:bg-black/60 shadow-sm backdrop-blur-sm"
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </button>
-                    </div>
-
-                    {/* Context menu */}
-                    <AnimatePresence>
-                      {docMenuOpen === doc.id && (
-                        <>
-                          <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-40"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setDocMenuOpen(null)
-                            }}
-                          />
-                          <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: -4 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: -4 }}
-                            transition={{ duration: 0.12 }}
-                            className="absolute top-10 right-2 z-50 w-44 rounded-xl bg-white dark:bg-[#2C2C2E] border border-border/30 shadow-xl overflow-hidden"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <button
-                              onClick={() => {
-                                handleOpenDoc(doc)
-                                setDocMenuOpen(null)
-                              }}
-                              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[13px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
-                            >
-                              <Eye className="h-4 w-4 text-[#007AFF]" />
-                              Visualizar
-                            </button>
-                            <button
-                              onClick={() => {
-                                handleDownloadDoc(doc)
-                                setDocMenuOpen(null)
-                              }}
-                              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[13px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
-                            >
-                              <Download className="h-4 w-4 text-[#34C759]" />
-                              Baixar
-                            </button>
-                            <div className="h-px bg-border/30 mx-2" />
-                            <button
-                              onClick={() => handleDeleteDoc(doc)}
-                              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[13px] text-[#FF3B30] hover:bg-[#FF3B30]/6 transition-colors"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              Excluir
-                            </button>
-                          </motion.div>
-                        </>
-                      )}
-                    </AnimatePresence>
+                    {/* Status dot */}
+                    <span
+                      className="absolute -bottom-[2px] -right-[2px] h-[10px] w-[10px] rounded-full border-2 border-white dark:border-[#1C1C1E]"
+                      style={{ backgroundColor: statusColor }}
+                    />
                   </div>
 
-                  {/* File info */}
-                  <div className="px-3 py-2.5">
-                    <p className="text-[13px] font-medium truncate leading-tight">
-                      {doc.nome}
-                    </p>
-                    <div className="flex items-center gap-1.5 mt-1">
-                      {doc.documento_categorias && (
-                        <span
-                          className="inline-block h-2 w-2 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: doc.documento_categorias.cor }}
-                        />
-                      )}
-                      <span className="text-[11px] text-muted-foreground truncate">
-                        {formatFileSize(doc.tamanho)} · {formatDateShort(doc.created_at)}
-                      </span>
-                    </div>
-                    {doc.obras && (
-                      <div className="flex items-center gap-1 mt-1">
-                        <Building2 className="h-3 w-3 text-[#FF9500]" />
-                        <span className="text-[11px] text-[#FF9500] truncate font-medium">
-                          {doc.obras.nome}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              )
-            })}
-          </motion.div>
-        )}
-
-        {/* List View */}
-        {!isLoading && filtered.length > 0 && viewMode === 'list' && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="rounded-2xl bg-white dark:bg-white/[0.05] border border-border/20 dark:border-white/[0.06] overflow-hidden"
-          >
-            {filtered.map((doc, i) => {
-              const Icon = getFileIcon(doc.tipo_arquivo)
-              const color = getFileIconColor(doc.tipo_arquivo)
-              return (
-                <motion.div
-                  key={doc.id}
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.02, duration: 0.2 }}
-                  className={cn(
-                    'group flex items-center gap-3 px-4 py-3 hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors cursor-pointer',
-                    i > 0 && 'border-t border-border/10 dark:border-white/[0.04]',
-                  )}
-                  onClick={() => handleOpenDoc(doc)}
-                >
-                  {/* Icon */}
-                  <div
-                    className="flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0"
-                    style={{ backgroundColor: `${color}12` }}
-                  >
-                    <Icon className="h-5 w-5" style={{ color }} strokeWidth={1.5} />
-                  </div>
-
-                  {/* Info */}
+                  {/* Obra info */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-[14px] font-medium truncate">{doc.nome}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      {doc.documento_categorias && (
-                        <div className="flex items-center gap-1">
-                          <span
-                            className="h-2 w-2 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: doc.documento_categorias.cor }}
+                    <h3 className="text-[15px] font-semibold leading-tight truncate tracking-[-0.1px]">
+                      {obra.nome}
+                    </h3>
+                    <p className="text-[12px] text-muted-foreground/50 mt-[2px] truncate">
+                      {obra.endereco}
+                    </p>
+                  </div>
+
+                  {/* Right side: count + upload + chevron */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {docs.length > 0 && (
+                      <span className="text-[12px] text-muted-foreground/40 tabular-nums font-medium">
+                        {docs.length}
+                      </span>
+                    )}
+
+                    <motion.button
+                      whileTap={{ scale: 0.85 }}
+                      onClick={(e) => { e.stopPropagation(); openUpload(obra.id, obra.nome) }}
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FF9500]/10 hover:bg-[#FF9500]/16 transition-colors"
+                    >
+                      <Plus className="h-4 w-4 text-[#FF9500]" strokeWidth={2.5} />
+                    </motion.button>
+
+                    <motion.div
+                      animate={{ rotate: expanded ? 90 : 0 }}
+                      transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+                      className="flex h-5 w-5 items-center justify-center"
+                    >
+                      <ChevronRight className="h-[14px] w-[14px] text-muted-foreground/30" />
+                    </motion.div>
+                  </div>
+                </div>
+
+                {/* Expanded body */}
+                <AnimatePresence initial={false}>
+                  {expanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+                      className="overflow-hidden"
+                    >
+                      <div className="h-px bg-border/8 dark:bg-white/[0.04]" />
+
+                      {docs.length === 0 ? (
+                        <button
+                          onClick={() => openUpload(obra.id, obra.nome)}
+                          className="w-full flex flex-col items-center py-7 group/empty"
+                        >
+                          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#FF9500]/[0.05] group-hover/empty:bg-[#FF9500]/[0.08] transition-colors">
+                            <Upload className="h-5 w-5 text-[#FF9500]/40 group-hover/empty:text-[#FF9500]/60 transition-colors" strokeWidth={1.5} />
+                          </div>
+                          <p className="text-[13px] text-muted-foreground/40 mt-3 group-hover/empty:text-muted-foreground/60 transition-colors">
+                            Enviar documento para esta obra
+                          </p>
+                        </button>
+                      ) : (
+                        docs.map((doc, i) => (
+                          <FileRow
+                            key={doc.id}
+                            doc={doc}
+                            onOpen={() => openDoc(doc)}
+                            onDownload={() => downloadDoc(doc)}
+                            onDelete={() => deleteDoc(doc)}
+                            last={i === docs.length - 1}
                           />
-                          <span className="text-[12px] text-muted-foreground">
-                            {doc.documento_categorias.nome}
-                          </span>
-                        </div>
+                        ))
                       )}
-                      {doc.obras && (
-                        <div className="flex items-center gap-1">
-                          <Building2 className="h-3 w-3 text-[#FF9500]" />
-                          <span className="text-[12px] text-[#FF9500] font-medium">
-                            {doc.obras.nome}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Meta */}
-                  <div className="text-right flex-shrink-0 hidden sm:block">
-                    <p className="text-[12px] text-muted-foreground">
-                      {formatFileSize(doc.tamanho)}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground/60">
-                      {formatDateShort(doc.created_at)}
-                    </p>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDownloadDoc(doc)
-                      }}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
-                    >
-                      <Download className="h-4 w-4 text-muted-foreground" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDeleteDoc(doc)
-                      }}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-[#FF3B30]/8 transition-colors"
-                    >
-                      <Trash2 className="h-4 w-4 text-muted-foreground hover:text-[#FF3B30]" />
-                    </button>
-                  </div>
-                </motion.div>
-              )
-            })}
-          </motion.div>
-        )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            )
+          })}
+        </div>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════════
-          UPLOAD MODAL
-          ═══════════════════════════════════════════════════════════ */}
-      <Dialog
-        open={uploadModalOpen}
-        onOpenChange={(open) => {
-          setUploadModalOpen(open)
-          if (!open) setUploadError(null)
-        }}
-      >
+      {/* ══════════════════════════════════════════════════════
+          UPLOAD MODAL (iOS Sheet)
+          ══════════════════════════════════════════════════════ */}
+      <Dialog open={uploadModalOpen} onOpenChange={(o) => { setUploadModalOpen(o); if (!o) setUploadError(null) }}>
         <DialogContent className={modalCn}>
-          {/* Header */}
+          {/* Sticky header */}
           <div className="sticky top-0 z-10 bg-[#F2F2F7] dark:bg-[#1C1C1E] px-5 pt-5 pb-3">
             <div className="flex items-center justify-between">
-              <button
-                onClick={() => setUploadModalOpen(false)}
-                className="text-[16px] text-[#007AFF]"
-              >
+              <button onClick={() => setUploadModalOpen(false)} className="text-[16px] text-[#007AFF]">
                 Cancelar
               </button>
-              <DialogTitle className="text-[16px] font-semibold">
-                Enviar Documentos
-              </DialogTitle>
+              <DialogTitle className="text-[16px] font-semibold">Enviar</DialogTitle>
               <button
                 onClick={handleUpload}
-                disabled={uploadFiles.length === 0 || uploading}
-                className="text-[16px] font-semibold text-[#007AFF] disabled:text-muted-foreground/40"
+                disabled={!uploadFiles.length || uploading}
+                className="text-[16px] font-semibold text-[#007AFF] disabled:text-muted-foreground/30"
               >
                 {uploading ? 'Enviando...' : 'Enviar'}
               </button>
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-5 pb-[env(safe-area-inset-bottom)] pb-5">
-            {/* Error banner */}
+          <div className="flex-1 overflow-y-auto px-5 pb-5 space-y-4">
+            {/* Error */}
             <AnimatePresence>
               {uploadError && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="mb-3 overflow-hidden"
-                >
-                  <div className="rounded-[14px] bg-[#FF3B30]/10 border border-[#FF3B30]/20 px-4 py-3 flex items-start gap-2.5">
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                  <div className="rounded-[14px] bg-[#FF3B30]/8 border border-[#FF3B30]/15 px-4 py-3 flex items-start gap-2.5">
                     <X className="h-4 w-4 text-[#FF3B30] flex-shrink-0 mt-0.5" />
                     <p className="text-[13px] text-[#FF3B30] leading-snug">{uploadError}</p>
                   </div>
@@ -948,160 +709,100 @@ export function DocumentacaoPage() {
               )}
             </AnimatePresence>
 
-            {/* Files preview */}
+            {/* Destination pill */}
+            <div className="rounded-[14px] bg-white dark:bg-white/[0.07] px-4 py-3 flex items-center gap-3">
+              <div
+                className="flex h-8 w-8 items-center justify-center rounded-[10px] flex-shrink-0"
+                style={{ backgroundColor: uploadTarget ? '#FF95000D' : '#007AFF0D' }}
+              >
+                {uploadTarget
+                  ? <Building2 className="h-4 w-4 text-[#FF9500]" />
+                  : <Landmark className="h-4 w-4 text-[#007AFF]" />}
+              </div>
+              <div>
+                <p className="text-[11px] text-muted-foreground/45 uppercase tracking-wider font-semibold leading-tight">
+                  Destino
+                </p>
+                <p className="text-[14px] font-medium leading-tight mt-[1px]">{uploadTargetLabel}</p>
+              </div>
+            </div>
+
+            {/* Files */}
             <div className="rounded-[14px] bg-white dark:bg-white/[0.07] overflow-hidden">
               {uploadFiles.length === 0 ? (
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full flex flex-col items-center gap-3 py-8 px-4"
-                >
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#007AFF]/10">
+                <button onClick={() => fileInputRef.current?.click()} className="w-full flex flex-col items-center gap-2.5 py-8 px-4">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#007AFF]/8">
                     <Upload className="h-6 w-6 text-[#007AFF]" />
                   </div>
-                  <div className="text-center">
-                    <p className="text-[14px] font-medium">Selecionar arquivos</p>
-                    <p className="text-[12px] text-muted-foreground mt-0.5">
-                      PDF, imagens, planilhas e mais
-                    </p>
-                  </div>
+                  <p className="text-[14px] font-medium">Selecionar arquivos</p>
+                  <p className="text-[12px] text-muted-foreground/40">PDF, imagens, planilhas e mais</p>
                 </button>
               ) : (
                 <>
                   {uploadFiles.map((file, i) => {
-                    const Icon = getFileIcon(file.type)
-                    const color = getFileIconColor(file.type)
+                    const Icon = getFileIcon(file.type); const color = getFileColor(file.type)
                     return (
-                      <div
-                        key={i}
-                        className={cn(
-                          'flex items-center gap-3 px-4 py-3',
-                          i > 0 && 'border-t border-border/10 dark:border-white/[0.04]',
-                        )}
-                      >
-                        <div
-                          className="flex h-9 w-9 items-center justify-center rounded-xl flex-shrink-0"
-                          style={{ backgroundColor: `${color}12` }}
-                        >
-                          <Icon className="h-4.5 w-4.5" style={{ color }} strokeWidth={1.5} />
+                      <div key={i} className={cn('flex items-center gap-3 px-4 py-2.5', i > 0 && 'border-t border-border/8 dark:border-white/[0.04]')}>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-[10px] flex-shrink-0" style={{ backgroundColor: `${color}0D` }}>
+                          <Icon className="h-4 w-4" style={{ color }} strokeWidth={1.5} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[14px] font-medium truncate">{file.name}</p>
-                          <p className="text-[12px] text-muted-foreground">
-                            {formatFileSize(file.size)}
-                          </p>
+                          <p className="text-[13px] font-medium truncate">{file.name}</p>
+                          <p className="text-[11px] text-muted-foreground/50">{fmtSize(file.size)}</p>
                         </div>
-                        <button
-                          onClick={() =>
-                            setUploadFiles(uploadFiles.filter((_, idx) => idx !== i))
-                          }
-                          className="flex h-7 w-7 items-center justify-center rounded-full bg-black/[0.04] dark:bg-white/[0.08]"
-                        >
-                          <X className="h-3.5 w-3.5" />
+                        <button onClick={() => setUploadFiles(uploadFiles.filter((_, j) => j !== i))} className="flex h-6 w-6 items-center justify-center rounded-full bg-black/[0.04] dark:bg-white/[0.08]">
+                          <X className="h-3 w-3" />
                         </button>
                       </div>
                     )
                   })}
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full flex items-center justify-center gap-1.5 py-2.5 text-[13px] text-[#007AFF] font-medium border-t border-border/10 dark:border-white/[0.04]"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Mais arquivos
+                  <button onClick={() => fileInputRef.current?.click()} className="w-full flex items-center justify-center gap-1.5 py-2.5 text-[13px] text-[#007AFF] font-medium border-t border-border/8 dark:border-white/[0.04]">
+                    <Plus className="h-3.5 w-3.5" /> Mais arquivos
                   </button>
                 </>
               )}
             </div>
 
             {/* Descrição */}
-            <div className="mt-4">
-              <p className="text-[12px] text-muted-foreground uppercase tracking-wider font-medium px-4 mb-1.5">
-                Descrição (opcional)
+            <div>
+              <p className="text-[12px] text-muted-foreground/45 uppercase tracking-wider font-semibold px-4 mb-1.5">
+                Descrição
               </p>
               <div className="rounded-[14px] bg-white dark:bg-white/[0.07] overflow-hidden">
                 <input
-                  type="text"
-                  value={uploadDescricao}
-                  onChange={(e) => setUploadDescricao(e.target.value)}
-                  placeholder="Adicionar uma descrição..."
-                  className="w-full px-4 py-3 bg-transparent text-[15px] border-0 focus:outline-none placeholder:text-muted-foreground/30"
+                  type="text" value={uploadDescricao} onChange={(e) => setUploadDescricao(e.target.value)}
+                  placeholder="Opcional..."
+                  className="w-full px-4 py-3 bg-transparent text-[15px] border-0 focus:outline-none placeholder:text-muted-foreground/25"
                 />
               </div>
             </div>
 
             {/* Categoria */}
-            <div className="mt-4">
-              <p className="text-[12px] text-muted-foreground uppercase tracking-wider font-medium px-4 mb-1.5">
-                Categoria
-              </p>
-              <div className="rounded-[14px] bg-white dark:bg-white/[0.07] overflow-hidden">
-                <button
-                  onClick={() => setUploadCategoriaId(null)}
-                  className={cn(
-                    'w-full flex items-center justify-between px-4 py-3 text-[15px] transition-colors',
-                    !uploadCategoriaId && 'text-[#007AFF] font-medium',
-                  )}
-                >
-                  <span>Sem categoria</span>
-                  {!uploadCategoriaId && <Check className="h-4.5 w-4.5 text-[#007AFF]" />}
-                </button>
-                {categorias.map((cat) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => setUploadCategoriaId(cat.id)}
-                    className={cn(
-                      'w-full flex items-center justify-between px-4 py-3 text-[15px] border-t border-border/10 dark:border-white/[0.04] transition-colors',
-                      uploadCategoriaId === cat.id && 'font-medium',
-                    )}
-                    style={uploadCategoriaId === cat.id ? { color: cat.cor } : undefined}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <span
-                        className="h-3 w-3 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: cat.cor }}
-                      />
-                      {cat.nome}
-                    </div>
-                    {uploadCategoriaId === cat.id && (
-                      <Check className="h-4.5 w-4.5" style={{ color: cat.cor }} />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Obra */}
-            {obras.length > 0 && (
-              <div className="mt-4">
-                <p className="text-[12px] text-muted-foreground uppercase tracking-wider font-medium px-4 mb-1.5">
-                  Obra (opcional)
+            {categorias.length > 0 && (
+              <div>
+                <p className="text-[12px] text-muted-foreground/45 uppercase tracking-wider font-semibold px-4 mb-1.5">
+                  Categoria
                 </p>
                 <div className="rounded-[14px] bg-white dark:bg-white/[0.07] overflow-hidden">
                   <button
-                    onClick={() => setUploadObraId(null)}
-                    className={cn(
-                      'w-full flex items-center justify-between px-4 py-3 text-[15px] transition-colors',
-                      !uploadObraId && 'text-[#007AFF] font-medium',
-                    )}
+                    onClick={() => setUploadCategoriaId(null)}
+                    className={cn('w-full flex items-center justify-between px-4 py-3 text-[15px]', !uploadCategoriaId && 'text-[#007AFF] font-medium')}
                   >
-                    <span>Documento geral</span>
-                    {!uploadObraId && <Check className="h-4.5 w-4.5 text-[#007AFF]" />}
+                    Nenhuma
+                    {!uploadCategoriaId && <Check className="h-4 w-4 text-[#007AFF]" />}
                   </button>
-                  {obras.map((obra) => (
+                  {categorias.map((c) => (
                     <button
-                      key={obra.id}
-                      onClick={() => setUploadObraId(obra.id)}
-                      className={cn(
-                        'w-full flex items-center justify-between px-4 py-3 text-[15px] border-t border-border/10 dark:border-white/[0.04] transition-colors',
-                        uploadObraId === obra.id && 'text-[#FF9500] font-medium',
-                      )}
+                      key={c.id}
+                      onClick={() => setUploadCategoriaId(c.id)}
+                      className={cn('w-full flex items-center justify-between px-4 py-3 text-[15px] border-t border-border/8 dark:border-white/[0.04]', uploadCategoriaId === c.id && 'font-medium')}
+                      style={uploadCategoriaId === c.id ? { color: c.cor } : undefined}
                     >
                       <div className="flex items-center gap-2.5">
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                        {obra.nome}
+                        <span className="h-3 w-3 rounded-full" style={{ backgroundColor: c.cor }} />
+                        {c.nome}
                       </div>
-                      {uploadObraId === obra.id && (
-                        <Check className="h-4.5 w-4.5 text-[#FF9500]" />
-                      )}
+                      {uploadCategoriaId === c.id && <Check className="h-4 w-4" style={{ color: c.cor }} />}
                     </button>
                   ))}
                 </div>
@@ -1111,210 +812,91 @@ export function DocumentacaoPage() {
         </DialogContent>
       </Dialog>
 
-      {/* ═══════════════════════════════════════════════════════════
-          CATEGORY MODAL
-          ═══════════════════════════════════════════════════════════ */}
-      <Dialog
-        open={categoryModalOpen}
-        onOpenChange={(open) => {
-          setCategoryModalOpen(open)
-          if (!open) {
-            setEditCategory(null)
-            setCatNome('')
-            setCatCor('#007AFF')
-          }
-        }}
-      >
+      {/* ══════════════════════════════════════════════════════
+          CATEGORY MODAL (iOS Sheet)
+          ══════════════════════════════════════════════════════ */}
+      <Dialog open={categoryModalOpen} onOpenChange={(o) => { setCategoryModalOpen(o); if (!o) { setEditCategory(null); setCatNome(''); setCatCor('#007AFF') } }}>
         <DialogContent className={modalCn}>
-          {/* Header */}
           <div className="sticky top-0 z-10 bg-[#F2F2F7] dark:bg-[#1C1C1E] px-5 pt-5 pb-3">
             <div className="flex items-center justify-between">
-              <button
-                onClick={() => setCategoryModalOpen(false)}
-                className="text-[16px] text-[#007AFF]"
-              >
-                Cancelar
+              <button onClick={() => setCategoryModalOpen(false)} className="text-[16px] text-[#007AFF]">
+                {editCategory ? 'Cancelar' : 'Fechar'}
               </button>
               <DialogTitle className="text-[16px] font-semibold">
-                {editCategory ? 'Editar Categoria' : 'Categorias'}
+                {editCategory ? 'Editar' : 'Categorias'}
               </DialogTitle>
               {editCategory ? (
-                <button
-                  onClick={handleSaveCategory}
-                  disabled={!catNome.trim()}
-                  className="text-[16px] font-semibold text-[#007AFF] disabled:text-muted-foreground/40"
-                >
+                <button onClick={saveCategory} disabled={!catNome.trim()} className="text-[16px] font-semibold text-[#007AFF] disabled:text-muted-foreground/30">
                   Salvar
                 </button>
-              ) : (
-                <div className="w-[68px]" />
-              )}
+              ) : <div className="w-[52px]" />}
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-5 pb-[env(safe-area-inset-bottom)] pb-5">
-            {/* Show form when editing or creating */}
-            {editCategory !== null || categorias.length === 0 ? (
+          <div className="flex-1 overflow-y-auto px-5 pb-5 space-y-4">
+            {editCategory ? (
               <>
-                {/* Category name */}
                 <div className="rounded-[14px] bg-white dark:bg-white/[0.07] overflow-hidden">
-                  <input
-                    type="text"
-                    value={catNome}
-                    onChange={(e) => setCatNome(e.target.value)}
-                    placeholder="Nome da categoria"
-                    className="w-full px-4 py-3.5 bg-transparent text-[15px] border-0 focus:outline-none placeholder:text-muted-foreground/30"
-                    autoFocus
-                  />
+                  <input type="text" value={catNome} onChange={(e) => setCatNome(e.target.value)} placeholder="Nome" className="w-full px-4 py-3.5 bg-transparent text-[15px] border-0 focus:outline-none placeholder:text-muted-foreground/25" autoFocus />
                 </div>
-
-                {/* Color picker */}
-                <div className="mt-4">
-                  <p className="text-[12px] text-muted-foreground uppercase tracking-wider font-medium px-4 mb-1.5">
-                    Cor
-                  </p>
+                <div>
+                  <p className="text-[12px] text-muted-foreground/45 uppercase tracking-wider font-semibold px-4 mb-1.5">Cor</p>
                   <div className="rounded-[14px] bg-white dark:bg-white/[0.07] p-4">
                     <div className="flex flex-wrap gap-3">
-                      {CATEGORY_COLORS.map((color) => (
-                        <button
-                          key={color}
-                          onClick={() => setCatCor(color)}
-                          className={cn(
-                            'h-8 w-8 rounded-full transition-all',
-                            catCor === color
-                              ? 'ring-2 ring-offset-2 ring-offset-[#F2F2F7] dark:ring-offset-[#1C1C1E]'
-                              : 'hover:scale-110',
-                          )}
-                          style={{
-                            backgroundColor: color,
-                            ...(catCor === color ? { ringColor: color } : {}),
-                          }}
-                        >
-                          {catCor === color && (
-                            <Check className="h-4 w-4 text-white mx-auto" strokeWidth={3} />
-                          )}
+                      {CATEGORY_COLORS.map((c) => (
+                        <button key={c} onClick={() => setCatCor(c)} className={cn('h-8 w-8 rounded-full transition-all', catCor === c ? 'ring-2 ring-offset-2 ring-offset-[#F2F2F7] dark:ring-offset-[#1C1C1E]' : 'hover:scale-110')} style={{ backgroundColor: c }}>
+                          {catCor === c && <Check className="h-4 w-4 text-white mx-auto" strokeWidth={3} />}
                         </button>
                       ))}
                     </div>
                   </div>
                 </div>
-
-                {/* Save button (for new category or if not in edit mode via list) */}
-                {!editCategory && (
-                  <motion.button
-                    whileTap={{ scale: 0.97 }}
-                    onClick={handleSaveCategory}
-                    disabled={!catNome.trim()}
-                    className="w-full mt-4 h-12 rounded-[14px] bg-[#007AFF] text-white text-[16px] font-semibold disabled:opacity-40 transition-opacity"
-                  >
-                    Criar Categoria
-                  </motion.button>
-                )}
-
-                {/* Delete option when editing */}
-                {editCategory && (
-                  <button
-                    onClick={() => handleDeleteCategory(editCategory.id)}
-                    className="w-full mt-4 h-12 rounded-[14px] text-[#FF3B30] text-[16px] font-medium bg-white dark:bg-white/[0.07]"
-                  >
-                    Excluir Categoria
-                  </button>
-                )}
-
-                {/* Back to list */}
-                {editCategory && (
-                  <button
-                    onClick={() => {
-                      setEditCategory(null)
-                      setCatNome('')
-                      setCatCor('#007AFF')
-                    }}
-                    className="w-full mt-2 py-2 text-[14px] text-[#007AFF]"
-                  >
-                    ← Voltar para lista
-                  </button>
-                )}
+                <button onClick={() => deleteCategory(editCategory.id)} className="w-full h-12 rounded-[14px] text-[#FF3B30] text-[15px] font-medium bg-white dark:bg-white/[0.07]">
+                  Excluir Categoria
+                </button>
+                <button onClick={() => { setEditCategory(null); setCatNome(''); setCatCor('#007AFF') }} className="w-full py-2 text-[14px] text-[#007AFF]">
+                  ← Voltar
+                </button>
               </>
             ) : (
               <>
-                {/* Category list */}
-                <div className="rounded-[14px] bg-white dark:bg-white/[0.07] overflow-hidden">
-                  {categorias.map((cat, i) => (
-                    <div
-                      key={cat.id}
-                      className={cn(
-                        'flex items-center gap-3 px-4 py-3',
-                        i > 0 && 'border-t border-border/10 dark:border-white/[0.04]',
-                      )}
-                    >
-                      <span
-                        className="h-4 w-4 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: cat.cor }}
-                      />
-                      <span className="text-[15px] flex-1">{cat.nome}</span>
-                      <span className="text-[13px] text-muted-foreground mr-2">
-                        {categoryCounts[cat.id] || 0}
-                      </span>
-                      <button
-                        onClick={() => {
-                          setEditCategory(cat)
-                          setCatNome(cat.nome)
-                          setCatCor(cat.cor)
-                        }}
-                        className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
-                      >
-                        <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Add new category */}
-                <div className="mt-4">
-                  <p className="text-[12px] text-muted-foreground uppercase tracking-wider font-medium px-4 mb-1.5">
-                    Nova Categoria
-                  </p>
+                {/* List */}
+                {categorias.length > 0 && (
                   <div className="rounded-[14px] bg-white dark:bg-white/[0.07] overflow-hidden">
-                    <input
-                      type="text"
-                      value={catNome}
-                      onChange={(e) => setCatNome(e.target.value)}
-                      placeholder="Nome da categoria"
-                      className="w-full px-4 py-3.5 bg-transparent text-[15px] border-0 focus:outline-none placeholder:text-muted-foreground/30"
-                    />
-                  </div>
-
-                  <div className="mt-3">
-                    <div className="rounded-[14px] bg-white dark:bg-white/[0.07] p-3">
-                      <div className="flex flex-wrap gap-2.5">
-                        {CATEGORY_COLORS.map((color) => (
-                          <button
-                            key={color}
-                            onClick={() => setCatCor(color)}
-                            className={cn(
-                              'h-7 w-7 rounded-full transition-all',
-                              catCor === color
-                                ? 'ring-2 ring-offset-2 ring-offset-[#F2F2F7] dark:ring-offset-[#1C1C1E]'
-                                : 'hover:scale-110',
-                            )}
-                            style={{ backgroundColor: color }}
-                          >
-                            {catCor === color && (
-                              <Check className="h-3.5 w-3.5 text-white mx-auto" strokeWidth={3} />
-                            )}
-                          </button>
-                        ))}
+                    {categorias.map((c, i) => (
+                      <div key={c.id} className={cn('flex items-center gap-3 px-4 py-3', i > 0 && 'border-t border-border/8 dark:border-white/[0.04]')}>
+                        <span className="h-4 w-4 rounded-full" style={{ backgroundColor: c.cor }} />
+                        <span className="text-[15px] flex-1">{c.nome}</span>
+                        <span className="text-[13px] text-muted-foreground/40 tabular-nums mr-2">{catCounts[c.id] || 0}</span>
+                        <button onClick={() => { setEditCategory(c); setCatNome(c.nome); setCatCor(c.cor) }} className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-black/[0.04] dark:hover:bg-white/[0.06]">
+                          <Pencil className="h-3.5 w-3.5 text-muted-foreground/50" />
+                        </button>
                       </div>
+                    ))}
+                  </div>
+                )}
+                {/* Add new */}
+                <div>
+                  <p className="text-[12px] text-muted-foreground/45 uppercase tracking-wider font-semibold px-4 mb-1.5">Nova</p>
+                  <div className="rounded-[14px] bg-white dark:bg-white/[0.07] overflow-hidden">
+                    <input type="text" value={catNome} onChange={(e) => setCatNome(e.target.value)} placeholder="Nome da categoria" className="w-full px-4 py-3.5 bg-transparent text-[15px] border-0 focus:outline-none placeholder:text-muted-foreground/25" />
+                  </div>
+                  <div className="mt-3 rounded-[14px] bg-white dark:bg-white/[0.07] p-3">
+                    <div className="flex flex-wrap gap-2.5">
+                      {CATEGORY_COLORS.map((c) => (
+                        <button key={c} onClick={() => setCatCor(c)} className={cn('h-7 w-7 rounded-full transition-all', catCor === c ? 'ring-2 ring-offset-2 ring-offset-[#F2F2F7] dark:ring-offset-[#1C1C1E]' : 'hover:scale-110')} style={{ backgroundColor: c }}>
+                          {catCor === c && <Check className="h-3.5 w-3.5 text-white mx-auto" strokeWidth={3} />}
+                        </button>
+                      ))}
                     </div>
                   </div>
-
                   <motion.button
                     whileTap={{ scale: 0.97 }}
-                    onClick={handleSaveCategory}
+                    onClick={saveCategory}
                     disabled={!catNome.trim()}
-                    className="w-full mt-3 h-11 rounded-[14px] bg-[#007AFF] text-white text-[15px] font-semibold disabled:opacity-40 transition-opacity"
+                    className="w-full mt-3 h-11 rounded-[14px] bg-[#007AFF] text-white text-[15px] font-semibold disabled:opacity-30 transition-opacity"
                   >
-                    Criar Categoria
+                    Criar
                   </motion.button>
                 </div>
               </>

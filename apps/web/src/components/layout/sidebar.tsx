@@ -254,6 +254,7 @@ export function Sidebar() {
         animate={{ width: sidebarCollapsed ? 72 : 260 }}
         transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
         className="fixed left-0 top-0 z-40 hidden md:flex h-screen flex-col border-r glass"
+        style={{ willChange: 'width' }}
       >
         <SidebarInner isMobile={false} />
 

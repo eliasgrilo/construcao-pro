@@ -300,7 +300,7 @@ export function NovaMovimentacaoDialog({
                     >
                       {subconta === 'CAIXA' && (
                         <motion.div
-                          layoutId="sc-ios"
+                          layoutId="sc-ios-caixa"
                           className="absolute inset-0 bg-white dark:bg-[#3A3A3C] rounded-[8px] shadow-sm -z-10"
                           transition={{ type: 'spring', bounce: 0.18, duration: 0.36 }}
                         />
@@ -320,7 +320,7 @@ export function NovaMovimentacaoDialog({
                     >
                       {subconta === 'APLICADO' && (
                         <motion.div
-                          layoutId="sc-ios"
+                          layoutId="sc-ios-caixa"
                           className="absolute inset-0 bg-white dark:bg-[#3A3A3C] rounded-[8px] shadow-sm -z-10"
                           transition={{ type: 'spring', bounce: 0.18, duration: 0.36 }}
                         />

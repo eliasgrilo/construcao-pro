@@ -11,25 +11,27 @@
   align-items: flex-end; /* Bottom sheet padrão Apple */
   justify-content: center;
 
-  background: var(--modal-backdrop-color);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  /* start transparent — backdropEnter animation fades in the blur */
+  background: transparent;
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
 
   --drag-opacity-factor: calc(1 - var(--drag-progress, 0));
   touch-action: manipulation;
 }
 
 .overlay[data-state="open"] {
+  /* Final state after backdropEnter animation completes */
   background: var(--modal-backdrop-color);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
 
-.overlay[data-state="closed"] {
-  background: transparent;
-  backdrop-filter: blur(0px);
-  -webkit-backdrop-filter: blur(0px);
-  pointer-events: none;
+.overlay[data-state="closing"] {
+  /* Keep blur visible during backdropExit animation */
+  background: var(--modal-backdrop-color);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .container {

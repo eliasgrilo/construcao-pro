@@ -265,7 +265,7 @@ export function ObraDetailEstoqueTable({
           >
             {filterCategoria === ESTOQUE_CATEGORY_ALL && (
               <motion.div
-                layoutId="estoque-cat-pill"
+                layoutId="estoque-table-cat-pill"
                 className="absolute inset-0 rounded-full bg-primary"
                 transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }}
               />
@@ -286,7 +286,7 @@ export function ObraDetailEstoqueTable({
             >
               {filterCategoria === categoria.key && (
                 <motion.div
-                  layoutId="estoque-cat-pill"
+                  layoutId="estoque-table-cat-pill"
                   className="absolute inset-0 rounded-full bg-primary"
                   transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }}
                 />

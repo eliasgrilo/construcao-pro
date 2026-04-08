@@ -288,7 +288,7 @@ export function CategoryFilterChips({
       >
         {filterCategoria === 'ALL' && (
           <motion.div
-            layoutId="estoque-cat-pill"
+            layoutId="estoque-page-cat-pill"
             className="absolute inset-0 rounded-full bg-primary"
             transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }}
           />
@@ -309,7 +309,7 @@ export function CategoryFilterChips({
         >
           {filterCategoria === cat.key && (
             <motion.div
-              layoutId="estoque-cat-pill"
+              layoutId="estoque-page-cat-pill"
               className="absolute inset-0 rounded-full bg-primary"
               transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }}
             />

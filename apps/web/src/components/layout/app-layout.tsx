@@ -102,7 +102,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: 0 } }}
             transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
-            style={{ minHeight: '100%' }}
+            style={{ minHeight: '100%', willChange: 'opacity' }}
           >
             {children}
           </motion.div>

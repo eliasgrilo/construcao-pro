@@ -1,27 +1,9 @@
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  useDashboardCustoPorObra,
-  useMateriais,
-  useMaterialCostTrend,
-  useMaterialEntradas,
-  useSupplierPriceRanking,
-} from '@/hooks/use-supabase'
-import { cn, formatCurrency, formatDate, formatNumber } from '@/lib/utils'
-import * as TabsPrimitive from '@radix-ui/react-tabs'
-import { useQueryClient } from '@tanstack/react-query'
+import { useMaterialCostTrend } from '@/hooks/use-supabase'
+import { formatCurrency } from '@/lib/utils'
 import { motion } from 'framer-motion'
-import {
-  AlertTriangle,
-  BarChart2,
-  ChevronDown,
-  Package,
-  RotateCcw,
-  Search,
-  TrendingDown,
-  TrendingUp,
-} from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { AlertTriangle, BarChart2, TrendingDown, TrendingUp } from 'lucide-react'
 import {
   Bar,
   BarChart,
@@ -34,55 +16,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-const statusMap: Record<string, { label: string; color: string; bgColor: string }> = {
-  ATIVA: { label: 'Ativa', color: '#34C759', bgColor: '#34C75918' },
-  FINALIZADA: { label: 'Finalizada', color: '#8E8E93', bgColor: '#8E8E9318' },
-  PAUSADA: { label: 'Pausada', color: '#FF9500', bgColor: '#FF950018' },
-  VENDIDO: { label: 'Vendido', color: '#5856D6', bgColor: '#5856D618' },
-  TERRENO: { label: 'Terreno', color: '#AF52DE', bgColor: '#AF52DE18' },
-  MANUTENCAO: { label: 'Manutenção', color: '#FF9500', bgColor: '#FF950018' },
-}
-
-function ringColor(pct: number) {
-  return pct > 90 ? '#FF3B30' : pct > 70 ? '#FF9500' : '#34C759'
-}
-
-const containerVariants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.04 } },
-} as const
-
-const rowVariants = {
-  hidden: { opacity: 0, y: 8 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { type: 'spring', stiffness: 520, damping: 38, mass: 0.7 },
-  },
-} as const
-
-// ─── Custom Tooltip ──────────────────────────────────────────────────────────
-
-interface ChartTipProps {
-  active?: boolean
-  payload?: Array<{ value: number }>
-  label?: string
-}
-
-function ChartTip({ active, payload, label }: ChartTipProps) {
-  if (active && payload && payload.length) {
-    return (
-      <div className="rounded-xl border bg-card/95 p-3 shadow-xl backdrop-blur-md">
-        <p className="text-[12px] font-medium text-muted-foreground mb-1">{label}</p>
-        <p className="text-[14px] font-bold tabular-nums">{formatCurrency(payload[0].value)}</p>
-      </div>
-    )
-  }
-  return null
-}
+import { ChartTip } from './analises-shared'
 
 // ─── Tab: Orçamento por Obra ─────────────────────────────────────────────────
 

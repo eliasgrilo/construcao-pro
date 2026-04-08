@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 import * as TabsPrimitive from '@radix-ui/react-tabs'
-import { motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useState } from 'react'
 import { FornecedoresTab } from './analises/fornecedores-tab'
 import { MateriaisTab } from './analises/materiais-tab'
@@ -67,18 +67,87 @@ export function AnalisesPage() {
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          <TabsPrimitive.Content value="orcamento" className="pt-5 focus-visible:outline-none">
-            <OrcamentoTab />
-          </TabsPrimitive.Content>
-          <TabsPrimitive.Content value="fornecedores" className="pt-5 focus-visible:outline-none">
-            <FornecedoresTab isActive={activeTab === 'fornecedores'} />
-          </TabsPrimitive.Content>
-          <TabsPrimitive.Content value="tendencia" className="pt-5 focus-visible:outline-none">
-            <TendenciaTab isActive={activeTab === 'tendencia'} />
-          </TabsPrimitive.Content>
-          <TabsPrimitive.Content value="materiais" className="pt-5 focus-visible:outline-none">
-            <MateriaisTab isActive={activeTab === 'materiais'} />
-          </TabsPrimitive.Content>
+          {/* AnimatePresence garante fade suave tanto na entrada quanto na saída do conteúdo.
+              mode="wait" espera o conteúdo antigo sair antes de mostrar o novo —
+              evita flicker de dois painéis sobrepostos. */}
+          <AnimatePresence mode="wait" initial={false}>
+            {activeTab === 'orcamento' && (
+              <TabsPrimitive.Content
+                key="orcamento"
+                value="orcamento"
+                forceMount
+                className="pt-5 focus-visible:outline-none"
+                asChild
+              >
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4, transition: { duration: 0.12 } }}
+                  transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+                  style={{ willChange: 'opacity, transform' }}
+                >
+                  <OrcamentoTab />
+                </motion.div>
+              </TabsPrimitive.Content>
+            )}
+            {activeTab === 'fornecedores' && (
+              <TabsPrimitive.Content
+                key="fornecedores"
+                value="fornecedores"
+                forceMount
+                className="pt-5 focus-visible:outline-none"
+                asChild
+              >
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4, transition: { duration: 0.12 } }}
+                  transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+                  style={{ willChange: 'opacity, transform' }}
+                >
+                  <FornecedoresTab isActive={activeTab === 'fornecedores'} />
+                </motion.div>
+              </TabsPrimitive.Content>
+            )}
+            {activeTab === 'tendencia' && (
+              <TabsPrimitive.Content
+                key="tendencia"
+                value="tendencia"
+                forceMount
+                className="pt-5 focus-visible:outline-none"
+                asChild
+              >
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4, transition: { duration: 0.12 } }}
+                  transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+                  style={{ willChange: 'opacity, transform' }}
+                >
+                  <TendenciaTab isActive={activeTab === 'tendencia'} />
+                </motion.div>
+              </TabsPrimitive.Content>
+            )}
+            {activeTab === 'materiais' && (
+              <TabsPrimitive.Content
+                key="materiais"
+                value="materiais"
+                forceMount
+                className="pt-5 focus-visible:outline-none"
+                asChild
+              >
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4, transition: { duration: 0.12 } }}
+                  transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+                  style={{ willChange: 'opacity, transform' }}
+                >
+                  <MateriaisTab isActive={activeTab === 'materiais'} />
+                </motion.div>
+              </TabsPrimitive.Content>
+            )}
+          </AnimatePresence>
         </div>
       </TabsPrimitive.Root>
     </div>

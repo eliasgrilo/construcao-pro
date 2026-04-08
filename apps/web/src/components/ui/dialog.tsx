@@ -3,12 +3,8 @@ import { cn } from '@/lib/utils'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import * as React from 'react'
 
-function Dialog({ open, ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) {
-  // iOS Safari ignores overflow:hidden on body — use position:fixed scroll lock instead.
-  // Radix's built-in scroll prevention is unreliable on iOS, so we override it here.
-  useBodyScrollLock(open ?? false)
-  useOverlayPresence(open ?? false)
-  return <DialogPrimitive.Root open={open} {...props} />
+function Dialog(props: React.ComponentProps<typeof DialogPrimitive.Root>) {
+  return <DialogPrimitive.Root {...props} />
 }
 
 const DialogTrigger = DialogPrimitive.Trigger
@@ -18,10 +14,16 @@ const DialogClose = DialogPrimitive.Close
 const DialogOverlay = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Overlay>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
->(({ className, onClick, ...props }, ref) => (
-  <DialogPrimitive.Overlay
-    ref={ref}
-    onClick={(e) => {
+>(({ className, onClick, ...props }, ref) => {
+  // Move scroll lock here so it persists during Framer Space/Radix exit animations,
+  // preventing the background from jumping (empurrar a tela) before modal leaves.
+  useBodyScrollLock(true)
+  useOverlayPresence(true)
+
+  return (
+    <DialogPrimitive.Overlay
+      ref={ref}
+      onClick={(e) => {
       if (document.activeElement instanceof HTMLElement) {
         document.activeElement.blur()
       }
@@ -36,7 +38,8 @@ const DialogOverlay = React.forwardRef<
     )}
     {...props}
   />
-))
+  )
+})
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
 const DialogContent = React.forwardRef<
@@ -49,9 +52,9 @@ const DialogContent = React.forwardRef<
       {/*
         With interactive-widget=resizes-content, the layout viewport shrinks
         when the keyboard opens. position:fixed;inset:0 automatically covers
-        only the visible area (above keyboard). No JS hacks needed.
+        only the visible area (above keyboard). overflow-hidden prevents translate out of bounds jank.
       */}
-      <div className="pointer-events-none fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6">
+      <div className="pointer-events-none fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6 overflow-hidden">
         <DialogPrimitive.Content
           ref={ref}
           className={cn(
@@ -67,17 +70,16 @@ const DialogContent = React.forwardRef<
             'px-5 pt-3 pb-[var(--modal-pb,max(1.25rem,env(safe-area-inset-bottom)))]',
             /*
               ── ANIMATIONS ──
-              Mobile: slide up from bottom with Apple-style spring deceleration.
+              Mobile: Apple-style modal behavior with spring deceleration.
             */
-            'data-[state=open]:animate-in data-[state=closed]:animate-out',
-            'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
-            'data-[state=closed]:slide-out-to-bottom-full data-[state=open]:slide-in-from-bottom-full',
-            'data-[state=open]:duration-[380ms] data-[state=closed]:duration-[220ms]',
-            'data-[state=open]:[animation-timing-function:cubic-bezier(0.32,0.72,0,1)]',
-            'data-[state=closed]:[animation-timing-function:cubic-bezier(0.4,0,1,1)]',
+            'max-sm:data-[state=open]:animate-in max-sm:data-[state=closed]:animate-out',
+            'max-sm:data-[state=closed]:fade-out-0 max-sm:data-[state=open]:fade-in-0',
+            'max-sm:data-[state=closed]:[animation:modalExit_0.22s_cubic-bezier(0.4,0,1,1)_forwards]',
+            'max-sm:data-[state=open]:[animation:modalEnter_0.38s_cubic-bezier(0.32,0.72,0,1)_forwards]',
             /* ── Desktop: centered card ── */
+            'sm:data-[state=open]:animate-in sm:data-[state=closed]:animate-out',
+            'sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0',
             'sm:max-w-lg sm:rounded-2xl sm:max-h-[85vh] sm:px-6 sm:pt-6 sm:pb-6',
-            'sm:data-[state=closed]:slide-out-to-bottom-[0%] sm:data-[state=open]:slide-in-from-bottom-[0%]',
             'sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95',
             'sm:data-[state=open]:duration-[260ms] sm:data-[state=closed]:duration-[180ms]',
             'sm:data-[state=open]:[animation-timing-function:cubic-bezier(0.34,1.56,0.64,1)]',

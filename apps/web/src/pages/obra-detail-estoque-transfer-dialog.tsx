@@ -48,9 +48,7 @@ export function ObraDetailEstoqueTransferDialog({
   const formRef = useRef<HTMLDivElement>(null)
   const { focusNext, focusPrev, dismiss, canGoPrev, canGoNext } = useFormFieldNavigation(formRef)
 
-  const destinos = allAlmoxarifados.filter(
-    (a) => a.id !== state.almoxId && a.obra_id === obraId,
-  )
+  const destinos = allAlmoxarifados.filter((a) => a.id !== state.almoxId && a.obra_id === obraId)
 
   const qtyNumber = Number(state.qty.replace(',', '.'))
   const canSubmit =
@@ -138,9 +136,7 @@ export function ObraDetailEstoqueTransferDialog({
                 <SelectTrigger className={triggerCn}>
                   <SelectValue
                     placeholder={
-                      state.almoxId
-                        ? 'Selecione o material…'
-                        : 'Selecione a origem primeiro'
+                      state.almoxId ? 'Selecione o material…' : 'Selecione a origem primeiro'
                     }
                   />
                 </SelectTrigger>
@@ -158,9 +154,7 @@ export function ObraDetailEstoqueTransferDialog({
             </div>
             {state.materialId && state.almoxId && (
               <div className="mt-2 rounded-[14px] bg-[#007AFF]/8 dark:bg-[#007AFF]/12 px-4 py-3 flex items-center justify-between">
-                <span className="text-[13px] font-medium text-[#007AFF]">
-                  Disponível
-                </span>
+                <span className="text-[13px] font-medium text-[#007AFF]">Disponível</span>
                 <span className="text-[15px] font-bold text-[#007AFF] tabular-nums">
                   {formatNumber(availableQuantity)}
                 </span>
@@ -202,9 +196,7 @@ export function ObraDetailEstoqueTransferDialog({
                 placeholder="0"
                 inputMode="decimal"
                 value={state.qty}
-                onChange={(e) =>
-                  onFieldChange('qty', e.target.value.replace(/[^\d,.]/g, ''))
-                }
+                onChange={(e) => onFieldChange('qty', e.target.value.replace(/[^\d,.]/g, ''))}
                 className="w-full px-4 py-3.5 bg-transparent text-[15px] border-0 focus:outline-none placeholder:text-muted-foreground/25"
               />
             </div>

@@ -210,7 +210,11 @@ export function ReceberParcelaModal({
                             ? 'bg-[#007AFF]/[0.05]'
                             : 'hover:bg-black/[0.03] dark:hover:bg-white/[0.03]',
                         )}
-                        style={isSelected ? { border: '1px solid rgba(0,122,255,0.25)' } : { border: '1px solid transparent' }}
+                        style={
+                          isSelected
+                            ? { border: '1px solid rgba(0,122,255,0.25)' }
+                            : { border: '1px solid transparent' }
+                        }
                       >
                         <span
                           className="flex h-8 w-8 items-center justify-center rounded-[8px] flex-shrink-0"
@@ -233,7 +237,10 @@ export function ReceberParcelaModal({
                             animate={{ scale: 1 }}
                             transition={{ type: 'spring', stiffness: 500, damping: 25 }}
                           >
-                            <CheckCircle2 className="h-5 w-5 flex-shrink-0" style={{ color: '#007AFF' }} />
+                            <CheckCircle2
+                              className="h-5 w-5 flex-shrink-0"
+                              style={{ color: '#007AFF' }}
+                            />
                           </motion.div>
                         )}
                       </motion.button>
@@ -286,9 +293,7 @@ export function ReceberParcelaModal({
             </div>
             <div className="h-px ml-4 bg-black/[0.07] dark:bg-white/[0.07]" />
             <div className="flex items-center min-h-[52px] px-4 gap-3">
-              <span className="text-[16px] font-medium flex-shrink-0 text-foreground">
-                Data
-              </span>
+              <span className="text-[16px] font-medium flex-shrink-0 text-foreground">Data</span>
               <input
                 type="date"
                 value={dataReceb}
@@ -300,40 +305,42 @@ export function ReceberParcelaModal({
 
           {/* New balance preview */}
           <AnimatePresence>
-            {selectedConta && valorRecebido > 0 && (() => {
-              const novoSaldo = (Number(selectedConta.valor_caixa) || 0) + valorRecebido
-              const positivo = novoSaldo >= 0
-              const cor = positivo ? '#34C759' : '#FF3B30'
-              return (
-                <motion.div
-                  key="saldo-preview"
-                  initial={{ opacity: 0, y: 6, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 6, scale: 0.98 }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                  className="rounded-[14px] px-4 py-3"
-                  style={{
-                    backgroundColor: positivo ? 'rgba(52,199,89,0.06)' : 'rgba(255,59,48,0.06)',
-                    border: `1px solid ${cor}20`,
-                  }}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[13px] text-muted-foreground">Saldo atual (caixa)</span>
-                    <span className="text-[13px] font-medium tabular-nums text-muted-foreground">
-                      {formatCurrency(Number(selectedConta.valor_caixa) || 0)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[13px] font-semibold" style={{ color: cor }}>
-                      {positivo ? 'Novo saldo em caixa' : 'Saldo insuficiente'}
-                    </span>
-                    <span className="text-[15px] font-bold tabular-nums" style={{ color: cor }}>
-                      {formatCurrency(novoSaldo)}
-                    </span>
-                  </div>
-                </motion.div>
-              )
-            })()}
+            {selectedConta &&
+              valorRecebido > 0 &&
+              (() => {
+                const novoSaldo = (Number(selectedConta.valor_caixa) || 0) + valorRecebido
+                const positivo = novoSaldo >= 0
+                const cor = positivo ? '#34C759' : '#FF3B30'
+                return (
+                  <motion.div
+                    key="saldo-preview"
+                    initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 6, scale: 0.98 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    className="rounded-[14px] px-4 py-3"
+                    style={{
+                      backgroundColor: positivo ? 'rgba(52,199,89,0.06)' : 'rgba(255,59,48,0.06)',
+                      border: `1px solid ${cor}20`,
+                    }}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[13px] text-muted-foreground">Saldo atual (caixa)</span>
+                      <span className="text-[13px] font-medium tabular-nums text-muted-foreground">
+                        {formatCurrency(Number(selectedConta.valor_caixa) || 0)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[13px] font-semibold" style={{ color: cor }}>
+                        {positivo ? 'Novo saldo em caixa' : 'Saldo insuficiente'}
+                      </span>
+                      <span className="text-[15px] font-bold tabular-nums" style={{ color: cor }}>
+                        {formatCurrency(novoSaldo)}
+                      </span>
+                    </div>
+                  </motion.div>
+                )
+              })()}
           </AnimatePresence>
         </div>
 
@@ -351,7 +358,14 @@ export function ReceberParcelaModal({
                   ? 'text-white'
                   : 'bg-black/[0.07] dark:bg-white/[0.07] text-foreground/25 cursor-not-allowed',
               )}
-              style={canConfirm ? { background: 'linear-gradient(135deg, #30D158, #25A244)', boxShadow: '0 4px 16px rgba(52,199,89,0.35)' } : undefined}
+              style={
+                canConfirm
+                  ? {
+                      background: 'linear-gradient(135deg, #30D158, #25A244)',
+                      boxShadow: '0 4px 16px rgba(52,199,89,0.35)',
+                    }
+                  : undefined
+              }
             >
               {isPending && (
                 <div className="h-[18px] w-[18px] rounded-full border-2 border-white/30 border-t-white animate-spin" />

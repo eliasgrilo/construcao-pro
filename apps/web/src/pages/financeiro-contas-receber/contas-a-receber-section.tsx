@@ -148,7 +148,11 @@ export function ContasAReceberSection({
     }
   })
 
-  const handleReceberParcela = async (contaBancariaId: string, dataRecebimento: string, valor: number) => {
+  const handleReceberParcela = async (
+    contaBancariaId: string,
+    dataRecebimento: string,
+    valor: number,
+  ) => {
     if (!receberModal) return
     const desc = receberModal.contas_receber?.descricao ?? '—'
     try {

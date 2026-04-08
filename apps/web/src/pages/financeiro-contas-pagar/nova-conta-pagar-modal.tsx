@@ -124,8 +124,8 @@ export function NovaContaPagarModal({
 
   // ── Forma de pagamento (local — appended to observacoes on save) ──
   const [formaPagamento, setFormaPagamento] = useState<string>('')
-  const [taxaCartaoStr, setTaxaCartaoStr] = useState('')   // "2,5" → %/parcela para CARTAO
-  const [diaVencBoleto, setDiaVencBoleto] = useState('')   // "10" → dia do mês para BOLETO
+  const [taxaCartaoStr, setTaxaCartaoStr] = useState('') // "2,5" → %/parcela para CARTAO
+  const [diaVencBoleto, setDiaVencBoleto] = useState('') // "10" → dia do mês para BOLETO
   const FORMAS_PAGAMENTO = [
     { value: 'PIX', label: 'PIX' },
     { value: 'BOLETO', label: 'Boleto' },
@@ -134,15 +134,18 @@ export function NovaContaPagarModal({
     { value: 'DINHEIRO', label: 'Dinheiro' },
   ]
 
-  const canSubmit = descricaoVal.trim().length >= 2 && valor > 0 && !!vencimento && !!formaPagamento && !isPending
+  const canSubmit =
+    descricaoVal.trim().length >= 2 && valor > 0 && !!vencimento && !!formaPagamento && !isPending
 
   const handleSubmit = form.handleSubmit(async (data) => {
     try {
       // Prepend forma de pagamento to observacoes when set
       const obsBase = data.observacoes?.trim() ?? ''
-      const formaLabel = FORMAS_PAGAMENTO.find((f) => f.value === formaPagamento)?.label ?? formaPagamento
+      const formaLabel =
+        FORMAS_PAGAMENTO.find((f) => f.value === formaPagamento)?.label ?? formaPagamento
       let extras = ''
-      if (formaPagamento === 'CARTAO' && taxaCartaoStr) extras = ` · Taxa: ${taxaCartaoStr}%/parcela`
+      if (formaPagamento === 'CARTAO' && taxaCartaoStr)
+        extras = ` · Taxa: ${taxaCartaoStr}%/parcela`
       if (formaPagamento === 'BOLETO' && diaVencBoleto) extras = ` · Venc. dia ${diaVencBoleto}`
       const obsComForma = formaPagamento
         ? obsBase
@@ -182,8 +185,12 @@ export function NovaContaPagarModal({
     if (firstError) {
       try {
         form.setFocus(firstError as Parameters<typeof form.setFocus>[0])
-        document.querySelector(`[name="${firstError}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      } catch { /* Controller fields not focusable via setFocus */ }
+        document
+          .querySelector(`[name="${firstError}"]`)
+          ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      } catch {
+        /* Controller fields not focusable via setFocus */
+      }
       await shakeControls.start({
         x: [0, -10, 10, -8, 8, -5, 5, 0],
         transition: { duration: 0.42, ease: 'easeInOut' },
@@ -430,7 +437,10 @@ export function NovaContaPagarModal({
               style={{ color: '#8E8E93' }}
             >
               Forma de pagamento
-              <span className="ml-1.5 normal-case font-normal text-[10px]" style={{ color: !formaPagamento ? '#FF3B30' : '#8E8E93' }}>
+              <span
+                className="ml-1.5 normal-case font-normal text-[10px]"
+                style={{ color: !formaPagamento ? '#FF3B30' : '#8E8E93' }}
+              >
                 {!formaPagamento ? '* obrigatório' : 'selecionado'}
               </span>
             </p>
@@ -503,7 +513,9 @@ export function NovaContaPagarModal({
                         inputMode="decimal"
                         className="w-[72px] text-[16px] text-right bg-transparent outline-none tabular-nums font-semibold placeholder:text-black/20 dark:placeholder:text-white/20 focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 rounded-sm"
                       />
-                      <span className="text-[14px] font-semibold text-foreground/50 flex-shrink-0">%</span>
+                      <span className="text-[14px] font-semibold text-foreground/50 flex-shrink-0">
+                        %
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -548,7 +560,9 @@ export function NovaContaPagarModal({
           {/* Grupo 3: Parcelas stepper + preview */}
           <div className="rounded-[14px] overflow-hidden bg-white dark:bg-[#2C2C2E]">
             <div className="flex items-center min-h-[52px] px-4 gap-3">
-              <span className="text-[16px] font-medium flex-shrink-0 text-foreground">Parcelas</span>
+              <span className="text-[16px] font-medium flex-shrink-0 text-foreground">
+                Parcelas
+              </span>
               <div className="flex-1 flex items-center justify-end gap-3">
                 <motion.button
                   type="button"

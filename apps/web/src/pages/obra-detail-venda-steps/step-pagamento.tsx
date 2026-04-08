@@ -568,7 +568,8 @@ export function StepPagamento({
                         {n === 1 ? 'À vista' : `${n}×`}
                         {n > 1 && pmtN > 0 && (
                           <span className="font-normal text-muted-foreground">
-                            {' '}de{' '}
+                            {' '}
+                            de{' '}
                             <span className="font-semibold dark:text-white text-[#1C1C1E]">
                               {formatCurrency(pmtN)}
                             </span>
@@ -587,7 +588,10 @@ export function StepPagamento({
                         animate={{ scale: 1 }}
                         transition={{ type: 'spring', stiffness: 600, damping: 25 }}
                       >
-                        <Check className="h-4 w-4 flex-shrink-0 ml-1" style={{ color: '#FF375F' }} />
+                        <Check
+                          className="h-4 w-4 flex-shrink-0 ml-1"
+                          style={{ color: '#FF375F' }}
+                        />
                       </motion.div>
                     )}
                   </button>
@@ -616,7 +620,10 @@ export function StepPagamento({
                     >
                       <CalendarDays className="h-[12px] w-[12px]" style={{ color: '#FF375F' }} />
                     </span>
-                    <p className="text-[11px] font-semibold tracking-wide" style={{ color: '#8E8E93' }}>
+                    <p
+                      className="text-[11px] font-semibold tracking-wide"
+                      style={{ color: '#8E8E93' }}
+                    >
                       {Number(vendaParcelas) > 1 ? 'VENCIMENTO DO 1º BOLETO' : 'DATA DE VENCIMENTO'}
                     </p>
                   </div>
@@ -635,36 +642,55 @@ export function StepPagamento({
                   </div>
 
                   {/* Cronograma boletos */}
-                  {Number(vendaParcelas) > 1 && vendaDataPrimeiraParcela && baseParc > 0 && (() => {
-                    const n = Number(vendaParcelas)
-                    const pmtSched = Math.round((baseParc / n) * 100) / 100
-                    const baseDate = new Date(`${vendaDataPrimeiraParcela}T12:00:00`)
-                    return (
-                      <div className="px-4 pb-3" style={{ borderTop: '1px solid rgba(60,60,67,0.07)', paddingTop: '12px' }}>
-                        <p className="text-[10px] font-semibold tracking-wide mb-2" style={{ color: '#8E8E93' }}>
-                          CRONOGRAMA DE BOLETOS
-                        </p>
-                        {Array.from({ length: Math.min(n, 3) }, (_, i) => {
-                          const d = addMonthsClamped(baseDate, i)
-                          return (
-                            <div key={i} className="flex items-center justify-between py-1.5">
-                              <span className="text-[12px]" style={{ color: '#8E8E93' }}>
-                                {i + 1}º boleto · {d.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })}
-                              </span>
-                              <span className="text-[12px] font-semibold tabular-nums" style={{ color: '#FF375F' }}>
-                                {formatCurrency(pmtSched)}
-                              </span>
-                            </div>
-                          )
-                        })}
-                        {n > 3 && (
-                          <p className="text-[11px] text-center pt-1" style={{ color: '#8E8E93' }}>
-                            +{n - 3} boletos restantes
+                  {Number(vendaParcelas) > 1 &&
+                    vendaDataPrimeiraParcela &&
+                    baseParc > 0 &&
+                    (() => {
+                      const n = Number(vendaParcelas)
+                      const pmtSched = Math.round((baseParc / n) * 100) / 100
+                      const baseDate = new Date(`${vendaDataPrimeiraParcela}T12:00:00`)
+                      return (
+                        <div
+                          className="px-4 pb-3"
+                          style={{ borderTop: '1px solid rgba(60,60,67,0.07)', paddingTop: '12px' }}
+                        >
+                          <p
+                            className="text-[10px] font-semibold tracking-wide mb-2"
+                            style={{ color: '#8E8E93' }}
+                          >
+                            CRONOGRAMA DE BOLETOS
                           </p>
-                        )}
-                      </div>
-                    )
-                  })()}
+                          {Array.from({ length: Math.min(n, 3) }, (_, i) => {
+                            const d = addMonthsClamped(baseDate, i)
+                            return (
+                              <div key={i} className="flex items-center justify-between py-1.5">
+                                <span className="text-[12px]" style={{ color: '#8E8E93' }}>
+                                  {i + 1}º boleto ·{' '}
+                                  {d.toLocaleDateString('pt-BR', {
+                                    month: 'short',
+                                    year: 'numeric',
+                                  })}
+                                </span>
+                                <span
+                                  className="text-[12px] font-semibold tabular-nums"
+                                  style={{ color: '#FF375F' }}
+                                >
+                                  {formatCurrency(pmtSched)}
+                                </span>
+                              </div>
+                            )
+                          })}
+                          {n > 3 && (
+                            <p
+                              className="text-[11px] text-center pt-1"
+                              style={{ color: '#8E8E93' }}
+                            >
+                              +{n - 3} boletos restantes
+                            </p>
+                          )}
+                        </div>
+                      )
+                    })()}
                 </motion.div>
               )}
             </AnimatePresence>

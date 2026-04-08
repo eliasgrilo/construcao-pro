@@ -132,8 +132,12 @@ export function NovaContaReceberModal({
     if (firstError) {
       try {
         form.setFocus(firstError as Parameters<typeof form.setFocus>[0])
-        document.querySelector(`[name="${firstError}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      } catch { /* Controller fields not focusable via setFocus */ }
+        document
+          .querySelector(`[name="${firstError}"]`)
+          ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      } catch {
+        /* Controller fields not focusable via setFocus */
+      }
       await shakeControls.start({
         x: [0, -10, 10, -8, 8, -5, 5, 0],
         transition: { duration: 0.42, ease: 'easeInOut' },
@@ -150,7 +154,8 @@ export function NovaContaReceberModal({
     // Inject forma de recebimento into observacoes before calling parent onSubmit
     if (formaRecebimento) {
       const obsAtual = form.getValues('observacoes') ?? ''
-      const label = FORMAS_RECEBIMENTO.find((f) => f.value === formaRecebimento)?.label ?? formaRecebimento
+      const label =
+        FORMAS_RECEBIMENTO.find((f) => f.value === formaRecebimento)?.label ?? formaRecebimento
       const novaObs = obsAtual.trim() ? `Forma: ${label}\n${obsAtual}` : `Forma: ${label}`
       form.setValue('observacoes', novaObs)
     }
@@ -407,7 +412,10 @@ export function NovaContaReceberModal({
                       <span className="flex-1 text-[13px] text-muted-foreground/60 tabular-nums">
                         {p.data}
                       </span>
-                      <span className="text-[13px] font-semibold tabular-nums" style={{ color: '#34C759' }}>
+                      <span
+                        className="text-[13px] font-semibold tabular-nums"
+                        style={{ color: '#34C759' }}
+                      >
                         {formatCurrency(p.valor)}
                       </span>
                     </div>
@@ -507,7 +515,14 @@ export function NovaContaReceberModal({
                   ? 'text-white'
                   : 'bg-black/[0.07] dark:bg-white/[0.07] text-foreground/25 cursor-not-allowed',
               )}
-              style={canSubmit ? { background: 'linear-gradient(135deg, #30D158, #25A244)', boxShadow: '0 4px 16px rgba(52,199,89,0.35)' } : undefined}
+              style={
+                canSubmit
+                  ? {
+                      background: 'linear-gradient(135deg, #30D158, #25A244)',
+                      boxShadow: '0 4px 16px rgba(52,199,89,0.35)',
+                    }
+                  : undefined
+              }
             >
               {isPending && (
                 <div className="h-[18px] w-[18px] rounded-full border-2 border-white/30 border-t-white animate-spin" />

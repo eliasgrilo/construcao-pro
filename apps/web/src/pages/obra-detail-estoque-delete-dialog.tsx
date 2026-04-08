@@ -43,10 +43,7 @@ export function ObraDetailEstoqueDeleteDialog({
                 {formatNumber(target?.quantidade ?? 0)}
               </strong>{' '}
               em{' '}
-              <strong className="text-foreground font-semibold">
-                {target?.almoxarifadoNome}
-              </strong>
-              .{' '}
+              <strong className="text-foreground font-semibold">{target?.almoxarifadoNome}</strong>.{' '}
               Esta ação não pode ser desfeita.
             </DialogDescription>
           </div>

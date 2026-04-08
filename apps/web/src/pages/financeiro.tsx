@@ -197,7 +197,14 @@ export function FinanceiroPage() {
   const contaForm = useForm<CreateFinanceiroContaInput>({
     resolver: zodResolver(createFinanceiroContaSchema),
     mode: 'onTouched',
-    defaultValues: { banco: '', agencia: '', numeroConta: '', valorInicial: 0, subconta: 'CAIXA', tipo: 'Corrente' },
+    defaultValues: {
+      banco: '',
+      agencia: '',
+      numeroConta: '',
+      valorInicial: 0,
+      subconta: 'CAIXA',
+      tipo: 'Corrente',
+    },
   })
   const { clearDraft: clearContaDraft } = useFormDraft(contaForm, 'nova-conta')
   const resetForm = () => {

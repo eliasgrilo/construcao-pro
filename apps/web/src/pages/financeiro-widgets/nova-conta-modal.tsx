@@ -107,7 +107,9 @@ export function NovaContaModal({
       try {
         const firstError = Object.keys(form.formState.errors)[0]
         form.setFocus(firstError as Parameters<typeof form.setFocus>[0])
-        document.querySelector(`[name="${firstError}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        document
+          .querySelector(`[name="${firstError}"]`)
+          ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       } catch {}
       await shakeControls.start({
         x: [0, -6, 6, -5, 5, -3, 3, 0],
@@ -131,7 +133,9 @@ export function NovaContaModal({
         {/* ── Cabeçalho fixo: título centrado + botão fechar ── */}
         <div className="flex-shrink-0 relative flex items-center justify-center px-5 pt-4 pb-2">
           <div className="flex flex-col items-center gap-1">
-            <DialogTitle className="text-[17px] font-semibold tracking-tight">Nova Conta</DialogTitle>
+            <DialogTitle className="text-[17px] font-semibold tracking-tight">
+              Nova Conta
+            </DialogTitle>
             <span
               className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
               style={{ backgroundColor: '#007AFF15', color: '#007AFF' }}
@@ -282,10 +286,12 @@ export function NovaContaModal({
                 Subconta
               </p>
               <div className="grid grid-cols-2 gap-2">
-                {([
-                  { value: 'CAIXA', label: 'Em Caixa', Icon: Wallet, color: '#34C759' },
-                  { value: 'APLICADO', label: 'Aplicações', Icon: FileText, color: '#007AFF' },
-                ] as const).map(({ value, label, Icon, color }) => {
+                {(
+                  [
+                    { value: 'CAIXA', label: 'Em Caixa', Icon: Wallet, color: '#34C759' },
+                    { value: 'APLICADO', label: 'Aplicações', Icon: FileText, color: '#007AFF' },
+                  ] as const
+                ).map(({ value, label, Icon, color }) => {
                   const isSelected = subcontaNova === value
                   return (
                     <motion.button
@@ -299,11 +305,7 @@ export function NovaContaModal({
                           ? 'bg-white dark:bg-[#3A3A3C]'
                           : 'bg-black/[0.04] dark:bg-white/[0.06]',
                       )}
-                      style={
-                        isSelected
-                          ? { boxShadow: `0 0 0 2px ${color}` }
-                          : {}
-                      }
+                      style={isSelected ? { boxShadow: `0 0 0 2px ${color}` } : {}}
                     >
                       <AnimatePresence>
                         {isSelected && (
@@ -319,10 +321,7 @@ export function NovaContaModal({
                           </motion.div>
                         )}
                       </AnimatePresence>
-                      <Icon
-                        className="h-5 w-5"
-                        style={{ color: isSelected ? color : undefined }}
-                      />
+                      <Icon className="h-5 w-5" style={{ color: isSelected ? color : undefined }} />
                       <span
                         className="text-[13px] font-medium"
                         style={{ color: isSelected ? color : undefined }}
@@ -403,7 +402,14 @@ export function NovaContaModal({
                   ? 'text-white'
                   : 'bg-black/[0.07] dark:bg-white/[0.07] text-foreground/25 cursor-not-allowed',
               )}
-              style={canSubmit ? { background: 'linear-gradient(135deg, #2196FF, #0050D8)', boxShadow: '0 4px 16px rgba(0,122,255,0.35)' } : undefined}
+              style={
+                canSubmit
+                  ? {
+                      background: 'linear-gradient(135deg, #2196FF, #0050D8)',
+                      boxShadow: '0 4px 16px rgba(0,122,255,0.35)',
+                    }
+                  : undefined
+              }
             >
               {isPending && (
                 <div className="h-[18px] w-[18px] rounded-full border-2 border-white/30 border-t-white animate-spin" />

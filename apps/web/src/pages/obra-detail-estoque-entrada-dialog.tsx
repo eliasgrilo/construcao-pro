@@ -162,9 +162,7 @@ export function ObraDetailEstoqueEntradaDialog({
                 placeholder="0"
                 inputMode="decimal"
                 value={state.qty}
-                onChange={(e) =>
-                  onFieldChange('qty', e.target.value.replace(/[^\d,.]/g, ''))
-                }
+                onChange={(e) => onFieldChange('qty', e.target.value.replace(/[^\d,.]/g, ''))}
                 className="flex-1 px-4 py-3.5 bg-transparent text-[15px] border-0 focus:outline-none placeholder:text-muted-foreground/25"
               />
               <div className="w-px h-6 bg-border/20 dark:bg-white/[0.08] flex-shrink-0" />
@@ -190,10 +188,7 @@ export function ObraDetailEstoqueEntradaDialog({
                 className="h-[50px] rounded-none border-0 shadow-none bg-transparent focus-visible:ring-0 text-[15px] px-4"
               />
               <div className="h-px bg-border/10 dark:bg-white/[0.06] ml-4" />
-              <Select
-                value={state.pagamento}
-                onValueChange={(v) => onFieldChange('pagamento', v)}
-              >
+              <Select value={state.pagamento} onValueChange={(v) => onFieldChange('pagamento', v)}>
                 <SelectTrigger className={triggerCn}>
                   <SelectValue
                     placeholder={

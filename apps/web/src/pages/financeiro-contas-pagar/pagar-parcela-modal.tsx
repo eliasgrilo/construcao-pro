@@ -231,7 +231,11 @@ export function PagarParcelaModal({
                             ? 'bg-[#007AFF]/[0.05]'
                             : 'hover:bg-black/[0.03] dark:hover:bg-white/[0.03]',
                         )}
-                        style={isSelected ? { border: '1px solid rgba(0,122,255,0.25)' } : { border: '1px solid transparent' }}
+                        style={
+                          isSelected
+                            ? { border: '1px solid rgba(0,122,255,0.25)' }
+                            : { border: '1px solid transparent' }
+                        }
                       >
                         <span
                           className="flex h-8 w-8 items-center justify-center rounded-[8px] flex-shrink-0"
@@ -391,7 +395,14 @@ export function PagarParcelaModal({
                   ? 'text-white'
                   : 'bg-black/[0.07] dark:bg-white/[0.07] text-foreground/25 cursor-not-allowed',
               )}
-              style={canConfirm ? { background: 'linear-gradient(135deg, #FF6B6B, #FF3B30)', boxShadow: '0 4px 16px rgba(255,59,48,0.35)' } : undefined}
+              style={
+                canConfirm
+                  ? {
+                      background: 'linear-gradient(135deg, #FF6B6B, #FF3B30)',
+                      boxShadow: '0 4px 16px rgba(255,59,48,0.35)',
+                    }
+                  : undefined
+              }
             >
               {isPending && (
                 <div className="h-[18px] w-[18px] rounded-full border-2 border-white/30 border-t-white animate-spin" />

@@ -102,11 +102,15 @@ export function NovaContaReceberModal({
   const canSubmit = descricao.trim().length >= 2 && valor > 0 && !!vencimento && !isPending
 
   const [formaRecebimento, setFormaRecebimento] = useState('')
+  const [taxaCartaoReceber, setTaxaCartaoReceber] = useState('')
+  const [diaVencBoletoReceber, setDiaVencBoletoReceber] = useState('')
   const FORMAS_RECEBIMENTO = [
-    { value: 'PIX', label: 'PIX' },
-    { value: 'TED', label: 'TED' },
-    { value: 'CHEQUE', label: 'Cheque' },
-    { value: 'DINHEIRO', label: 'Dinheiro' },
+    { value: 'PIX', label: 'PIX', color: '#34C759' },
+    { value: 'CARTAO_CREDITO', label: 'Cartão', color: '#5856D6' },
+    { value: 'BOLETO', label: 'Boleto', color: '#FF375F' },
+    { value: 'TED', label: 'TED', color: '#FF9500' },
+    { value: 'CHEQUE', label: 'Cheque', color: '#8E8E93' },
+    { value: 'DINHEIRO', label: 'Dinheiro', color: '#30B0C7' },
   ] as const
 
   const parcelas = useMemo(
@@ -156,7 +160,14 @@ export function NovaContaReceberModal({
       const obsAtual = form.getValues('observacoes') ?? ''
       const label =
         FORMAS_RECEBIMENTO.find((f) => f.value === formaRecebimento)?.label ?? formaRecebimento
-      const novaObs = obsAtual.trim() ? `Forma: ${label}\n${obsAtual}` : `Forma: ${label}`
+      let prefix = `Forma: ${label}`
+      if (formaRecebimento === 'CARTAO_CREDITO' && taxaCartaoReceber) {
+        prefix += ` · Taxa: ${taxaCartaoReceber}%/parcela`
+      }
+      if (formaRecebimento === 'BOLETO' && diaVencBoletoReceber) {
+        prefix += ` · Dia venc.: ${diaVencBoletoReceber}`
+      }
+      const novaObs = obsAtual.trim() ? `${prefix}\n${obsAtual}` : prefix
       form.setValue('observacoes', novaObs)
     }
     onSubmit()
@@ -171,6 +182,8 @@ export function NovaContaReceberModal({
         if (!v) {
           form.reset()
           setFormaRecebimento('')
+          setTaxaCartaoReceber('')
+          setDiaVencBoletoReceber('')
         }
       }}
     >
@@ -440,7 +453,7 @@ export function NovaContaReceberModal({
               <span className="ml-1.5 normal-case font-normal text-[10px]">opcional</span>
             </p>
             <div className="flex flex-wrap gap-2">
-              {FORMAS_RECEBIMENTO.map(({ value, label }) => {
+              {FORMAS_RECEBIMENTO.map(({ value, label, color }) => {
                 const isSelected = formaRecebimento === value
                 return (
                   <motion.button
@@ -454,7 +467,7 @@ export function NovaContaReceberModal({
                     )}
                     style={
                       isSelected
-                        ? { backgroundColor: '#34C759' }
+                        ? { backgroundColor: color }
                         : { backgroundColor: 'rgba(120,120,128,0.10)' }
                     }
                   >
@@ -478,6 +491,76 @@ export function NovaContaReceberModal({
               })}
             </div>
           </div>
+
+          {/* Campos condicionais: Cartão / Boleto */}
+          <AnimatePresence>
+            {(formaRecebimento === 'CARTAO_CREDITO' || formaRecebimento === 'BOLETO') && (
+              <motion.div
+                key={`extra-${formaRecebimento}`}
+                initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 6, scale: 0.98 }}
+                transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+                className="rounded-[14px] overflow-hidden bg-white dark:bg-[#2C2C2E]"
+              >
+                {formaRecebimento === 'CARTAO_CREDITO' && (
+                  <div className="flex items-center min-h-[52px] px-4 gap-3">
+                    <CreditCard
+                      className="h-[18px] w-[18px] flex-shrink-0"
+                      style={{ color: '#5856D6' }}
+                    />
+                    <span className="text-[16px] font-medium flex-shrink-0 text-foreground">
+                      Taxa por parcela
+                    </span>
+                    <div className="flex-1 flex items-center justify-end gap-1">
+                      <input
+                        value={taxaCartaoReceber}
+                        onChange={(e) => {
+                          const v = e.target.value.replace(/[^0-9.,]/g, '')
+                          setTaxaCartaoReceber(v)
+                        }}
+                        placeholder="0,00"
+                        inputMode="decimal"
+                        className="text-[16px] text-right bg-transparent outline-none tabular-nums w-[80px] placeholder:text-black/20 dark:placeholder:text-white/20 focus-visible:ring-2 focus-visible:ring-[#5856D6]/60 rounded-sm"
+                      />
+                      <span
+                        className="text-[14px] font-semibold flex-shrink-0"
+                        style={{ color: '#5856D680' }}
+                      >
+                        %
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {formaRecebimento === 'BOLETO' && (
+                  <div className="flex items-center min-h-[52px] px-4 gap-3">
+                    <FileText
+                      className="h-[18px] w-[18px] flex-shrink-0"
+                      style={{ color: '#FF375F' }}
+                    />
+                    <span className="text-[16px] font-medium flex-shrink-0 text-foreground">
+                      Dia de vencimento
+                    </span>
+                    <div className="flex-1 flex items-center justify-end gap-1">
+                      <input
+                        value={diaVencBoletoReceber}
+                        onChange={(e) => {
+                          const v = e.target.value.replace(/\D/g, '').slice(0, 2)
+                          const n = Number.parseInt(v, 10)
+                          if (!v || (n >= 1 && n <= 31)) setDiaVencBoletoReceber(v)
+                        }}
+                        placeholder="Ex: 10"
+                        inputMode="numeric"
+                        maxLength={2}
+                        className="text-[16px] text-right bg-transparent outline-none tabular-nums w-[60px] placeholder:text-black/20 dark:placeholder:text-white/20 focus-visible:ring-2 focus-visible:ring-[#FF375F]/60 rounded-sm"
+                      />
+                      <span className="text-[13px] text-foreground/40 flex-shrink-0">do mês</span>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Obra (optional) */}
           {obras.length > 0 && (

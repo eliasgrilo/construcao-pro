@@ -497,10 +497,17 @@ export function NovaContaPagarModal({
               >
                 <div className="rounded-[14px] overflow-hidden bg-white dark:bg-[#2C2C2E]">
                   <div className="flex items-center min-h-[52px] px-4 gap-3">
-                    <CreditCard className="h-4 w-4 flex-shrink-0 text-foreground/40" />
-                    <span className="text-[16px] font-medium flex-1 text-foreground">
-                      Taxa por parcela
-                    </span>
+                    <CreditCard className="h-4 w-4 flex-shrink-0" style={{ color: '#5856D6' }} />
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="text-[16px] font-medium text-foreground">
+                        Taxa por parcela
+                      </span>
+                      {nParcelas > 1 && (
+                        <span className="text-[11px]" style={{ color: '#5856D680' }}>
+                          incide em {nParcelas}× abaixo
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-1 min-w-0">
                       <input
                         value={taxaCartaoStr}
@@ -511,7 +518,7 @@ export function NovaContaPagarModal({
                         onFocus={(e) => e.target.select()}
                         placeholder="0,00"
                         inputMode="decimal"
-                        className="w-[72px] text-[16px] text-right bg-transparent outline-none tabular-nums font-semibold placeholder:text-black/20 dark:placeholder:text-white/20 focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 rounded-sm"
+                        className="w-[72px] text-[16px] text-right bg-transparent outline-none tabular-nums font-semibold placeholder:text-black/20 dark:placeholder:text-white/20 focus-visible:ring-2 focus-visible:ring-[#5856D6]/60 rounded-sm"
                       />
                       <span className="text-[14px] font-semibold text-foreground/50 flex-shrink-0">
                         %

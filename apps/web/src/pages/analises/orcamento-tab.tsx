@@ -4,13 +4,7 @@ import { useDashboardCustoPorObra } from '@/hooks/use-supabase'
 import { cn, formatCurrency, formatNumber } from '@/lib/utils'
 import { useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import {
-  AlertTriangle,
-  BarChart2,
-  RotateCcw,
-  TrendingDown,
-  TrendingUp,
-} from 'lucide-react'
+import { AlertTriangle, BarChart2, RotateCcw, TrendingDown, TrendingUp } from 'lucide-react'
 import { useMemo } from 'react'
 import {
   Bar,

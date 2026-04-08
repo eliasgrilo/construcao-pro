@@ -1,0 +1,401 @@
+@import "tailwindcss";
+
+/* ─── Dark mode via .dark class (class-based toggle) ── */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ─── Apple Design System ──────────────────────────── */
+@theme {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter",
+    ui-sans-serif, system-ui, sans-serif;
+
+  /* Light — Apple System Colors */
+  --color-background: #f5f5f7;
+  --color-foreground: #1d1d1f;
+  --color-card: #ffffff;
+  --color-card-foreground: #1d1d1f;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #1d1d1f;
+  --color-primary: #007aff;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f5f5f7;
+  --color-secondary-foreground: #1d1d1f;
+  --color-muted: #f5f5f7;
+  --color-muted-foreground: #86868b;
+  --color-accent: #f5f5f7;
+  --color-accent-foreground: #1d1d1f;
+  --color-destructive: #ff3b30;
+  --color-destructive-foreground: #ffffff;
+  --color-border: rgba(0, 0, 0, 0.08);
+  --color-input: rgba(0, 0, 0, 0.06);
+  --color-ring: #007aff;
+  --color-success: #34c759;
+  --color-warning: #ff9500;
+  --color-info: #007aff;
+
+  --color-sidebar: rgba(255, 255, 255, 0.8);
+  --color-sidebar-foreground: #1d1d1f;
+  --color-sidebar-border: rgba(0, 0, 0, 0.08);
+  --color-sidebar-accent: rgba(0, 0, 0, 0.04);
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1rem;
+
+  /* Apple Modal Tokens */
+  --keyboard-visible: 0;
+
+  --modal-enter-duration: 0.4s;
+  /* Apple exit is always faster than enter */
+  --modal-exit-duration: 0.28s;
+  --modal-spring: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Exact Apple ease-in cubic for dismissal */
+  --modal-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --modal-ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --modal-backdrop-color: rgba(0, 0, 0, 0.4);
+  --modal-border-radius: 13px;
+  --modal-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.08), 0 8px 32px rgba(0, 0, 0, 0.18), 0 2px 8px
+    rgba(0, 0, 0, 0.12);
+}
+
+/* ─── Dark — Apple True Black ──────────────────────── */
+.dark {
+  --color-background: #000000;
+  --color-foreground: #f5f5f7;
+  --color-card: #1c1c1e;
+  --color-card-foreground: #f5f5f7;
+  --color-popover: #2c2c2e;
+  --color-popover-foreground: #f5f5f7;
+  --color-primary: #0a84ff;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #2c2c2e;
+  --color-secondary-foreground: #f5f5f7;
+  --color-muted: #2c2c2e;
+  --color-muted-foreground: #98989d;
+  --color-accent: #2c2c2e;
+  --color-accent-foreground: #f5f5f7;
+  --color-destructive: #ff453a;
+  --color-destructive-foreground: #ffffff;
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-input: rgba(255, 255, 255, 0.1);
+  --color-ring: #0a84ff;
+  --color-success: #30d158;
+  --color-warning: #ffd60a;
+  --color-info: #0a84ff;
+
+  --color-sidebar: rgba(28, 28, 30, 0.85);
+  --color-sidebar-foreground: #f5f5f7;
+  --color-sidebar-border: rgba(255, 255, 255, 0.08);
+  --color-sidebar-accent: rgba(255, 255, 255, 0.06);
+
+  --modal-backdrop-color: rgba(0, 0, 0, 0.6);
+}
+
+/* ─── Mobile keyboard: keep focused input visible ───── */
+/* scroll-margin-bottom gives breathing room when scrollIntoView positions
+   an input — ensures it doesn't land flush against the keyboard edge. */
+@media (max-width: 639px) {
+  input,
+  textarea,
+  [contenteditable] {
+    scroll-margin-bottom: 1.5rem;
+  }
+}
+
+/* ─── Base ─────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  border-color: var(--color-border);
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 15px;
+  line-height: 1.47059;
+  letter-spacing: -0.009em;
+  overflow-x: clip;
+  overscroll-behavior-y: contain;
+  touch-action: manipulation;
+  /* Safe area insets for devices with notch/home bar */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  /* Momentum scrolling on iOS */
+  -webkit-overflow-scrolling: touch;
+}
+
+#root,
+#__next {
+  min-height: 100vh; /* Fallback */
+  min-height: 100dvh; /* Modern mobile */
+  /* Let content expand natively to fix 'cut pages' bug */
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── App Layout — single <main> responsive offset ─── */
+/*
+  .app-main drives the responsive content area.
+  The sidebar width is stored as --app-sb-w on .app-root by AppLayout.tsx.
+
+  Mobile (< 768px):
+    - No sidebar margin (overlay sidebar)
+    - Padding-top covers the fixed 48px topbar + iOS safe-area
+
+  Desktop (≥ 768px):
+    - Margin-left = sidebar width
+    - Padding-top reset to 0 (no fixed topbar on desktop)
+*/
+.app-main {
+  padding-top: calc(48px + env(safe-area-inset-top, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  margin-left: 0;
+}
+
+@media (min-width: 768px) {
+  .app-main {
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-left: var(--app-sb-w, 260px);
+  }
+}
+
+/* ─── Typography ───────────────────────────────────── */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  letter-spacing: -0.022em;
+}
+
+/* ─── Selection ────────────────────────────────────── */
+::selection {
+  background: var(--color-primary);
+  color: white;
+}
+
+/* ─── Scrollbar ────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.2);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 128, 128, 0.4);
+}
+
+/* ─── Skeleton ─────────────────────────────────────── */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    110deg,
+    var(--color-muted) 8%,
+    rgba(128, 128, 128, 0.06) 18%,
+    var(--color-muted) 33%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+  border-radius: var(--radius-md);
+}
+
+/* ─── Glass — macOS Vibrancy ───────────────────────── */
+.glass {
+  background: var(--color-sidebar);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+
+/* ─── Focus ────────────────────────────────────────── */
+.focus-ring:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.25);
+}
+
+/*
+  ─── Page Transitions ──────────────────────────────────
+  Transitions are handled entirely by Framer Motion AnimatePresence
+  in AppLayout.tsx. The View Transitions API is disabled in the router
+  (defaultViewTransition: false) because iOS Safari incorrectly snapshots
+  backdrop-filter + position:fixed elements, causing the sidebar and
+  topbar to flash on every navigation.
+
+  The only rule we keep is the accessibility guard for reduced-motion:
+  it suppresses Framer Motion's animation via the `prefers-reduced-motion`
+  media feature (Framer respects this automatically when useReducedMotion
+  is passed, but the CSS rule ensures any residual browser-level animation
+  is also clipped).
+*/
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ─── Apple Card ───────────────────────────────────── */
+.apple-card {
+  background: var(--color-card);
+  border-radius: 16px;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.apple-card:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+@media (prefers-color-scheme: light) {
+  .apple-card {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+  }
+}
+
+.dark .apple-card {
+  box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.06), inset 0 0.5px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* ─── Tabular Nums ─────────────────────────────────── */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Scrollbar Hide ───────────────────────────────── */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ─── iOS momentum scroll ──────────────────────────── */
+.scroll-ios {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* ─── Prevent iOS 16+ text size adjustment ─────────── */
+@supports (-webkit-touch-callout: none) {
+  input,
+  textarea,
+  select {
+    font-size: max(16px, 1em);
+  }
+}
+
+/* \u2500\u2500\u2500 Safe-area bottom padding utility \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+/* \u2500\u2500\u2500 PWA Standalone: ensure full coverage \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+@media (display-mode: standalone) {
+  body {
+    /* Remove body-level padding; each component handles its own env() */
+    padding-bottom: 0;
+  }
+}
+
+/* \u2500\u2500\u2500 100dvh for dynamic viewport (accounts for iOS browser chrome) \u2500 */
+.h-dvh {
+  height: 100dvh;
+}
+
+/* ─── Modal Animations ─────────────────────────────── */
+
+/*
+  modalEnter: Y-translate + scale in a SINGLE keyframe.
+  Two separate animations on the same element conflict and cause jank —
+  scale is embedded here so only one transform is applied at a time.
+*/
+@keyframes modalEnter {
+  0% {
+    transform: translateY(100%) scale(0.96);
+    opacity: 0;
+  }
+  55% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Exit is easeIn, faster than enter — matches Apple sheet dismissal */
+@keyframes modalExit {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(105%) scale(0.97);
+    opacity: 0;
+  }
+}
+
+/* Backdrop animates both background color AND blur */
+@keyframes backdropEnter {
+  from {
+    background: transparent;
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+  to {
+    background: var(--modal-backdrop-color);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+}
+
+@keyframes backdropExit {
+  from {
+    background: var(--modal-backdrop-color);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  to {
+    background: transparent;
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Target both module class variants and global fallback */
+  [class*="overlay"],
+  [class*="container"] {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

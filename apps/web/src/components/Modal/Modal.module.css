@@ -1,0 +1,156 @@
+/*
+  With interactive-widget=resizes-content, the layout viewport shrinks when
+  the keyboard opens. position:fixed;inset:0 automatically covers only the
+  visible area (above keyboard). No JS positioning hacks needed.
+*/
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end; /* Bottom sheet padrão Apple */
+  justify-content: center;
+
+  background: var(--modal-backdrop-color);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+
+  --drag-opacity-factor: calc(1 - var(--drag-progress, 0));
+  touch-action: manipulation;
+}
+
+.overlay[data-state="open"] {
+  background: var(--modal-backdrop-color);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.overlay[data-state="closed"] {
+  background: transparent;
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  pointer-events: none;
+}
+
+.container {
+  position: relative;
+  width: 100%;
+  max-width: 540px;
+  max-height: 95%;
+
+  background: var(--color-surface, #ffffff);
+  border-radius: var(--modal-border-radius) var(--modal-border-radius) 0 0;
+  box-shadow: var(--modal-shadow);
+
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.container[data-state="open"],
+.container[data-state="closing"] {
+  will-change: transform, opacity;
+}
+
+:root[class~="dark"] .container {
+  background: var(--color-card, #1c1c1e);
+}
+
+.handle {
+  width: 36px;
+  height: 5px;
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 2.5px;
+  margin: 10px auto 0;
+  flex-shrink: 0;
+}
+
+:root[class~="dark"] .handle {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.content {
+  flex: 1;
+  min-height: 0; /* allow shrinking so footer stays visible */
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 20px 20px 0;
+}
+
+.contentNoPad {
+  flex: 1;
+  min-height: 0; /* allow shrinking so footer stays visible */
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 0;
+}
+
+.content:has(input:focus),
+.content:has(textarea:focus),
+.contentNoPad:has(input:focus),
+.contentNoPad:has(textarea:focus) {
+  scroll-padding-bottom: 120px;
+}
+
+.footer {
+  flex-shrink: 0;
+  padding: 16px 20px;
+  padding-bottom: var(--modal-pb, max(16px, env(safe-area-inset-bottom)));
+  border-top: 0.5px solid rgba(0, 0, 0, 0.1);
+  background: inherit;
+}
+
+:root[class~="dark"] .footer {
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+/* ─── Animations ─── */
+
+.container[data-state="open"] {
+  animation: modalEnter var(--modal-enter-duration) var(--modal-spring) forwards;
+}
+
+.container[data-state="closing"] {
+  animation: modalExit var(--modal-exit-duration) var(--modal-ease-in) forwards;
+}
+
+.overlay[data-state="open"] {
+  animation: backdropEnter var(--modal-enter-duration) var(--modal-ease-out) forwards;
+}
+
+.overlay[data-state="closing"] {
+  animation: backdropExit var(--modal-exit-duration) var(--modal-ease-in) forwards;
+}
+
+/* ─── Multi-device ─── */
+
+.modalContainer {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+@media (min-width: 768px) {
+  .overlay {
+    align-items: center;
+  }
+
+  .container {
+    max-width: 480px;
+    border-radius: var(--modal-border-radius);
+    max-height: 90vh;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .container {
+    max-height: 92%;
+  }
+
+  .content,
+  .contentNoPad {
+    padding-bottom: 16px;
+  }
+}

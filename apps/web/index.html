@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="preconnect" href="https://vjiabffqqwxuqrybvgat.supabase.co" crossorigin />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <!-- viewport-fit=cover: enables env(safe-area-inset-*) on iOS notch devices.
+       interactive-widget=resizes-content: tells iOS Safari to shrink the LAYOUT
+       viewport when the virtual keyboard appears. This means:
+       - position:fixed elements automatically reposition above the keyboard
+       - 100dvh / window.innerHeight update dynamically
+       - No JavaScript needed for keyboard avoidance
+       Supported since iOS 16 / Safari 16. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5.0, interactive-widget=resizes-content" />
+  <meta name="description" content="ConstruçãoPro - Sistema de Gestão de Obras" />
+  <link rel="canonical" href="https://construcao-pro.vercel.app/" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+
+  <!-- Open Graph / Social -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://construcao-pro.vercel.app/" />
+  <meta property="og:title" content="ConstruçãoPro — Gestão de Obras" />
+  <meta property="og:description" content="Sistema completo de gestão de obras, estoque, financeiro e notas fiscais." />
+  <meta property="og:site_name" content="ConstruçãoPro" />
+  <meta property="og:locale" content="pt_BR" />
+
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)" />
+
+  <!-- iOS PWA — standalone home screen mode -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="ConstruçãoPro" />
+  <!-- black-translucent: status bar overlays app; we compensate with env(safe-area-inset-top) -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
+
+  <!-- Android PWA -->
+  <meta name="mobile-web-app-capable" content="yes" />
+
+  <!-- Critical: paint the correct background colour before any JS or CSS loads.
+       Prevents the white-flash / black-flash on PWA cold start. -->
+  <style>
+    html, body { margin: 0; background-color: #f5f5f7; }
+    @media (prefers-color-scheme: dark) { html, body { background-color: #000000; } }
+  </style>
+
+  <!-- Google Fonts removed — Inter was render-blocking and never used on Apple devices.
+       The CSS font stack already starts with -apple-system / SF Pro (system font). -->
+  <title>ConstruçãoPro — Gestão de Obras</title>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
+</html>

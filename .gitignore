@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.turbo/
+.env
+*.local
+coverage/
+.DS_Store
+*.tsbuildinfo
+*.bak
+.claude/
+.claire/
+.vercel/
+.vscode/
+.tools/
+biome-errors.json
+apps/web/lint_errors.txt
+supabase/.temp/

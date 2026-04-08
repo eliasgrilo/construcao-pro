@@ -1,0 +1,89 @@
+.toolbar {
+  position: fixed;
+  /*
+    With interactive-widget=resizes-content, the layout viewport shrinks
+    when the keyboard opens. position:fixed;bottom:0 is automatically
+    right above the keyboard. No JS tracking needed.
+  */
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 44px; /* Altura padrão Apple InputAccessoryView */
+  z-index: 1001; /* Acima do modal */
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+
+  /* Blur background igual ao teclado nativo */
+  background: rgba(249, 249, 249, 0.94);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-top: 0.5px solid rgba(0, 0, 0, 0.15);
+
+  /* Esconde por padrão */
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(100%);
+
+  transition: opacity 0.22s cubic-bezier(0, 0, 0.2, 1), transform 0.22s cubic-bezier(0, 0, 0.2, 1);
+}
+
+/* Only show toolbar when focus is OUTSIDE modals — modals have their own footer/buttons */
+:global(
+    body:has(input:focus, textarea:focus):not(
+      :has([role="dialog"] input:focus, [role="dialog"] textarea:focus)
+    )
+  )
+  .toolbar {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+:root[class~="dark"] .toolbar {
+  background: rgba(28, 28, 30, 0.94);
+  border-top-color: rgba(255, 255, 255, 0.12);
+}
+
+.navGroup {
+  display: flex;
+}
+
+.navButton {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-accent, #007aff);
+  border-radius: 8px;
+
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s ease;
+}
+
+.navButton:disabled {
+  opacity: 0.3;
+}
+.navButton:active:not(:disabled) {
+  opacity: 0.6;
+}
+
+.doneButton {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--color-accent, #007aff);
+  padding: 0 12px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s ease;
+}
+
+.doneButton:active {
+  opacity: 0.6;
+}

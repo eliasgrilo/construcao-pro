@@ -1,0 +1,86 @@
+import { cn } from '@/lib/utils'
+import { type VariantProps, cva } from 'class-variance-authority'
+import * as React from 'react'
+
+const buttonVariants = cva(
+  'relative inline-flex items-center justify-center whitespace-nowrap text-[15px] sm:text-[13px] font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-40 cursor-pointer select-none active:opacity-80',
+  {
+    variants: {
+      variant: {
+        default:
+          'bg-primary text-primary-foreground rounded-xl sm:rounded-lg shadow-sm hover:bg-primary/90',
+        destructive:
+          'bg-destructive text-destructive-foreground rounded-xl sm:rounded-lg shadow-sm hover:bg-destructive/90',
+        outline: 'border bg-transparent rounded-xl sm:rounded-lg hover:bg-accent',
+        secondary:
+          'bg-secondary text-secondary-foreground rounded-xl sm:rounded-lg hover:bg-secondary/80',
+        ghost: 'rounded-xl sm:rounded-lg hover:bg-accent',
+        link: 'text-primary underline-offset-4 hover:underline',
+      },
+      size: {
+        default: 'h-11 sm:h-9 px-4',
+        sm: 'h-10 sm:h-8 px-3 text-[14px] sm:text-[12px]',
+        lg: 'h-12 px-6 text-[15px] rounded-xl',
+        icon: 'h-11 w-11 sm:h-9 sm:w-9',
+      },
+    },
+    defaultVariants: { variant: 'default', size: 'default' },
+  },
+)
+
+export interface ButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {
+  loading?: boolean
+}
+
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, size, loading, children, disabled, ...props }, ref) => (
+    <button
+      className={cn(buttonVariants({ variant, size, className }))}
+      ref={ref}
+      disabled={disabled || loading}
+      {...props}
+    >
+      {loading && (
+        <svg
+          className="absolute h-3.5 w-3.5 animate-spin"
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="3"
+          />
+          <path
+            className="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+          />
+        </svg>
+      )}
+      <span
+        className={cn(
+          'inline-flex items-center justify-center gap-1.5',
+          loading && 'opacity-0 pointer-events-none select-none',
+        )}
+      >
+        {children}
+      </span>
+      {loading && (
+        <span className="sr-only" role="status" aria-live="polite">
+          Carregando…
+        </span>
+      )}
+    </button>
+  ),
+)
+Button.displayName = 'Button'
+
+export { Button, buttonVariants }

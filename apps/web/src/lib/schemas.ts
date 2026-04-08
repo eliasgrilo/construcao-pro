@@ -99,7 +99,7 @@ export const createMovimentacaoSchema = z.object({
     .positive('Valor deve ser maior que zero')
     .finite('Valor inválido')
     .max(999_999_999, 'Valor máximo excedido'),
-  transferenciaDestinoId: z.string().default('SWITCH'),
+  transferenciaDestinoId: z.string().nullable().default(null),
 })
 export type CreateMovimentacaoInput = z.infer<typeof createMovimentacaoSchema>
 

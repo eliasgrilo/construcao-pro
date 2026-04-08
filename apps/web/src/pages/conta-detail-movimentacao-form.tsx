@@ -87,7 +87,7 @@ export function computeMovDeltas(
     }
   }
 
-  const isSwitch = !transferenciaDestinoId || transferenciaDestinoId === 'SWITCH'
+  const isSwitch = !transferenciaDestinoId
   if (isSwitch) {
     return {
       delta_caixa: isCaixa ? -v : +v,
@@ -136,7 +136,7 @@ export function NovaMovimentacaoDialog({
       subconta: 'CAIXA',
       motivo: '',
       valor: 0,
-      transferenciaDestinoId: 'SWITCH',
+      transferenciaDestinoId: null,
     },
   })
   const { clearDraft } = useFormDraft(movForm, 'nova-movimentacao')
@@ -303,7 +303,7 @@ export function NovaMovimentacaoDialog({
                     >
                       {subconta === 'CAIXA' && (
                         <motion.div
-                          layoutId={`${layoutIdPrefix}-sc-ios-caixa`}
+                          layoutId={`${layoutIdPrefix}-sc-ios-pill`}
                           className="absolute inset-0 bg-white dark:bg-[#3A3A3C] rounded-[8px] shadow-sm -z-10"
                           transition={{ type: 'spring', bounce: 0.18, duration: 0.36 }}
                         />
@@ -323,7 +323,7 @@ export function NovaMovimentacaoDialog({
                     >
                       {subconta === 'APLICADO' && (
                         <motion.div
-                          layoutId={`${layoutIdPrefix}-sc-ios-caixa`}
+                          layoutId={`${layoutIdPrefix}-sc-ios-pill`}
                           className="absolute inset-0 bg-white dark:bg-[#3A3A3C] rounded-[8px] shadow-sm -z-10"
                           transition={{ type: 'spring', bounce: 0.18, duration: 0.36 }}
                         />
@@ -380,8 +380,8 @@ export function NovaMovimentacaoDialog({
                   </div>
                   <div className="px-3 pb-3 space-y-1.5">
                     <DestinoCard
-                      selected={transferenciaDestino === 'SWITCH'}
-                      onSelect={() => movForm.setValue('transferenciaDestinoId', 'SWITCH')}
+                      selected={transferenciaDestino === null}
+                      onSelect={() => movForm.setValue('transferenciaDestinoId', null)}
                       icon={subconta === 'CAIXA' ? FileText : Wallet}
                       color={subconta === 'CAIXA' ? '#007AFF' : '#34C759'}
                       iconBg={subconta === 'CAIXA' ? '#007AFF14' : '#34C75914'}

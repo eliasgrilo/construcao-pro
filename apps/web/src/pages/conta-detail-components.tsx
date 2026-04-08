@@ -1,7 +1,7 @@
 /**
  * conta-detail-components.tsx
  * Micro-componentes puros extraídos de conta-detail.tsx:
- *   Ring, SegBtn, DestinoCard
+ *   Ring, DestinoCard
  */
 import { cn } from '@/lib/utils'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -46,43 +46,6 @@ export function Ring({
         style={{ transition: 'stroke-dasharray 0.6s cubic-bezier(0.34,1.56,0.64,1)' }}
       />
     </svg>
-  )
-}
-
-/* ─── Segmented button (2-option) ─── */
-export function SegBtn({
-  active,
-  color,
-  onClick,
-  children,
-  layoutId,
-}: {
-  active: boolean
-  color: string
-  onClick: () => void
-  children: React.ReactNode
-  layoutId: string
-}) {
-  return (
-    <motion.button
-      type="button"
-      whileTap={{ scale: 0.96 }}
-      onClick={onClick}
-      className={cn(
-        'relative flex items-center justify-center gap-1.5 rounded-[10px] text-[13px] font-medium transition-colors min-h-[42px] z-10 flex-1',
-        active ? '' : 'text-muted-foreground hover:text-foreground',
-      )}
-      style={{ color: active ? color : undefined }}
-    >
-      {active && (
-        <motion.div
-          layoutId={layoutId}
-          className="absolute inset-0 bg-card rounded-[10px] shadow-sm border border-black/5 dark:border-white/5 -z-10"
-          transition={{ type: 'spring', bounce: 0.15, duration: 0.4 }}
-        />
-      )}
-      {children}
-    </motion.button>
   )
 }
 

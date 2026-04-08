@@ -223,7 +223,7 @@ export function useDeleteFinanceiroMovimentacao() {
  *   SAIDA    CAIXA    → delta_caixa=-v, delta_aplicado=0
  *   ENTRADA  APLICADO → delta_caixa=0,  delta_aplicado=+v
  *   SAIDA    APLICADO → delta_caixa=0,  delta_aplicado=-v
- *   SWITCH   CAIXA→AP → delta_caixa=-v, delta_aplicado=+v
+ *   INTERNAL CAIXA↔AP → delta_caixa=-v, delta_aplicado=+v
  *   TRANSFER other    → delta_caixa=-v (or -ap), destino_conta_id+delta_destino_caixa=+v
  */
 export function useRegisterFinanceiroMovement() {

@@ -55,7 +55,7 @@ interface MovimentacaoConta {
   valor: number
   data: string
   createdAt: string
-  /** 'SWITCH' = troca interna Caixa↔Aplicado · contaId = outra conta cadastrada */
+  /** null = troca interna Caixa↔Aplicado · contaId = outra conta cadastrada */
   transferenciaDestinoId?: string
 }
 
@@ -213,7 +213,7 @@ export function ContaDetailPage() {
 
     const subInfo = isT
       ? (() => {
-          if (mov.transferenciaDestinoId === 'SWITCH' || !mov.transferenciaDestinoId) {
+          if (!mov.transferenciaDestinoId) {
             return `${scLbl} → ${sc === 'CAIXA' ? 'Aplicações' : 'Em Caixa'}`
           }
           const dest = contasAll.find((c) => c.id === mov.transferenciaDestinoId)

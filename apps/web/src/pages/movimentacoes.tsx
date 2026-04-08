@@ -8,7 +8,7 @@ import {
 import { cn, formatCurrency } from '@/lib/utils'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowDownRight, ArrowLeftRight, ArrowUpRight, Home, Landmark, Search } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import {
   FinanceiroCard,
   ImovelCard,
@@ -25,6 +25,7 @@ import {
 } from './movimentacoes-parts'
 
 export function MovimentacoesPage() {
+  const layoutIdPrefix = useId()
   const { data: movsData, isLoading: isLoadingMovs } = useMovimentacoes()
   const { data: finMovsData, isLoading: isLoadingFin } = useAllFinanceiroMovimentacoes()
   const { data: custoPorObraData } = useDashboardCustoPorObra()
@@ -246,7 +247,7 @@ export function MovimentacoesPage() {
               >
                 {activeTab === tab.key && (
                   <motion.div
-                    layoutId="mov-tab-pill"
+                    layoutId={`${layoutIdPrefix}-mov-tab-pill`}
                     className="absolute inset-0 rounded-[9px] bg-background shadow-sm"
                     transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                   />

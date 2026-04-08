@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils'
 import * as TabsPrimitive from '@radix-ui/react-tabs'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { FornecedoresTab } from './analises/fornecedores-tab'
 import { MateriaisTab } from './analises/materiais-tab'
 import { OrcamentoTab } from './analises/orcamento-tab'
@@ -17,6 +17,7 @@ const TABS = [
 type TabKey = (typeof TABS)[number]['key']
 
 export function AnalisesPage() {
+  const layoutIdPrefix = useId()
   const [activeTab, setActiveTab] = useState<TabKey>('orcamento')
 
   return (
@@ -55,7 +56,7 @@ export function AnalisesPage() {
               >
                 {activeTab === tab.key && (
                   <motion.div
-                    layoutId="analises-tab-pill"
+                    layoutId={`${layoutIdPrefix}-analises-tab-pill`}
                     className="absolute inset-0 rounded-[9px] bg-background shadow-sm"
                     transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                   />

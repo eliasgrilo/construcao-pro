@@ -8,11 +8,12 @@ import { cn } from '@/lib/utils'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowLeft, Plus } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { type CustoData, type ObraData, ObrasGrid, statusMap } from './obras-card'
 import { ObraCreateDialog, ObraDeleteDialog } from './obras-dialogs'
 
 export function ObrasPage() {
+  const layoutIdPrefix = useId()
   const navigate = useNavigate()
   const routeSearch = useSearch({ from: '/obras' })
   const { canManageObras, allowedObraIds } = usePermissions()
@@ -160,7 +161,7 @@ export function ObrasPage() {
               >
                 {filterStatus === seg.key && (
                   <motion.div
-                    layoutId="filter-pill"
+                    layoutId={`${layoutIdPrefix}-filter-pill`}
                     className="absolute inset-0 rounded-[9px] bg-background shadow-sm"
                     transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                   />

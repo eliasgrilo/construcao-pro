@@ -4,6 +4,7 @@
  */
 import { cn } from '@/lib/utils'
 import { motion } from 'framer-motion'
+import { useId } from 'react'
 import { ArrowLeftRight, DollarSign, FileText, Package, Warehouse, Wrench } from 'lucide-react'
 import type { Tab } from './obra-detail-types'
 
@@ -25,6 +26,8 @@ export function ObraDetailTabBar({
   setActiveTab: (tab: Tab) => void
   obraId: string
 }) {
+  const layoutIdPrefix = useId()
+
   return (
     <div
       className="px-4 md:px-8 mt-2"
@@ -55,7 +58,7 @@ export function ObraDetailTabBar({
             {tab.label}
             {activeTab === tab.key && (
               <motion.span
-                layoutId="tab-indicator"
+                layoutId={`${layoutIdPrefix}-tab-indicator`}
                 className="absolute bottom-0 left-0 right-0 h-[2px] rounded-t-full bg-primary"
                 transition={{ type: 'spring', stiffness: 380, damping: 32 }}
               />

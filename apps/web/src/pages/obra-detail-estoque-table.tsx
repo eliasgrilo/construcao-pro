@@ -5,7 +5,7 @@ import { cn, formatCurrency, formatDate, formatNumber } from '@/lib/utils'
 import type { ColumnDef } from '@tanstack/react-table'
 import { motion } from 'framer-motion'
 import { AlertTriangle, ArrowRightLeft, Filter, Minus, Package, Plus, Trash2 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { ESTOQUE_CATEGORY_ALL } from './obra-detail-estoque-utils'
 import { Empty } from './obra-detail-parts'
 import { getUnidadeForEstoque, isLowStock } from './obra-detail-state'
@@ -30,6 +30,7 @@ export function ObraDetailEstoqueTable({
   onOpenTransfer,
   onOpenDelete,
 }: ObraDetailEstoqueTableProps) {
+  const layoutIdPrefix = useId()
   const [filterCategoria, setFilterCategoria] = useState(ESTOQUE_CATEGORY_ALL)
 
   const lowCount = estoque.filter((item) => isLowStock(item)).length
@@ -265,7 +266,7 @@ export function ObraDetailEstoqueTable({
           >
             {filterCategoria === ESTOQUE_CATEGORY_ALL && (
               <motion.div
-                layoutId="estoque-table-cat-pill"
+                layoutId={`${layoutIdPrefix}-estoque-table-cat-pill`}
                 className="absolute inset-0 rounded-full bg-primary"
                 transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }}
               />
@@ -286,7 +287,7 @@ export function ObraDetailEstoqueTable({
             >
               {filterCategoria === categoria.key && (
                 <motion.div
-                  layoutId="estoque-table-cat-pill"
+                  layoutId={`${layoutIdPrefix}-estoque-table-cat-pill`}
                   className="absolute inset-0 rounded-full bg-primary"
                   transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }}
                 />

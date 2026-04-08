@@ -4,6 +4,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { cn, formatCurrency, formatNumber } from '@/lib/utils'
 import { accents } from '@/lib/utils'
 import { motion } from 'framer-motion'
+import { useId } from 'react'
 import {
   AlertTriangle,
   ArrowLeft,
@@ -271,6 +272,7 @@ export function CategoryFilterChips({
   filterCategoria: string
   onFilterChange: (cat: string) => void
 }) {
+  const layoutIdPrefix = useId()
   if (filteredData.length === 0 || categorias.length <= 1) return null
 
   return (
@@ -288,7 +290,7 @@ export function CategoryFilterChips({
       >
         {filterCategoria === 'ALL' && (
           <motion.div
-            layoutId="estoque-page-cat-pill"
+            layoutId={`${layoutIdPrefix}-estoque-page-cat-pill`}
             className="absolute inset-0 rounded-full bg-primary"
             transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }}
           />
@@ -309,7 +311,7 @@ export function CategoryFilterChips({
         >
           {filterCategoria === cat.key && (
             <motion.div
-              layoutId="estoque-page-cat-pill"
+              layoutId={`${layoutIdPrefix}-estoque-page-cat-pill`}
               className="absolute inset-0 rounded-full bg-primary"
               transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }}
             />

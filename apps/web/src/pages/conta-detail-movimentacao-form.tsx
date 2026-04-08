@@ -17,6 +17,7 @@ import {
   Wallet,
   X,
 } from 'lucide-react'
+import React, { useId } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { DestinoCard } from './conta-detail-components'
 
@@ -93,7 +94,7 @@ export function computeMovDeltas(
       delta_aplicado: isCaixa ? +v : -v,
       destino_conta_id: null,
       delta_destino_caixa: 0,
-      transferencia_destino_id: 'SWITCH',
+      transferencia_destino_id: null,
     }
   }
 
@@ -122,6 +123,8 @@ export function NovaMovimentacaoDialog({
 }: NovaMovimentacaoDialogProps) {
   const { toast } = useToast()
   const registerMovement = useRegisterFinanceiroMovement()
+
+  const layoutIdPrefix = useId()
 
   const outrasContas = contasAll.filter((c) => c.id !== conta?.id)
 
@@ -256,7 +259,7 @@ export function NovaMovimentacaoDialog({
                     >
                       {active && (
                         <motion.div
-                          layoutId="tipo-pill-ios"
+                          layoutId={`${layoutIdPrefix}-tipo-pill-ios`}
                           className="absolute inset-0 bg-white dark:bg-[#3A3A3C] rounded-[8px] shadow-sm -z-10"
                           transition={{ type: 'spring', bounce: 0.15, duration: 0.36 }}
                         />
@@ -300,7 +303,7 @@ export function NovaMovimentacaoDialog({
                     >
                       {subconta === 'CAIXA' && (
                         <motion.div
-                          layoutId="sc-ios-caixa"
+                          layoutId={`${layoutIdPrefix}-sc-ios-caixa`}
                           className="absolute inset-0 bg-white dark:bg-[#3A3A3C] rounded-[8px] shadow-sm -z-10"
                           transition={{ type: 'spring', bounce: 0.18, duration: 0.36 }}
                         />
@@ -320,7 +323,7 @@ export function NovaMovimentacaoDialog({
                     >
                       {subconta === 'APLICADO' && (
                         <motion.div
-                          layoutId="sc-ios-caixa"
+                          layoutId={`${layoutIdPrefix}-sc-ios-caixa`}
                           className="absolute inset-0 bg-white dark:bg-[#3A3A3C] rounded-[8px] shadow-sm -z-10"
                           transition={{ type: 'spring', bounce: 0.18, duration: 0.36 }}
                         />

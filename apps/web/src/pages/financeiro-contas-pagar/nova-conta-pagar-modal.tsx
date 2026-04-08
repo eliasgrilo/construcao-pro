@@ -73,8 +73,10 @@ import {
   Wallet,
   X,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { Controller, type UseFormReturn, useForm } from 'react-hook-form'
+import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
+import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 
 import { clr, modalCn, tipos } from '../financeiro'
 import { MovimentacaoListItem, ringColor } from '../financeiro-widgets'
@@ -109,6 +111,9 @@ export function NovaContaPagarModal({
   const nParcelas = form.watch('nParcelas')
   const vencimento = form.watch('vencimento')
   const descricaoVal = form.watch('descricao')
+
+  const formRef = useRef<HTMLDivElement>(null)
+  const { focusNext, focusPrev, dismiss, canGoPrev, canGoNext } = useFormFieldNavigation(formRef)
 
   const parcelas = useMemo(
     () =>
@@ -282,7 +287,7 @@ export function NovaContaPagarModal({
         </div>
 
         {/* Form — scrollable */}
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 space-y-[10px] pb-3">
+        <div ref={formRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 space-y-[10px] pb-3">
           {/* Grupo 1: Descrição + Categoria + Obra */}
           <div className="rounded-[14px] overflow-hidden bg-white dark:bg-[#2C2C2E]">
             <div className="flex items-center min-h-[52px] px-4 gap-3">
@@ -698,6 +703,13 @@ export function NovaContaPagarModal({
             </motion.button>
           </div>
         </StickyFooter>
+        <KeyboardToolbar
+          onNext={focusNext}
+          onPrev={focusPrev}
+          onDone={dismiss}
+          hasPrev={canGoPrev}
+          hasNext={canGoNext}
+        />
       </DialogContent>
     </Dialog>
   )

@@ -74,8 +74,10 @@ import {
   Wallet,
   X,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { Controller, type UseFormReturn, useForm } from 'react-hook-form'
+import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
+import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 
 import { clr, modalCn, tipos } from '../financeiro'
 import { MovimentacaoListItem, ringColor } from '../financeiro-widgets'
@@ -95,6 +97,9 @@ export function ReceberParcelaModal({
   const [contaId, setContaId] = useState('')
   const [dataReceb, setDataReceb] = useState(() => todayISO())
   const [valorStr, setValorStr] = useState('')
+
+  const formRef = useRef<HTMLDivElement>(null)
+  const { focusNext, focusPrev, dismiss, canGoPrev, canGoNext } = useFormFieldNavigation(formRef)
 
   useEffect(() => {
     if (parcela && contas.length > 0) {
@@ -184,7 +189,7 @@ export function ReceberParcelaModal({
         </div>
 
         {/* Form */}
-        <div className="flex-shrink-0 px-4 space-y-[10px] pb-3">
+        <div ref={formRef} className="flex-shrink-0 px-4 space-y-[10px] pb-3">
           {/* Conta bancária picker */}
           {contas.length > 1 ? (
             <div className="rounded-[14px] overflow-hidden bg-white dark:bg-[#2C2C2E]">
@@ -374,6 +379,13 @@ export function ReceberParcelaModal({
             </motion.button>
           </div>
         </StickyFooter>
+        <KeyboardToolbar
+          onNext={focusNext}
+          onPrev={focusPrev}
+          onDone={dismiss}
+          hasPrev={canGoPrev}
+          hasNext={canGoNext}
+        />
       </DialogContent>
     </Dialog>
   )

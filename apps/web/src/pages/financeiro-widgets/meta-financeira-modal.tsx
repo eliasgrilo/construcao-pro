@@ -68,8 +68,10 @@ import {
   Wallet,
   X,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { Controller, type UseFormReturn, useForm } from 'react-hook-form'
+import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
+import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 
 import { clr, modalCn, tipos } from '../financeiro'
 import { contaItemVariants, contaListVariants, contaSubLabel } from '../financeiro'
@@ -92,6 +94,9 @@ export function MetaFinanceiraModal({
   upsertMeta: ReturnType<typeof useUpsertFinanceiroMeta>
 }) {
   const { toast } = useToast()
+  const formRef = useRef<HTMLDivElement>(null)
+  const { focusNext, focusPrev, dismiss, canGoPrev, canGoNext } = useFormFieldNavigation(formRef)
+
   return (
     <Dialog
       open={metaModalOpen}
@@ -122,7 +127,7 @@ export function MetaFinanceiraModal({
           </motion.button>
         </div>
 
-        <div className="flex-shrink-0 px-4 pt-1 pb-3">
+        <div ref={formRef} className="flex-shrink-0 px-4 pt-1 pb-3">
           <div className="rounded-2xl bg-white dark:bg-[#2C2C2E] px-5 pt-5 pb-5">
             <p
               className="text-[11px] font-semibold tracking-wide mb-4"
@@ -265,6 +270,13 @@ export function MetaFinanceiraModal({
             )}
           </div>
         </StickyFooter>
+        <KeyboardToolbar
+          onNext={focusNext}
+          onPrev={focusPrev}
+          onDone={dismiss}
+          hasPrev={canGoPrev}
+          hasNext={canGoNext}
+        />
       </DialogContent>
     </Dialog>
   )

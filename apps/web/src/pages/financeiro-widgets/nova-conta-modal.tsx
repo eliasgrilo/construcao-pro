@@ -68,8 +68,10 @@ import {
   Wallet,
   X,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { Controller, type UseFormReturn, useForm } from 'react-hook-form'
+import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
+import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 
 import { clr, modalCn, tipos } from '../financeiro'
 import { contaItemVariants, contaListVariants, contaSubLabel } from '../financeiro'
@@ -98,6 +100,9 @@ export function NovaContaModal({
     { value: 'Poupança', label: 'Poupança' },
     { value: 'Investimento', label: 'Invest.' },
   ] as const
+
+  const formRef = useRef<HTMLDivElement>(null)
+  const { focusNext, focusPrev, dismiss, canGoPrev, canGoNext } = useFormFieldNavigation(formRef)
 
   const shakeControls = useAnimation()
   const handleAddConta = async () => {
@@ -175,7 +180,7 @@ export function NovaContaModal({
         </div>
 
         {/* ── Formulário agrupado — área rolável ── */}
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 space-y-[10px] pb-3">
+        <div ref={formRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 space-y-[10px] pb-3">
           {/* Grupo 1: informações do banco */}
           <div className="rounded-[14px] overflow-hidden bg-white dark:bg-[#2C2C2E]">
             {/* Banco */}
@@ -418,6 +423,13 @@ export function NovaContaModal({
             </motion.button>
           </div>
         </StickyFooter>
+        <KeyboardToolbar
+          onNext={focusNext}
+          onPrev={focusPrev}
+          onDone={dismiss}
+          hasPrev={canGoPrev}
+          hasNext={canGoNext}
+        />
       </DialogContent>
     </Dialog>
   )

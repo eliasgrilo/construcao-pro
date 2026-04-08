@@ -17,8 +17,10 @@ import {
   Wallet,
   X,
 } from 'lucide-react'
-import React, { useId } from 'react'
+import React, { useId, useRef } from 'react'
 import { Controller, useForm } from 'react-hook-form'
+import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
+import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 import { DestinoCard } from './conta-detail-components'
 
 // Using types mapped from conta-detail.tsx
@@ -125,6 +127,8 @@ export function NovaMovimentacaoDialog({
   const registerMovement = useRegisterFinanceiroMovement()
 
   const layoutIdPrefix = useId()
+  const formRef = useRef<HTMLDivElement>(null)
+  const { focusNext, focusPrev, dismiss, canGoPrev, canGoNext } = useFormFieldNavigation(formRef)
 
   const outrasContas = contasAll.filter((c) => c.id !== conta?.id)
 
@@ -236,7 +240,7 @@ export function NovaMovimentacaoDialog({
         </div>
 
         {/* Form area rolável */}
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 space-y-[10px] pb-3">
+        <div ref={formRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 space-y-[10px] pb-3">
           {/* Tipo selector */}
           <div className="rounded-[14px] overflow-hidden bg-white dark:bg-[#2C2C2E]">
             <div className="px-3 py-[10px]">
@@ -507,6 +511,13 @@ export function NovaMovimentacaoDialog({
             </motion.button>
           </div>
         </StickyFooter>
+        <KeyboardToolbar
+          onNext={focusNext}
+          onPrev={focusPrev}
+          onDone={dismiss}
+          hasPrev={canGoPrev}
+          hasNext={canGoNext}
+        />
       </DialogContent>
     </Dialog>
   )

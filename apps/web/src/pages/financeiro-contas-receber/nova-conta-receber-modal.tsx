@@ -74,8 +74,10 @@ import {
   Wallet,
   X,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { Controller, type UseFormReturn, useForm, useWatch } from 'react-hook-form'
+import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
+import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 
 import { clr, modalCn, tipos } from '../financeiro'
 import { MovimentacaoListItem, ringColor } from '../financeiro-widgets'
@@ -98,6 +100,9 @@ export function NovaContaReceberModal({
   const valor = useWatch({ control: form.control, name: 'valor' })
   const vencimento = useWatch({ control: form.control, name: 'vencimento' })
   const nParcelas = useWatch({ control: form.control, name: 'nParcelas' })
+
+  const formRef = useRef<HTMLDivElement>(null)
+  const { focusNext, focusPrev, dismiss, canGoPrev, canGoNext } = useFormFieldNavigation(formRef)
 
   const canSubmit = descricao.trim().length >= 2 && valor > 0 && !!vencimento && !isPending
 
@@ -234,7 +239,7 @@ export function NovaContaReceberModal({
         </div>
 
         {/* Form — scrollable */}
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 space-y-[10px] pb-3">
+        <div ref={formRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 space-y-[10px] pb-3">
           {/* Grupo 1: descricao + cliente */}
           <div className="rounded-[14px] overflow-hidden bg-white dark:bg-[#2C2C2E]">
             <div className="flex items-center min-h-[52px] px-4 gap-3">
@@ -618,6 +623,13 @@ export function NovaContaReceberModal({
             </motion.button>
           </div>
         </StickyFooter>
+        <KeyboardToolbar
+          onNext={focusNext}
+          onPrev={focusPrev}
+          onDone={dismiss}
+          hasPrev={canGoPrev}
+          hasNext={canGoNext}
+        />
       </DialogContent>
     </Dialog>
   )

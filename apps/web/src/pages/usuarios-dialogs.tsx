@@ -30,7 +30,7 @@ import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Check, Mail } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 
 // ─── Role Config ──────────────────────────────────────────
@@ -196,6 +196,10 @@ export function EditDialog({
   const [ativo, setAtivo] = useState(true)
   const [selectedObras, setSelectedObras] = useState<string[]>([])
 
+  const cachedUser = useRef(user)
+  if (user) cachedUser.current = user
+  const activeUser = user || cachedUser.current
+
   useEffect(() => {
     if (user) {
       setNome(user.nome)
@@ -205,14 +209,14 @@ export function EditDialog({
     }
   }, [user?.id])
 
-  const isSelf = currentUser?.id === user?.id
+  const isSelf = currentUser?.id === activeUser?.id
 
   const handleSave = async () => {
-    if (!user) return
+    if (!activeUser) return
 
     try {
       await updateUsuarioWithObras.mutateAsync({
-        id: user.id,
+        id: activeUser.id,
         nome,
         role,
         ativo,
@@ -239,7 +243,7 @@ export function EditDialog({
         <DialogHeader>
           <DialogTitle>Editar Usuário</DialogTitle>
           <DialogDescription>
-            {user?.email}
+            {activeUser?.email}
             {isSelf && <span className="ml-2 text-[11px] text-warning font-medium">(Você)</span>}
           </DialogDescription>
         </DialogHeader>

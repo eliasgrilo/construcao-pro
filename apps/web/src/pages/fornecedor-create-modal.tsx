@@ -4,8 +4,10 @@ import { useCreateFornecedor } from '@/hooks/use-supabase'
 import { type CreateFornecedorInput, createFornecedorSchema } from '@/lib/schemas'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
+import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
+import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 import { iosSheetDialogCn } from './dialog-styles'
 
 const modalCn = iosSheetDialogCn
@@ -28,6 +30,9 @@ export function CreateFornecedorModal({ open, onOpenChange }: CreateFornecedorMo
     resolver: zodResolver(createFornecedorSchema),
     mode: 'onTouched',
   })
+
+  const formRef = useRef<HTMLDivElement>(null)
+  const { focusNext, focusPrev, dismiss, canGoPrev, canGoNext } = useFormFieldNavigation(formRef)
 
   useEffect(() => {
     if (!open) reset()
@@ -95,7 +100,7 @@ export function CreateFornecedorModal({ open, onOpenChange }: CreateFornecedorMo
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto px-5 space-y-4 pb-6">
+        <div ref={formRef} className="flex-1 min-h-0 overflow-y-auto px-5 space-y-4 pb-6">
           {/* Razão Social */}
           <div>
             <p className="text-[12px] text-muted-foreground/45 uppercase tracking-wider font-semibold px-4 mb-1.5">
@@ -246,6 +251,13 @@ export function CreateFornecedorModal({ open, onOpenChange }: CreateFornecedorMo
             </div>
           </div>
         </div>
+        <KeyboardToolbar
+          onNext={focusNext}
+          onPrev={focusPrev}
+          onDone={dismiss}
+          hasPrev={canGoPrev}
+          hasNext={canGoNext}
+        />
       </DialogContent>
     </Dialog>
   )

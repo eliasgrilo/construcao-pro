@@ -32,7 +32,7 @@ import {
 import { accents } from '@/lib/utils'
 import { motion } from 'framer-motion'
 import { Package, Pencil, Plus, Tag, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import {
   UNIDADES,
   getUnidadeAbbr,
@@ -61,6 +61,14 @@ export function CategoriasTab() {
     nome: string
     count: number
   } | null>(null)
+
+  const cachedEditTarget = useRef(editTarget)
+  if (editTarget) cachedEditTarget.current = editTarget
+  const activeEdit = editTarget || cachedEditTarget.current
+
+  const cachedDeleteTarget = useRef(deleteTarget)
+  if (deleteTarget) cachedDeleteTarget.current = deleteTarget
+  const activeDelete = deleteTarget || cachedDeleteTarget.current
 
   const [newNome, setNewNome] = useState('')
   const [newUnidade, setNewUnidade] = useState('')
@@ -360,9 +368,9 @@ export function CategoriasTab() {
               </Button>
               <Button
                 onClick={() =>
-                  editTarget &&
+                  activeEdit &&
                   updateMutation.mutate(
-                    { id: editTarget.id, nome: editNome.trim(), unidade: unidadeType(editUnidade) },
+                    { id: activeEdit.id, nome: editNome.trim(), unidade: unidadeType(editUnidade) },
                     {
                       onSuccess: () => {
                         setEditTarget(null)
@@ -389,15 +397,15 @@ export function CategoriasTab() {
           <DialogHeader>
             <DialogTitle>Excluir Categoria</DialogTitle>
             <DialogDescription>
-              {(deleteTarget?.count ?? 0) > 0 ? (
+              {(activeDelete?.count ?? 0) > 0 ? (
                 <>
-                  A categoria <strong>{deleteTarget?.nome}</strong> possui{' '}
-                  <strong>{deleteTarget?.count} material(is)</strong> vinculado(s). Remova-os
+                  A categoria <strong>{activeDelete?.nome}</strong> possui{' '}
+                  <strong>{activeDelete?.count} material(is)</strong> vinculado(s). Remova-os
                   primeiro antes de excluir a categoria.
                 </>
               ) : (
                 <>
-                  Tem certeza que deseja excluir <strong>{deleteTarget?.nome}</strong>? Essa ação
+                  Tem certeza que deseja excluir <strong>{activeDelete?.nome}</strong>? Essa ação
                   não pode ser desfeita.
                 </>
               )}
@@ -405,14 +413,14 @@ export function CategoriasTab() {
           </DialogHeader>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setDeleteTarget(null)}>
-              {(deleteTarget?.count ?? 0) > 0 ? 'Entendido' : 'Cancelar'}
+              {(activeDelete?.count ?? 0) > 0 ? 'Entendido' : 'Cancelar'}
             </Button>
-            {(!deleteTarget || (deleteTarget.count ?? 0) === 0) && (
+            {(!activeDelete || (activeDelete.count ?? 0) === 0) && (
               <Button
                 variant="destructive"
                 onClick={() =>
-                  deleteTarget &&
-                  deleteMutation.mutate(deleteTarget.id, {
+                  activeDelete &&
+                  deleteMutation.mutate(activeDelete.id, {
                     onSuccess: () => {
                       setDeleteTarget(null)
                       toast({ title: 'Categoria excluída', variant: 'success' })

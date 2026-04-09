@@ -109,11 +109,15 @@ export function ReceberParcelaModal({
     }
   }, [parcela, contas])
 
-  if (!parcela) return null
+  const cachedParcela = useRef<ContaReceberParcela | null>(null)
+  if (parcela) cachedParcela.current = parcela
+  const activeParcela = parcela || cachedParcela.current
+
+  if (!activeParcela) return null
 
   const valorRecebido = parseCurrency(valorStr)
-  const desc = parcela.contas_receber?.descricao ?? '—'
-  const isMulti = parcela.total_parcelas > 1
+  const desc = activeParcela.contas_receber?.descricao ?? '—'
+  const isMulti = activeParcela.total_parcelas > 1
   const selectedConta = contas.find((c) => c.id === contaId)
   const canConfirm = !!contaId && !!dataReceb && valorRecebido > 0 && !isPending
 
@@ -180,11 +184,11 @@ export function ReceberParcelaModal({
             className="text-[38px] font-bold tabular-nums tracking-tight"
             style={{ color: '#34C759' }}
           >
-            +{formatCurrency(valorRecebido > 0 ? valorRecebido : Number(parcela.valor))}
+            +{formatCurrency(valorRecebido > 0 ? valorRecebido : Number(activeParcela.valor))}
           </p>
           <p className="text-[14px] text-muted-foreground mt-1 text-center px-6 line-clamp-2">
             {desc}
-            {isMulti ? ` · ${parcela.numero_parcela}/${parcela.total_parcelas}` : ''}
+            {isMulti ? ` · ${activeParcela.numero_parcela}/${activeParcela.total_parcelas}` : ''}
           </p>
         </div>
 

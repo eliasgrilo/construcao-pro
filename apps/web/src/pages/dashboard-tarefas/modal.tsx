@@ -20,8 +20,10 @@ import {
   Trash2,
   X,
 } from 'lucide-react'
-import { type RefObject, memo, useCallback, useRef, useState } from 'react'
+import { type RefObject, memo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
+import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 import { type ClrColors, type NavigateFn, clr, greeting, obraColors } from '../dashboard-shared'
 import { DashboardFilterMenuItem } from '../dashboard-widgets'
 import {
@@ -95,6 +97,9 @@ export function DashboardChecklistModal({
   useBodyScrollLock(checklistOpen)
   useOverlayPresence(checklistOpen)
 
+  const formRef = useRef<HTMLDivElement>(null)
+  const { focusNext, focusPrev, dismiss, canGoPrev, canGoNext } = useFormFieldNavigation(formRef)
+
   return createPortal(
     <AnimatePresence>
       {checklistOpen && (
@@ -126,6 +131,7 @@ export function DashboardChecklistModal({
             style={{ zIndex: 1001 }}
           >
             <div
+              ref={formRef}
               role="dialog"
               aria-modal="true"
               aria-label="Checklist de tarefas"
@@ -249,6 +255,13 @@ export function DashboardChecklistModal({
                 {/* Progress bar */}
                 <DashboardChecklistProgressBar tasks={tasks} doneCount={doneCount} />
               </div>
+              <KeyboardToolbar
+                onNext={focusNext}
+                onPrev={focusPrev}
+                onDone={dismiss}
+                hasPrev={canGoPrev}
+                hasNext={canGoNext}
+              />
             </div>
           </motion.div>
         </>

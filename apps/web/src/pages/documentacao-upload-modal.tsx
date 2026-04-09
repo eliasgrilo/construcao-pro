@@ -8,8 +8,10 @@ import type { DocumentoCategoria } from '@/hooks/use-supabase'
 import { cn } from '@/lib/utils'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Building2, Check, Landmark, Plus, Upload, X } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
+import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 import { fmtSize, getFileColor, getFileIcon, modalCn } from './documentacao-utils'
 
 interface DocumentacaoUploadModalProps {
@@ -54,6 +56,9 @@ export function DocumentacaoUploadModal({
     file: File
     name: string
   } | null>(null)
+
+  const formRef = useRef<HTMLDivElement>(null)
+  const { focusNext, focusPrev, dismiss, canGoPrev, canGoNext } = useFormFieldNavigation(formRef)
 
   function openPreview(item: { file: File; name: string }) {
     const url = URL.createObjectURL(item.file)
@@ -100,7 +105,7 @@ export function DocumentacaoUploadModal({
             </div>
           </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-5 space-y-4">
+          <div ref={formRef} className="flex-1 min-h-0 overflow-y-auto px-5 pb-5 space-y-4">
             {/* Error */}
             <AnimatePresence>
               {uploadError && (
@@ -277,6 +282,13 @@ export function DocumentacaoUploadModal({
               </div>
             )}
           </div>
+          <KeyboardToolbar
+            onNext={focusNext}
+            onPrev={focusPrev}
+            onDone={dismiss}
+            hasPrev={canGoPrev}
+            hasNext={canGoNext}
+          />
         </DialogContent>
       </Dialog>
 

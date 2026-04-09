@@ -8,6 +8,8 @@ import {
 import { useToast } from '@/components/ui/toast'
 import { cn } from '@/lib/utils'
 import { AnimatePresence, motion } from 'framer-motion'
+import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
+import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 import { StepIndicator } from '../notas-fiscais-import-components'
 import { NotasFiscaisImportDialogFooter } from './notas-fiscais-import-dialog-footer'
 import type { NotasFiscaisPageModel } from './notas-fiscais-import-dialog-model'
@@ -58,8 +60,19 @@ function renderStep(model: NotasFiscaisPageModel) {
   return null
 }
 
+import React from 'react'
+
 export function NotasFiscaisImportDialog(model: NotasFiscaisPageModel) {
-  const copy = getDialogCopy(model)
+  const formRef = React.useRef<HTMLDivElement>(null)
+  const { focusNext, focusPrev, dismiss, canGoPrev, canGoNext } = useFormFieldNavigation(formRef)
+
+  const cachedModelRef = React.useRef(model)
+  if (model.uploadStep !== null) {
+    cachedModelRef.current = model
+  }
+  const activeModel = model.uploadStep !== null ? model : cachedModelRef.current
+
+  const copy = getDialogCopy(activeModel)
   const { toast } = useToast()
 
   return (
@@ -83,8 +96,9 @@ export function NotasFiscaisImportDialog(model: NotasFiscaisPageModel) {
             : 'sm:max-w-lg',
         )}
       >
-        <DialogHeader
-          className="shrink-0 pb-5 border-b space-y-0"
+        <div ref={formRef} className="flex flex-col flex-1 min-h-0">
+          <DialogHeader
+            className="shrink-0 pb-5 border-b space-y-0"
           style={{ borderColor: 'rgba(0,0,0,0.06)' }}
         >
           <DialogTitle className="sr-only">{copy?.title ?? TITLES.select}</DialogTitle>
@@ -92,12 +106,12 @@ export function NotasFiscaisImportDialog(model: NotasFiscaisPageModel) {
             Importe notas fiscais em etapas: selecione, confira e confirme os dados
           </DialogDescription>
 
-          {model.uploadStep && <StepIndicator currentStep={model.uploadStep} />}
+          {activeModel.uploadStep && <StepIndicator currentStep={activeModel.uploadStep} />}
 
-          {model.uploadStep && copy && (
+          {activeModel.uploadStep && copy && (
             <AnimatePresence mode="wait">
               <motion.div
-                key={`${model.uploadStep}-${model.showReview ? 'review' : 'main'}`}
+                key={`${activeModel.uploadStep}-${activeModel.showReview ? 'review' : 'main'}`}
                 initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -5 }}
@@ -112,10 +126,18 @@ export function NotasFiscaisImportDialog(model: NotasFiscaisPageModel) {
         </DialogHeader>
 
         <AnimatePresence mode="wait" initial={false}>
-          {renderStep(model)}
+          {renderStep(activeModel)}
         </AnimatePresence>
 
-        <NotasFiscaisImportDialogFooter model={model} />
+          <NotasFiscaisImportDialogFooter model={activeModel} />
+        </div>
+        <KeyboardToolbar
+          onNext={focusNext}
+          onPrev={focusPrev}
+          onDone={dismiss}
+          hasPrev={canGoPrev}
+          hasNext={canGoNext}
+        />
       </DialogContent>
     </Dialog>
   )

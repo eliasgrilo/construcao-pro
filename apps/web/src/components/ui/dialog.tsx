@@ -1,4 +1,3 @@
-import { useBodyScrollLock, useOverlayPresence } from '@/hooks/use-body-scroll-lock'
 import { cn } from '@/lib/utils'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import * as React from 'react'
@@ -15,11 +14,6 @@ const DialogOverlay = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Overlay>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
 >(({ className, onClick, ...props }, ref) => {
-  // Move scroll lock here so it persists during Framer Space/Radix exit animations,
-  // preventing the background from jumping (empurrar a tela) before modal leaves.
-  useBodyScrollLock(true)
-  useOverlayPresence(true)
-
   return (
     <DialogPrimitive.Overlay
       ref={ref}

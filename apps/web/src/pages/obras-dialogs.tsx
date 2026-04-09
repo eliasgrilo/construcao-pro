@@ -24,6 +24,8 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { CheckCircle2, HardHat, MapPin, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
+import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 
 /* ── Apple-style section stagger variants ── */
 const modalSectionVariants = {
@@ -87,6 +89,9 @@ export function ObraCreateDialog({
   const isPending = createMutation.isPending
   const isKeyboardOpen = useIsKeyboardOpen()
 
+  const formRef = useRef<HTMLFormElement>(null)
+  const { focusNext, focusPrev, dismiss, canGoPrev, canGoNext } = useFormFieldNavigation(formRef)
+
   function handleClose() {
     if (isPending) return
     setOpen(false)
@@ -144,6 +149,7 @@ export function ObraCreateDialog({
         {/* ══ SCROLLABLE BODY ══ */}
         <form
           id="nova-obra-form"
+          ref={formRef}
           onSubmit={handleSubmit(async (d) => {
             if (isSubmittingRef.current) return
             isSubmittingRef.current = true
@@ -378,6 +384,13 @@ export function ObraCreateDialog({
             </motion.div>
           )}
         </AnimatePresence>
+        <KeyboardToolbar
+          onNext={focusNext}
+          onPrev={focusPrev}
+          onDone={dismiss}
+          hasPrev={canGoPrev}
+          hasNext={canGoNext}
+        />
       </DialogContent>
     </Dialog>
   )
@@ -393,13 +406,17 @@ export function ObraDeleteDialog({
   const { toast } = useToast()
   const deleteMutation = useDeleteObra()
 
+  const cachedDeleteTarget = useRef(deleteTarget)
+  if (deleteTarget) cachedDeleteTarget.current = deleteTarget
+  const activeDelete = deleteTarget || cachedDeleteTarget.current
+
   return (
     <Dialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>Excluir Obra</DialogTitle>
           <DialogDescription>
-            Tem certeza que deseja excluir <strong>{deleteTarget?.nome}</strong>? Esta ação não pode
+            Tem certeza que deseja excluir <strong>{activeDelete?.nome}</strong>? Esta ação não pode
             ser desfeita.
           </DialogDescription>
         </DialogHeader>
@@ -410,8 +427,8 @@ export function ObraDeleteDialog({
           <Button
             variant="destructive"
             onClick={() =>
-              deleteTarget &&
-              deleteMutation.mutate(deleteTarget.id, {
+              activeDelete &&
+              deleteMutation.mutate(activeDelete.id, {
                 onSuccess: () => {
                   setDeleteTarget(null)
                   toast({ title: 'Obra excluída', variant: 'success' })

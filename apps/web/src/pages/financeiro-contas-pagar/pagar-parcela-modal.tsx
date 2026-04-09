@@ -108,13 +108,17 @@ export function PagarParcelaModal({
     }
   }, [parcela, contas])
 
-  if (!parcela) return null
+  const cachedParcela = useRef<ContaPagarParcela | null>(null)
+  if (parcela) cachedParcela.current = parcela
+  const activeParcela = parcela || cachedParcela.current
+
+  if (!activeParcela) return null
 
   const valorPago = parseCurrency(valorStr)
-  const desc = parcela.contas_pagar?.descricao ?? '—'
-  const categoria = parcela.contas_pagar?.categoria ?? 'Outros'
-  const isMulti = parcela.total_parcelas > 1
-  const hasNF = !!parcela.contas_pagar?.nf_id
+  const desc = activeParcela.contas_pagar?.descricao ?? '—'
+  const categoria = activeParcela.contas_pagar?.categoria ?? 'Outros'
+  const isMulti = activeParcela.total_parcelas > 1
+  const hasNF = !!activeParcela.contas_pagar?.nf_id
   const selectedConta = contas.find((c) => c.id === contaId)
   const saldoCaixa = Number(selectedConta?.valor_caixa ?? 0)
   const saldoAposDebito = saldoCaixa - valorPago
@@ -184,11 +188,11 @@ export function PagarParcelaModal({
             className="text-[38px] font-bold tabular-nums tracking-tight"
             style={{ color: clr.red }}
           >
-            −{formatCurrency(Number(parcela.valor))}
+            −{formatCurrency(Number(activeParcela.valor))}
           </p>
           <p className="text-[14px] text-muted-foreground mt-1 text-center px-6 line-clamp-2">
             {desc}
-            {isMulti ? ` · ${parcela.numero_parcela}/${parcela.total_parcelas}` : ''}
+            {isMulti ? ` · ${activeParcela.numero_parcela}/${activeParcela.total_parcelas}` : ''}
           </p>
           <div className="flex items-center gap-2 mt-2 flex-wrap justify-center">
             <span

@@ -7,7 +7,9 @@ import { useToast } from '@/components/ui/toast'
 import { type FornecedorRow, useUpdateFornecedor } from '@/hooks/use-supabase'
 import { cn } from '@/lib/utils'
 import { motion } from 'framer-motion'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
+import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 import { iosSheetDialogCn } from './dialog-styles'
 
 const modalCn = iosSheetDialogCn
@@ -35,6 +37,9 @@ export function EditFornecedorModal({
   const [estado, setEstado] = useState(fornecedor.estado ?? '')
   const [observacao, setObservacao] = useState(fornecedor.observacao ?? '')
   const [ativo, setAtivo] = useState(fornecedor.ativo ?? true)
+
+  const formRef = useRef<HTMLDivElement>(null)
+  const { focusNext, focusPrev, dismiss, canGoPrev, canGoNext } = useFormFieldNavigation(formRef)
 
   const resetFields = () => {
     setNome(fornecedor.nome ?? '')
@@ -117,7 +122,7 @@ export function EditFornecedorModal({
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto px-5 space-y-4 pb-6">
+        <div ref={formRef} className="flex-1 min-h-0 overflow-y-auto px-5 space-y-4 pb-6">
           {/* Razão Social */}
           <div>
             <p className="text-[12px] text-muted-foreground/45 uppercase tracking-wider font-semibold px-4 mb-1.5">
@@ -273,6 +278,13 @@ export function EditFornecedorModal({
             </div>
           </div>
         </div>
+        <KeyboardToolbar
+          onNext={focusNext}
+          onPrev={focusPrev}
+          onDone={dismiss}
+          hasPrev={canGoPrev}
+          hasNext={canGoNext}
+        />
       </DialogContent>
     </Dialog>
   )

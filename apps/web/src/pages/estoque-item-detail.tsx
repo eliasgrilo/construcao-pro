@@ -1,3 +1,4 @@
+import * as React from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { type MaterialEntradaRow, useMaterialEntradas } from '@/hooks/use-supabase'
 import { cn, formatCurrency, formatDateShort, formatNumber } from '@/lib/utils'
@@ -81,12 +82,16 @@ export function EstoqueItemDetail({
   const materialId = item?.material?.id ?? null
   const { data: entradas = [], isLoading } = useMaterialEntradas(materialId)
 
-  if (!item) return null
+  const cachedItem = React.useRef<EstoqueItem | null>(null)
+  if (item) cachedItem.current = item
+  const activeItem = item || cachedItem.current
 
-  const qty = item.quantidade ?? 0
-  const unit = item.material?.unidade ?? item.material?.categoria?.unidade ?? 'UN'
-  const precoAtual = item.material?.preco_unitario ?? 0
-  const min = item.material?.estoque_minimo || 0
+  if (!activeItem) return null
+
+  const qty = activeItem.quantidade ?? 0
+  const unit = activeItem.material?.unidade ?? activeItem.material?.categoria?.unidade ?? 'UN'
+  const precoAtual = activeItem.material?.preco_unitario ?? 0
+  const min = activeItem.material?.estoque_minimo || 0
   const isLow = min > 0 && qty < min
 
   // Price stats from entry history
@@ -119,10 +124,10 @@ export function EstoqueItemDetail({
           <div className="flex items-center justify-between">
             <div className="min-w-0 flex-1 pr-3">
               <p className="text-[18px] font-bold truncate tracking-[-0.2px]">
-                {item.material?.nome}
+                {activeItem.material?.nome}
               </p>
               <p className="text-[12px] text-muted-foreground/50 font-mono mt-0.5">
-                {item.material?.codigo || '—'} · {item.material?.categoria?.nome || '—'}
+                {activeItem.material?.codigo || '—'} · {activeItem.material?.categoria?.nome || '—'}
               </p>
             </div>
             <motion.button

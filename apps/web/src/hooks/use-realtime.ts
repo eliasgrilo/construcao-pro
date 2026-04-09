@@ -40,6 +40,8 @@ export function useRealtimeSync() {
     })
   }, [])
 
+  const isFirstConnection = useRef(true)
+
   // Refresh all queries when user returns to the app (mobile resume).
   // This is critical on iOS where the app can be suspended for minutes.
   useEffect(() => {
@@ -154,93 +156,86 @@ export function useRealtimeSync() {
 
     const channel = supabase
       .channel('app-realtime-sync')
-      // ── financeiro ──────────────────────────────────────────────────────────
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'financeiro_contas' }, () =>
-        invalidateFinContas(),
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'financeiro_movimentacoes' },
-        () => invalidateFinMov(),
-      )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'financeiro_meta' }, () =>
-        invalidateFinMeta(),
-      )
-      // ── contas a pagar / receber ─────────────────────────────────────────────
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'contas_pagar' }, () =>
-        invalidateContasPagar(),
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'contas_pagar_parcelas' },
-        () => invalidateContasPagar(),
-      )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'contas_receber' }, () =>
-        invalidateContasReceber(),
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'contas_receber_parcelas' },
-        () => invalidateContasReceber(),
-      )
-      // ── estoque ──────────────────────────────────────────────────────────────
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'estoques' }, () =>
-        invalidateEstoque(),
-      )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'almoxarifados' }, () =>
-        invalidateAlmoxarifados(),
-      )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'movimentacoes' }, () =>
-        invalidateMovimentacoes(),
-      )
-      // ── obras ────────────────────────────────────────────────────────────────
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'obras' }, () =>
-        invalidateObras(),
-      )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'obra_manutencao' }, () =>
-        invalidateObraManutencao(),
-      )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'obra_manutencao_item' }, () =>
-        invalidateObraManutencao(),
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'obra_lancamentos_burocracia' },
-        () => invalidateObraLancamentos(),
-      )
-      // ── documentos ───────────────────────────────────────────────────────────
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'documentos' }, () =>
-        invalidateDocumentos(),
-      )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'documento_categorias' }, () =>
-        invalidateDocumentos(),
-      )
-      // ── materiais / categorias ───────────────────────────────────────────────
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'materiais' }, () =>
-        invalidateMateriais(),
-      )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'categorias' }, () =>
-        invalidateCategorias(),
-      )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'itens_nf' }, () =>
-        invalidateNFs(),
-      )
-      // ── tarefas / notas / fornecedores ───────────────────────────────────────
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tarefas' }, () =>
-        invalidateTarefas(),
-      )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notas_fiscais' }, () =>
-        invalidateNFs(),
-      )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'fornecedores' }, () =>
-        invalidateFornecedores(),
-      )
-      // ── user preferences ────────────────────────────────────────────────────
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_preferences' }, () =>
-        invalidateUserPreferences(),
-      )
+      .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+        switch (payload.table) {
+          // ── financeiro ──────────────────────────────────────────────────────────
+          case 'financeiro_contas':
+            invalidateFinContas()
+            break
+          case 'financeiro_movimentacoes':
+            invalidateFinMov()
+            break
+          case 'financeiro_meta':
+            invalidateFinMeta()
+            break
+          // ── contas a pagar / receber ─────────────────────────────────────────────
+          case 'contas_pagar':
+          case 'contas_pagar_parcelas':
+            invalidateContasPagar()
+            break
+          case 'contas_receber':
+          case 'contas_receber_parcelas':
+            invalidateContasReceber()
+            break
+          // ── estoque ──────────────────────────────────────────────────────────────
+          case 'estoques':
+            invalidateEstoque()
+            break
+          case 'almoxarifados':
+            invalidateAlmoxarifados()
+            break
+          case 'movimentacoes':
+            invalidateMovimentacoes()
+            break
+          // ── obras ────────────────────────────────────────────────────────────────
+          case 'obras':
+            invalidateObras()
+            break
+          case 'obra_manutencao':
+          case 'obra_manutencao_item':
+            invalidateObraManutencao()
+            break
+          case 'obra_lancamentos_burocracia':
+            invalidateObraLancamentos()
+            break
+          // ── documentos ───────────────────────────────────────────────────────────
+          case 'documentos':
+          case 'documento_categorias':
+            invalidateDocumentos()
+            break
+          // ── materiais / categorias ───────────────────────────────────────────────
+          case 'materiais':
+            invalidateMateriais()
+            break
+          case 'categorias':
+            invalidateCategorias()
+            break
+          case 'itens_nf':
+            invalidateNFs()
+            break
+          // ── tarefas / notas / fornecedores ───────────────────────────────────────
+          case 'tarefas':
+            invalidateTarefas()
+            break
+          case 'notas_fiscais':
+            invalidateNFs()
+            break
+          case 'fornecedores':
+            invalidateFornecedores()
+            break
+          // ── user preferences ────────────────────────────────────────────────────
+          case 'user_preferences':
+            invalidateUserPreferences()
+            break
+        }
+      })
       .subscribe((channelStatus) => {
         if (channelStatus === 'SUBSCRIBED') {
+          if (isFirstConnection.current) {
+            isFirstConnection.current = false
+            setStatus('CONNECTED')
+            return
+          }
           // Just reconnected — invalidate all active queries to ensure fresh data
           if (statusRef.current === 'RECONNECTING' || statusRef.current === 'DISCONNECTED') {
             qc.invalidateQueries()

@@ -16,6 +16,10 @@ export function ObraDetailEstoqueDeleteDialog({
   isPending: boolean
   onConfirm: (target: DeleteEstoqueTarget) => void
 }) {
+  const cachedTarget = react.useRef(target)
+  if (target) cachedTarget.current = target
+  const activeTarget = target || cachedTarget.current
+
   const handleClose = () => {
     if (!isPending) setTarget(null)
   }
@@ -40,10 +44,10 @@ export function ObraDetailEstoqueDeleteDialog({
             <DialogDescription className="text-[14px] text-muted-foreground leading-snug px-2">
               Isso registrará uma saída para consumir o saldo restante de{' '}
               <strong className="text-foreground font-semibold">
-                {formatNumber(target?.quantidade ?? 0)}
+                {formatNumber(activeTarget?.quantidade ?? 0)}
               </strong>{' '}
               em{' '}
-              <strong className="text-foreground font-semibold">{target?.almoxarifadoNome}</strong>.{' '}
+              <strong className="text-foreground font-semibold">{activeTarget?.almoxarifadoNome}</strong>.{' '}
               Esta ação não pode ser desfeita.
             </DialogDescription>
           </div>
@@ -55,7 +59,7 @@ export function ObraDetailEstoqueDeleteDialog({
               variant="destructive"
               className="h-[50px] rounded-[14px] text-[16px] font-semibold"
               loading={isPending}
-              onClick={() => target && onConfirm(target)}
+              onClick={() => activeTarget && onConfirm(activeTarget)}
             >
               Zerar Estoque
             </Button>

@@ -36,8 +36,10 @@ import { cn } from '@/lib/utils'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
 import { Plus, Tag, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useForm } from 'react-hook-form'
+import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
+import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 import { UNIDADES, getUnidadeLabel } from './materiais-tab-constants'
 
 /* ── Shared form fields ── */
@@ -184,6 +186,9 @@ export function MateriaisCreateDialog({
   const { toast } = useToast()
   const { data: categoriasData = [] } = useCategorias()
   const createMutation = useCreateMaterial()
+  
+  const formRef = useRef<HTMLFormElement>(null)
+  const { focusNext, focusPrev, dismiss, canGoPrev, canGoNext } = useFormFieldNavigation(formRef)
 
   const {
     register,
@@ -239,6 +244,7 @@ export function MateriaisCreateDialog({
         </div>
         <form
           id="novo-material-form"
+          ref={formRef}
           onSubmit={handleSubmit((d) =>
             createMutation.mutate(
               {
@@ -292,6 +298,13 @@ export function MateriaisCreateDialog({
             </Button>
           </div>
         </StickyFooter>
+        <KeyboardToolbar
+          onNext={focusNext}
+          onPrev={focusPrev}
+          onDone={dismiss}
+          hasPrev={canGoPrev}
+          hasNext={canGoNext}
+        />
       </DialogContent>
     </Dialog>
   )
@@ -317,6 +330,13 @@ export function MateriaisEditDialog({
   const { toast } = useToast()
   const { data: categoriasData = [] } = useCategorias()
   const updateMutation = useUpdateMaterial()
+
+  const cachedEditTarget = useRef(editTarget)
+  if (editTarget) cachedEditTarget.current = editTarget
+  const activeEdit = editTarget || cachedEditTarget.current
+
+  const formRef = useRef<HTMLFormElement>(null)
+  const { focusNext, focusPrev, dismiss, canGoPrev, canGoNext } = useFormFieldNavigation(formRef)
 
   const {
     register,
@@ -375,11 +395,12 @@ export function MateriaisEditDialog({
         </div>
         <form
           id="editar-material-form"
+          ref={formRef}
           onSubmit={handleSubmit((d) => {
-            if (!editTarget) return
+            if (!activeEdit) return
             updateMutation.mutate(
               {
-                id: editTarget.id,
+                id: activeEdit.id,
                 nome: d.nome,
                 codigo: d.codigo,
                 categoria_id: d.categoriaId || undefined,
@@ -426,6 +447,13 @@ export function MateriaisEditDialog({
             </Button>
           </div>
         </StickyFooter>
+        <KeyboardToolbar
+          onNext={focusNext}
+          onPrev={focusPrev}
+          onDone={dismiss}
+          hasPrev={canGoPrev}
+          hasNext={canGoNext}
+        />
       </DialogContent>
     </Dialog>
   )
@@ -442,13 +470,17 @@ export function MateriaisDeleteDialog({
   const { toast } = useToast()
   const deleteMutation = useDeleteMaterial()
 
+  const cachedDeleteTarget = useRef(deleteTarget)
+  if (deleteTarget) cachedDeleteTarget.current = deleteTarget
+  const activeDelete = deleteTarget || cachedDeleteTarget.current
+
   return (
     <Dialog open={!!deleteTarget} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>Excluir Material</DialogTitle>
           <DialogDescription>
-            Tem certeza que deseja excluir <strong>{deleteTarget?.nome}</strong>? Registros de
+            Tem certeza que deseja excluir <strong>{activeDelete?.nome}</strong>? Registros de
             estoque vinculados também serão removidos. Essa ação não pode ser desfeita.
           </DialogDescription>
         </DialogHeader>
@@ -459,8 +491,8 @@ export function MateriaisDeleteDialog({
           <Button
             variant="destructive"
             onClick={() =>
-              deleteTarget &&
-              deleteMutation.mutate(deleteTarget.id, {
+              activeDelete &&
+              deleteMutation.mutate(activeDelete.id, {
                 onSuccess: () => {
                   onClose()
                   toast({ title: 'Material excluído', variant: 'success' })
@@ -498,6 +530,9 @@ export function QuickAddCategoriaDialog({
   const [catNome, setCatNome] = useState('')
   const [catUnidade, setCatUnidade] = useState('')
 
+  const formRef = useRef<HTMLDivElement>(null)
+  const { focusNext, focusPrev, dismiss, canGoPrev, canGoNext } = useFormFieldNavigation(formRef)
+
   const handleClose = () => {
     setCatNome('')
     setCatUnidade('')
@@ -527,6 +562,7 @@ export function QuickAddCategoriaDialog({
           </motion.button>
         </div>
         <div
+          ref={formRef}
           className={cn('overflow-y-auto overscroll-contain px-5 space-y-4 flex-1 min-h-0 py-5')}
         >
           <div className="space-y-1.5">
@@ -617,6 +653,13 @@ export function QuickAddCategoriaDialog({
             </Button>
           </div>
         </StickyFooter>
+        <KeyboardToolbar
+          onNext={focusNext}
+          onPrev={focusPrev}
+          onDone={dismiss}
+          hasPrev={canGoPrev}
+          hasNext={canGoNext}
+        />
       </DialogContent>
     </Dialog>
   )

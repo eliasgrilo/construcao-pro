@@ -42,17 +42,10 @@ export function useRealtimeSync() {
 
   const isFirstConnection = useRef(true)
 
-  // Refresh all queries when user returns to the app (mobile resume).
-  // This is critical on iOS where the app can be suspended for minutes.
-  useEffect(() => {
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        qc.invalidateQueries()
-      }
-    }
-    document.addEventListener('visibilitychange', handleVisibility)
-    return () => document.removeEventListener('visibilitychange', handleVisibility)
-  }, [qc])
+  // Note: query refresh on tab focus is handled by TanStack Query's built-in
+  // refetchOnWindowFocus. A manual qc.invalidateQueries() here would double-fire
+  // and mark all queries stale on every tab switch, causing unnecessary DB
+  // round-trips on every focus event.
 
   useEffect(() => {
     // Debounced invalidators — prevent UI thrashing from rapid DB changes

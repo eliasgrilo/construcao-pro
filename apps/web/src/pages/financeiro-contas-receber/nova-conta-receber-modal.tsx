@@ -1,86 +1,18 @@
 import { formatBRL, parseCurrency } from '@/components/ui/currency-input'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { StickyFooter } from '@/components/ui/sticky-footer'
-import { useToast } from '@/components/ui/toast'
-import { useFormDraft } from '@/hooks/use-form-draft'
-import { usePermissions } from '@/hooks/use-permissions'
-import {
-  type ContaPagarParcela,
-  type ContaReceberParcela,
-  type FinanceiroConta,
-  type FinanceiroMovimentacaoWithConta,
-  type MaterialCostTrendPoint,
-  type ObraRow,
-  useAllFinanceiroMovimentacoes,
-  useContasPagarParcelas,
-  useContasReceberParcelas,
-  useCreateContaPagar,
-  useCreateContaReceber,
-  useCreateFinanceiroConta,
-  useCreateFinanceiroMovimentacao,
-  useDashboardStats,
-  useDeleteContaPagar,
-  useDeleteContaReceber,
-  useDeleteFinanceiroConta,
-  useFinanceiroContas,
-  useFinanceiroMeta,
-  useMaterialCostTrend,
-  useObras,
-  usePagarParcela,
-  useReceberParcela,
-  useUpsertFinanceiroMeta,
-} from '@/hooks/use-supabase'
-import { useUndoableDelete } from '@/hooks/use-undoable-delete'
-import { exportMovimentacoesCsv } from '@/lib/export-csv'
-import {
-  buildInstallmentPreview,
-  buildInstallmentSchedule,
-  getRelativeDueLabel,
-  groupItemsByMonth,
-} from '@/lib/installments'
-import {
-  type CreateContaPagarInput,
-  type CreateContaReceberInput,
-  type CreateFinanceiroContaInput,
-  createContaPagarSchema,
-  createContaReceberSchema,
-  createFinanceiroContaSchema,
-} from '@/lib/schemas'
-import { accents, cn, formatCurrency, formatDate, todayISO } from '@/lib/utils'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useNavigate } from '@tanstack/react-router'
+import { type ObraRow } from '@/hooks/use-supabase'
+import { buildInstallmentPreview, buildInstallmentSchedule } from '@/lib/installments'
+import { type CreateContaReceberInput } from '@/lib/schemas'
+import { cn, formatCurrency } from '@/lib/utils'
 import { AnimatePresence, motion, useAnimation } from 'framer-motion'
-import {
-  AlertCircle,
-  ArrowDownRight,
-  ArrowLeftRight,
-  ArrowUpRight,
-  Calendar,
-  CheckCircle2,
-  ChevronDown,
-  Clock,
-  CreditCard,
-  Download,
-  FileText,
-  Landmark,
-  Package,
-  Plus,
-  Receipt,
-  Search,
-  Target,
-  Trash2,
-  TrendingDown,
-  TrendingUp,
-  Wallet,
-  X,
-} from 'lucide-react'
-import { useEffect, useMemo, useState, useRef } from 'react'
-import { Controller, type UseFormReturn, useForm, useWatch } from 'react-hook-form'
+import { ArrowDownRight, CheckCircle2, CreditCard, FileText, X } from 'lucide-react'
+import { useMemo, useState, useRef } from 'react'
+import { Controller, type UseFormReturn, useWatch } from 'react-hook-form'
 import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
 import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 
-import { clr, modalCn, tipos } from '../financeiro'
-import { MovimentacaoListItem, ringColor } from '../financeiro-widgets'
+import { modalCn } from '../financeiro'
 export function NovaContaReceberModal({
   open,
   setOpen,
@@ -104,11 +36,17 @@ export function NovaContaReceberModal({
   const formRef = useRef<HTMLDivElement>(null)
   const { focusNext, focusPrev, dismiss, canGoPrev, canGoNext } = useFormFieldNavigation(formRef)
 
-  const canSubmit = descricao.trim().length >= 2 && valor > 0 && !!vencimento && !isPending
-
   const [formaRecebimento, setFormaRecebimento] = useState('')
   const [taxaCartaoReceber, setTaxaCartaoReceber] = useState('')
   const [diaVencBoletoReceber, setDiaVencBoletoReceber] = useState('')
+
+  const boletoInvalidoRec =
+    formaRecebimento === 'BOLETO' &&
+    (diaVencBoletoReceber.trim() === '' ||
+      Number(diaVencBoletoReceber) < 1 ||
+      Number(diaVencBoletoReceber) > 31)
+  const canSubmit =
+    descricao.trim().length >= 2 && valor > 0 && !!vencimento && !boletoInvalidoRec && !isPending
   const FORMAS_RECEBIMENTO = [
     { value: 'PIX', label: 'PIX', color: '#34C759' },
     { value: 'CARTAO_CREDITO', label: 'Cartão', color: '#5856D6' },

@@ -50,12 +50,10 @@ import {
   ArrowLeftRight,
   ArrowUpRight,
   Calendar,
-  CheckCircle2,
   ChevronDown,
   Clock,
   CreditCard,
   Download,
-  FileText,
   Landmark,
   Package,
   Plus,
@@ -65,7 +63,6 @@ import {
   Trash2,
   TrendingDown,
   TrendingUp,
-  Wallet,
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useState, useRef } from 'react'
@@ -90,15 +87,13 @@ export function NovaContaModal({
   isPending: boolean
 }) {
   const subcontaNova = form.watch('subconta')
-  const tipoNova = form.watch('tipo')
   const banco = form.watch('banco')
   const valorInicial = form.watch('valorInicial')
   const canSubmit = banco.trim().length > 0 && valorInicial >= 0 && !isPending
 
-  const TIPOS_CONTA = [
-    { value: 'Corrente', label: 'Corrente' },
-    { value: 'Poupança', label: 'Poupança' },
-    { value: 'Investimento', label: 'Invest.' },
+  const TIPOS_SUBCONTA = [
+    { value: 'CAIXA', label: 'Em Caixa' },
+    { value: 'APLICADO', label: 'Aplicações' },
   ] as const
 
   const formRef = useRef<HTMLDivElement>(null)
@@ -251,29 +246,29 @@ export function NovaContaModal({
             </div>
           </div>
 
-          {/* Grupo 2: Tipo de conta — 3-way Apple segmented */}
+          {/* Grupo 2: Subconta — 2-way Apple segmented */}
           <div className="rounded-[14px] overflow-hidden bg-white dark:bg-[#2C2C2E] px-3 py-[10px]">
             <p
               className="text-[11px] font-semibold uppercase tracking-wide mb-2.5 px-1"
               style={{ color: '#8E8E93' }}
             >
-              Tipo de conta
+              Subconta
             </p>
             <div className="relative flex gap-0.5 p-[3px] rounded-[10px] bg-black/[0.06] dark:bg-white/[0.08]">
               <div
                 className="absolute top-[3px] bottom-[3px] rounded-[8px] bg-white dark:bg-[#3A3A3C] shadow-sm pointer-events-none transition-transform duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)]"
                 style={{
-                  width: 'calc((100% - 6px) / 3)',
-                  transform: `translateX(calc(${TIPOS_CONTA.findIndex((t) => t.value === tipoNova)} * (100% + 3px)))`,
+                  width: 'calc((100% - 6px) / 2)',
+                  transform: `translateX(calc(${TIPOS_SUBCONTA.findIndex((t) => t.value === subcontaNova)} * (100% + 3px)))`,
                 }}
               />
-              {TIPOS_CONTA.map(({ value, label }) => (
+              {TIPOS_SUBCONTA.map(({ value, label }) => (
                 <button
                   key={value}
                   type="button"
-                  onClick={() => form.setValue('tipo', value)}
+                  onClick={() => form.setValue('subconta', value)}
                   className="relative flex-1 flex items-center justify-center rounded-[8px] py-[9px] text-[13px] font-medium transition-colors z-10"
-                  style={{ color: tipoNova === value ? '#007AFF' : undefined }}
+                  style={{ color: subcontaNova === value ? '#007AFF' : undefined }}
                 >
                   {label}
                 </button>
@@ -281,63 +276,8 @@ export function NovaContaModal({
             </div>
           </div>
 
-          {/* Grupo 3: saldo inicial — subconta picker + valor único */}
+          {/* Grupo 3: saldo inicial */}
           <div className="rounded-[14px] overflow-hidden bg-white dark:bg-[#2C2C2E]">
-            <div className="px-3 pt-3 pb-2">
-              <p
-                className="text-[11px] font-semibold uppercase tracking-wide mb-2 px-1"
-                style={{ color: '#8E8E93' }}
-              >
-                Subconta
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                {(
-                  [
-                    { value: 'CAIXA', label: 'Em Caixa', Icon: Wallet, color: '#34C759' },
-                    { value: 'APLICADO', label: 'Aplicações', Icon: FileText, color: '#007AFF' },
-                  ] as const
-                ).map(({ value, label, Icon, color }) => {
-                  const isSelected = subcontaNova === value
-                  return (
-                    <motion.button
-                      key={value}
-                      type="button"
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => form.setValue('subconta', value)}
-                      className={cn(
-                        'relative flex flex-col items-center gap-2 py-3 px-3 rounded-[12px] transition-all',
-                        isSelected
-                          ? 'bg-white dark:bg-[#3A3A3C]'
-                          : 'bg-black/[0.04] dark:bg-white/[0.06]',
-                      )}
-                      style={isSelected ? { boxShadow: `0 0 0 2px ${color}` } : {}}
-                    >
-                      <AnimatePresence>
-                        {isSelected && (
-                          <motion.div
-                            key="check"
-                            initial={{ scale: 0, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0, opacity: 0 }}
-                            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                            className="absolute top-1.5 right-1.5"
-                          >
-                            <CheckCircle2 className="h-3.5 w-3.5" style={{ color }} />
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                      <Icon className="h-5 w-5" style={{ color: isSelected ? color : undefined }} />
-                      <span
-                        className="text-[13px] font-medium"
-                        style={{ color: isSelected ? color : undefined }}
-                      >
-                        {label}
-                      </span>
-                    </motion.button>
-                  )
-                })}
-              </div>
-            </div>
             <div className="h-px mx-4 bg-black/[0.07] dark:bg-white/[0.07]" />
             <div className="flex items-center min-h-[52px] px-4 gap-3">
               <span className="text-[16px] font-medium flex-shrink-0 text-foreground/55">

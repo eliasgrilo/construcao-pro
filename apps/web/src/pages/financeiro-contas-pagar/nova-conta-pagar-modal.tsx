@@ -3,83 +3,19 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { StickyFooter } from '@/components/ui/sticky-footer'
 import { useToast } from '@/components/ui/toast'
 import { useFormDraft } from '@/hooks/use-form-draft'
-import { usePermissions } from '@/hooks/use-permissions'
-import {
-  type ContaPagarParcela,
-  type ContaReceberParcela,
-  type FinanceiroConta,
-  type FinanceiroMovimentacaoWithConta,
-  type MaterialCostTrendPoint,
-  type ObraRow,
-  useAllFinanceiroMovimentacoes,
-  useContasPagarParcelas,
-  useContasReceberParcelas,
-  useCreateContaPagar,
-  useCreateContaReceber,
-  useCreateFinanceiroConta,
-  useCreateFinanceiroMovimentacao,
-  useDashboardStats,
-  useDeleteContaPagar,
-  useDeleteContaReceber,
-  useDeleteFinanceiroConta,
-  useFinanceiroContas,
-  useFinanceiroMeta,
-  useMaterialCostTrend,
-  useObras,
-  usePagarParcela,
-  useReceberParcela,
-  useUpsertFinanceiroMeta,
-} from '@/hooks/use-supabase'
-import { useUndoableDelete } from '@/hooks/use-undoable-delete'
-import { exportMovimentacoesCsv } from '@/lib/export-csv'
-import {
-  buildInstallmentSchedule,
-  getRelativeDueLabel,
-  groupItemsByMonth,
-} from '@/lib/installments'
-import {
-  type CreateContaPagarInput,
-  type CreateContaReceberInput,
-  type CreateFinanceiroContaInput,
-  createContaPagarSchema,
-  createContaReceberSchema,
-  createFinanceiroContaSchema,
-} from '@/lib/schemas'
-import { accents, cn, formatCurrency, formatDate, todayISO } from '@/lib/utils'
+import { type ObraRow, useCreateContaPagar } from '@/hooks/use-supabase'
+import { buildInstallmentSchedule } from '@/lib/installments'
+import { type CreateContaPagarInput, createContaPagarSchema } from '@/lib/schemas'
+import { cn, formatCurrency } from '@/lib/utils'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useNavigate } from '@tanstack/react-router'
 import { AnimatePresence, motion, useAnimation } from 'framer-motion'
-import {
-  AlertCircle,
-  ArrowDownRight,
-  ArrowLeftRight,
-  ArrowUpRight,
-  Calendar,
-  CheckCircle2,
-  ChevronDown,
-  Clock,
-  CreditCard,
-  Download,
-  FileText,
-  Landmark,
-  Package,
-  Plus,
-  Receipt,
-  Search,
-  Target,
-  Trash2,
-  TrendingDown,
-  TrendingUp,
-  Wallet,
-  X,
-} from 'lucide-react'
-import { useEffect, useMemo, useState, useRef } from 'react'
-import { Controller, type UseFormReturn, useForm } from 'react-hook-form'
+import { CheckCircle2, CreditCard, FileText, Receipt, X } from 'lucide-react'
+import { useMemo, useState, useRef } from 'react'
+import { Controller, useForm } from 'react-hook-form'
 import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
 import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 
-import { clr, modalCn, tipos } from '../financeiro'
-import { MovimentacaoListItem, ringColor } from '../financeiro-widgets'
+import { clr, modalCn } from '../financeiro'
 export function NovaContaPagarModal({
   open,
   setOpen,
@@ -139,8 +75,16 @@ export function NovaContaPagarModal({
     { value: 'DINHEIRO', label: 'Dinheiro' },
   ]
 
+  const boletoInvalido =
+    formaPagamento === 'BOLETO' &&
+    (diaVencBoleto.trim() === '' || Number(diaVencBoleto) < 1 || Number(diaVencBoleto) > 31)
   const canSubmit =
-    descricaoVal.trim().length >= 2 && valor > 0 && !!vencimento && !!formaPagamento && !isPending
+    descricaoVal.trim().length >= 2 &&
+    valor > 0 &&
+    !!vencimento &&
+    !!formaPagamento &&
+    !boletoInvalido &&
+    !isPending
 
   const handleSubmit = form.handleSubmit(async (data) => {
     try {

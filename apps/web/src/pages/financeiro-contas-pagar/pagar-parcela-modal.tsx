@@ -1,85 +1,15 @@
 import { formatBRL, parseCurrency } from '@/components/ui/currency-input'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { StickyFooter } from '@/components/ui/sticky-footer'
-import { useToast } from '@/components/ui/toast'
-import { useFormDraft } from '@/hooks/use-form-draft'
-import { usePermissions } from '@/hooks/use-permissions'
-import {
-  type ContaPagarParcela,
-  type ContaReceberParcela,
-  type FinanceiroConta,
-  type FinanceiroMovimentacaoWithConta,
-  type MaterialCostTrendPoint,
-  type ObraRow,
-  useAllFinanceiroMovimentacoes,
-  useContasPagarParcelas,
-  useContasReceberParcelas,
-  useCreateContaPagar,
-  useCreateContaReceber,
-  useCreateFinanceiroConta,
-  useCreateFinanceiroMovimentacao,
-  useDashboardStats,
-  useDeleteContaPagar,
-  useDeleteContaReceber,
-  useDeleteFinanceiroConta,
-  useFinanceiroContas,
-  useFinanceiroMeta,
-  useMaterialCostTrend,
-  useObras,
-  usePagarParcela,
-  useReceberParcela,
-  useUpsertFinanceiroMeta,
-} from '@/hooks/use-supabase'
-import { useUndoableDelete } from '@/hooks/use-undoable-delete'
-import { exportMovimentacoesCsv } from '@/lib/export-csv'
-import {
-  buildInstallmentSchedule,
-  getRelativeDueLabel,
-  groupItemsByMonth,
-} from '@/lib/installments'
-import {
-  type CreateContaPagarInput,
-  type CreateContaReceberInput,
-  type CreateFinanceiroContaInput,
-  createContaPagarSchema,
-  createContaReceberSchema,
-  createFinanceiroContaSchema,
-} from '@/lib/schemas'
-import { accents, cn, formatCurrency, formatDate, todayISO } from '@/lib/utils'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useNavigate } from '@tanstack/react-router'
+import { type ContaPagarParcela, type FinanceiroConta } from '@/hooks/use-supabase'
+import { cn, formatCurrency, todayISO } from '@/lib/utils'
 import { AnimatePresence, motion, useAnimation } from 'framer-motion'
-import {
-  AlertCircle,
-  ArrowDownRight,
-  ArrowLeftRight,
-  ArrowUpRight,
-  Calendar,
-  CheckCircle2,
-  ChevronDown,
-  Clock,
-  CreditCard,
-  Download,
-  FileText,
-  Landmark,
-  Package,
-  Plus,
-  Receipt,
-  Search,
-  Target,
-  Trash2,
-  TrendingDown,
-  TrendingUp,
-  Wallet,
-  X,
-} from 'lucide-react'
-import { useEffect, useMemo, useState, useRef } from 'react'
-import { Controller, type UseFormReturn, useForm } from 'react-hook-form'
+import { CheckCircle2, FileText, Landmark, X } from 'lucide-react'
+import { useEffect, useState, useRef } from 'react'
 import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
 import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 
-import { clr, modalCn, tipos } from '../financeiro'
-import { MovimentacaoListItem, ringColor } from '../financeiro-widgets'
+import { clr, modalCn } from '../financeiro'
 export function PagarParcelaModal({
   parcela,
   contas,

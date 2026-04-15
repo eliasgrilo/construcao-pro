@@ -435,8 +435,9 @@ export function App() {
         return
       }
 
-      // SIGNED_IN, TOKEN_REFRESHED (with valid session), INITIAL_SESSION, etc.
-      loadProfile(session, { forceRefresh: event !== 'TOKEN_REFRESHED' })
+      // SIGNED_IN / USER_UPDATED: always refresh (permissions/profile may have changed).
+      // INITIAL_SESSION / TOKEN_REFRESHED: use cached user if same ID — no extra DB round-trip.
+      loadProfile(session, { forceRefresh: event === 'SIGNED_IN' || event === 'USER_UPDATED' })
     })
     return () => subscription.unsubscribe()
   }, [loadProfile, logout])

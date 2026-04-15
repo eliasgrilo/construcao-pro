@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { formatNumber } from '@/lib/utils'
 import { Trash2 } from 'lucide-react'
+import { useRef } from 'react'
 import { iosSheetDialogCn } from './dialog-styles'
 import type { DeleteEstoqueTarget } from './obra-detail-types'
 
@@ -16,7 +17,7 @@ export function ObraDetailEstoqueDeleteDialog({
   isPending: boolean
   onConfirm: (target: DeleteEstoqueTarget) => void
 }) {
-  const cachedTarget = react.useRef(target)
+  const cachedTarget = useRef(target)
   if (target) cachedTarget.current = target
   const activeTarget = target || cachedTarget.current
 

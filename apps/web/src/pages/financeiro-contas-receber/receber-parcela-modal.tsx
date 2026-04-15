@@ -1,3 +1,4 @@
+import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
 import { formatBRL, parseCurrency } from '@/components/ui/currency-input'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { StickyFooter } from '@/components/ui/sticky-footer'
@@ -31,6 +32,7 @@ import {
   useUpsertFinanceiroMeta,
 } from '@/hooks/use-supabase'
 import { useUndoableDelete } from '@/hooks/use-undoable-delete'
+import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 import { exportMovimentacoesCsv } from '@/lib/export-csv'
 import {
   buildInstallmentPreview,
@@ -74,10 +76,8 @@ import {
   Wallet,
   X,
 } from 'lucide-react'
-import { useEffect, useMemo, useState, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Controller, type UseFormReturn, useForm } from 'react-hook-form'
-import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
-import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 
 import { clr, modalCn, tipos } from '../financeiro'
 import { MovimentacaoListItem, ringColor } from '../financeiro-widgets'

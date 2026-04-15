@@ -1,16 +1,16 @@
+import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
 import { formatBRL, parseCurrency } from '@/components/ui/currency-input'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { StickyFooter } from '@/components/ui/sticky-footer'
-import { type ObraRow } from '@/hooks/use-supabase'
+import type { ObraRow } from '@/hooks/use-supabase'
+import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 import { buildInstallmentPreview, buildInstallmentSchedule } from '@/lib/installments'
-import { type CreateContaReceberInput } from '@/lib/schemas'
+import type { CreateContaReceberInput } from '@/lib/schemas'
 import { cn, formatCurrency } from '@/lib/utils'
 import { AnimatePresence, motion, useAnimation } from 'framer-motion'
 import { ArrowDownRight, CheckCircle2, CreditCard, FileText, X } from 'lucide-react'
-import { useMemo, useState, useRef } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Controller, type UseFormReturn, useWatch } from 'react-hook-form'
-import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
-import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 
 import { modalCn } from '../financeiro'
 export function NovaContaReceberModal({
@@ -177,7 +177,10 @@ export function NovaContaReceberModal({
         </div>
 
         {/* Form — scrollable */}
-        <div ref={formRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 space-y-[10px] pb-3">
+        <div
+          ref={formRef}
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 space-y-[10px] pb-3"
+        >
           {/* Grupo 1: descricao + cliente */}
           <div className="rounded-[14px] overflow-hidden bg-white dark:bg-[#2C2C2E]">
             <div className="flex items-center min-h-[52px] px-4 gap-3">

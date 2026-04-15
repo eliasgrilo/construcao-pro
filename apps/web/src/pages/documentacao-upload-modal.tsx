@@ -1,3 +1,4 @@
+import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
 /**
  * documentacao-upload-modal.tsx
  * DocumentacaoUploadModal extraído de documentacao-dialogs.tsx
@@ -5,13 +6,12 @@
 import { ZoomableImageViewer } from '@/components/ZoomableImageViewer'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import type { DocumentoCategoria } from '@/hooks/use-supabase'
+import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 import { cn } from '@/lib/utils'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Building2, Check, Landmark, Plus, Upload, X } from 'lucide-react'
-import { useState, useRef } from 'react'
+import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
-import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 import { fmtSize, getFileColor, getFileIcon, modalCn } from './documentacao-utils'
 
 interface DocumentacaoUploadModalProps {

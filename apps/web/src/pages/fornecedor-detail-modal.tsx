@@ -1,3 +1,4 @@
+import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
 /**
  * fornecedor-detail-modal.tsx
  * EditFornecedorModal extraído de fornecedor-detail.tsx
@@ -5,11 +6,10 @@
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
 import { type FornecedorRow, useUpdateFornecedor } from '@/hooks/use-supabase'
+import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 import { cn } from '@/lib/utils'
 import { motion } from 'framer-motion'
-import { useState, useRef } from 'react'
-import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
-import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
+import { useRef, useState } from 'react'
 import { iosSheetDialogCn } from './dialog-styles'
 
 const modalCn = iosSheetDialogCn

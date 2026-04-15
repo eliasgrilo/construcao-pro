@@ -1,3 +1,4 @@
+import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
 import {
   Dialog,
   DialogContent,
@@ -6,10 +7,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
+import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 import { cn } from '@/lib/utils'
 import { AnimatePresence, motion } from 'framer-motion'
-import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
-import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 import { StepIndicator } from '../notas-fiscais-import-components'
 import { NotasFiscaisImportDialogFooter } from './notas-fiscais-import-dialog-footer'
 import type { NotasFiscaisPageModel } from './notas-fiscais-import-dialog-model'
@@ -99,35 +99,35 @@ export function NotasFiscaisImportDialog(model: NotasFiscaisPageModel) {
         <div ref={formRef} className="flex flex-col flex-1 min-h-0">
           <DialogHeader
             className="shrink-0 pb-5 border-b space-y-0"
-          style={{ borderColor: 'rgba(0,0,0,0.06)' }}
-        >
-          <DialogTitle className="sr-only">{copy?.title ?? TITLES.select}</DialogTitle>
-          <DialogDescription className="sr-only">
-            Importe notas fiscais em etapas: selecione, confira e confirme os dados
-          </DialogDescription>
+            style={{ borderColor: 'rgba(0,0,0,0.06)' }}
+          >
+            <DialogTitle className="sr-only">{copy?.title ?? TITLES.select}</DialogTitle>
+            <DialogDescription className="sr-only">
+              Importe notas fiscais em etapas: selecione, confira e confirme os dados
+            </DialogDescription>
 
-          {activeModel.uploadStep && <StepIndicator currentStep={activeModel.uploadStep} />}
+            {activeModel.uploadStep && <StepIndicator currentStep={activeModel.uploadStep} />}
 
-          {activeModel.uploadStep && copy && (
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={`${activeModel.uploadStep}-${activeModel.showReview ? 'review' : 'main'}`}
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -5 }}
-                transition={{ duration: 0.18, ease: [0.25, 0.46, 0.45, 0.94] }}
-                className="pt-4 text-center"
-              >
-                <p className="text-[18px] font-bold tracking-tight leading-tight">{copy.title}</p>
-                <p className="text-[12px] text-muted-foreground mt-1">{copy.description}</p>
-              </motion.div>
-            </AnimatePresence>
-          )}
-        </DialogHeader>
+            {activeModel.uploadStep && copy && (
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={`${activeModel.uploadStep}-${activeModel.showReview ? 'review' : 'main'}`}
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -5 }}
+                  transition={{ duration: 0.18, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  className="pt-4 text-center"
+                >
+                  <p className="text-[18px] font-bold tracking-tight leading-tight">{copy.title}</p>
+                  <p className="text-[12px] text-muted-foreground mt-1">{copy.description}</p>
+                </motion.div>
+              </AnimatePresence>
+            )}
+          </DialogHeader>
 
-        <AnimatePresence mode="wait" initial={false}>
-          {renderStep(activeModel)}
-        </AnimatePresence>
+          <AnimatePresence mode="wait" initial={false}>
+            {renderStep(activeModel)}
+          </AnimatePresence>
 
           <NotasFiscaisImportDialogFooter model={activeModel} />
         </div>

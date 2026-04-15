@@ -1,3 +1,4 @@
+import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
 /**
  * obras-dialogs.tsx
  * ObraCreateDialog + ObraDeleteDialog extraídos de obras.tsx
@@ -17,6 +18,7 @@ import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/toast'
 import { useIsKeyboardOpen } from '@/hooks/use-keyboard-open'
 import { useCreateObra, useDeleteObra } from '@/hooks/use-supabase'
+import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 import { type CreateObraInput, createObraSchema } from '@/lib/schemas'
 import { cn } from '@/lib/utils'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -24,8 +26,6 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { CheckCircle2, HardHat, MapPin, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
-import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 
 /* ── Apple-style section stagger variants ── */
 const modalSectionVariants = {

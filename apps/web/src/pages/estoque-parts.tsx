@@ -4,7 +4,6 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { cn, formatCurrency, formatNumber } from '@/lib/utils'
 import { accents } from '@/lib/utils'
 import { motion } from 'framer-motion'
-import { useId } from 'react'
 import {
   AlertTriangle,
   ArrowLeft,
@@ -15,6 +14,7 @@ import {
   MapPin,
   Package,
 } from 'lucide-react'
+import { useId } from 'react'
 import type { EstoqueItem, ObraGroup } from './estoque-types'
 
 // ── Animation variants ─────────────────────────────────────────────────────────

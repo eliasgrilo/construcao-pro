@@ -4,8 +4,8 @@
  */
 import { cn } from '@/lib/utils'
 import { motion } from 'framer-motion'
-import { useId } from 'react'
 import { ArrowLeftRight, DollarSign, FileText, Package, Warehouse, Wrench } from 'lucide-react'
+import { useId } from 'react'
 import type { Tab } from './obra-detail-types'
 
 export const tabs: { key: Tab; label: string; icon: typeof Warehouse }[] = [

@@ -1,3 +1,4 @@
+import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
 import { formatBRL, parseCurrency } from '@/components/ui/currency-input'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { StickyFooter } from '@/components/ui/sticky-footer'
@@ -31,6 +32,7 @@ import {
   type useUpsertFinanceiroMeta,
 } from '@/hooks/use-supabase'
 import { useUndoableDelete } from '@/hooks/use-undoable-delete'
+import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 import { exportMovimentacoesCsv } from '@/lib/export-csv'
 import {
   type CreateContaPagarInput,
@@ -65,10 +67,8 @@ import {
   TrendingUp,
   X,
 } from 'lucide-react'
-import { useEffect, useMemo, useState, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Controller, type UseFormReturn, useForm } from 'react-hook-form'
-import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
-import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 
 import { clr, modalCn, tipos } from '../financeiro'
 import { contaItemVariants, contaListVariants, contaSubLabel } from '../financeiro'
@@ -175,7 +175,10 @@ export function NovaContaModal({
         </div>
 
         {/* ── Formulário agrupado — área rolável ── */}
-        <div ref={formRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 space-y-[10px] pb-3">
+        <div
+          ref={formRef}
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 space-y-[10px] pb-3"
+        >
           {/* Grupo 1: informações do banco */}
           <div className="rounded-[14px] overflow-hidden bg-white dark:bg-[#2C2C2E]">
             {/* Banco */}

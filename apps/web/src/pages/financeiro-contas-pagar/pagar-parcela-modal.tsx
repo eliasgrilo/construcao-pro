@@ -1,13 +1,13 @@
+import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
 import { formatBRL, parseCurrency } from '@/components/ui/currency-input'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { StickyFooter } from '@/components/ui/sticky-footer'
-import { type ContaPagarParcela, type FinanceiroConta } from '@/hooks/use-supabase'
+import type { ContaPagarParcela, FinanceiroConta } from '@/hooks/use-supabase'
+import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 import { cn, formatCurrency, todayISO } from '@/lib/utils'
 import { AnimatePresence, motion, useAnimation } from 'framer-motion'
 import { CheckCircle2, FileText, Landmark, X } from 'lucide-react'
-import { useEffect, useState, useRef } from 'react'
-import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
-import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
+import { useEffect, useRef, useState } from 'react'
 
 import { clr, modalCn } from '../financeiro'
 export function PagarParcelaModal({
@@ -143,7 +143,10 @@ export function PagarParcelaModal({
           </div>
         </div>
 
-        <div ref={formRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 space-y-[10px] pb-3">
+        <div
+          ref={formRef}
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 space-y-[10px] pb-3"
+        >
           {/* Conta bancária picker — card-based */}
           {contas.length > 1 ? (
             <div className="rounded-[14px] overflow-hidden bg-white dark:bg-[#2C2C2E]">

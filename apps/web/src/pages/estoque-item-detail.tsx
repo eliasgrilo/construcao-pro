@@ -1,9 +1,9 @@
-import * as React from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { type MaterialEntradaRow, useMaterialEntradas } from '@/hooks/use-supabase'
 import { cn, formatCurrency, formatDateShort, formatNumber } from '@/lib/utils'
 import { motion } from 'framer-motion'
 import { AlertTriangle, Calendar, Clock, TrendingDown, TrendingUp, X } from 'lucide-react'
+import * as React from 'react'
 import { iosTallDialogCn } from './dialog-styles'
 import type { EstoqueItem } from './estoque-types'
 

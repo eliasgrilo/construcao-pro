@@ -1,3 +1,4 @@
+import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
 /**
  * materiais-tab-dialogs.tsx
  * Dialogs extraídos de materiais-tab.tsx: Criar, Editar, Excluir Material + Quick-Add Categoria.
@@ -31,15 +32,14 @@ import {
   useDeleteMaterial,
   useUpdateMaterial,
 } from '@/hooks/use-supabase'
+import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 import { type CreateMaterialInput, createMaterialSchema } from '@/lib/schemas'
 import { cn } from '@/lib/utils'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
 import { Plus, Tag, X } from 'lucide-react'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
-import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 import { UNIDADES, getUnidadeLabel } from './materiais-tab-constants'
 
 /* ── Shared form fields ── */
@@ -186,7 +186,7 @@ export function MateriaisCreateDialog({
   const { toast } = useToast()
   const { data: categoriasData = [] } = useCategorias()
   const createMutation = useCreateMaterial()
-  
+
   const formRef = useRef<HTMLFormElement>(null)
   const { focusNext, focusPrev, dismiss, canGoPrev, canGoNext } = useFormFieldNavigation(formRef)
 

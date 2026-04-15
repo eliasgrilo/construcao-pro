@@ -1,3 +1,4 @@
+import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
 import { useToast } from '@/components/ui/toast'
 import { useBodyScrollLock, useOverlayPresence } from '@/hooks/use-body-scroll-lock'
 import {
@@ -6,6 +7,7 @@ import {
   useDeleteTarefa,
   useUpdateTarefa,
 } from '@/hooks/use-supabase'
+import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 import { cn } from '@/lib/utils'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
@@ -22,8 +24,6 @@ import {
 } from 'lucide-react'
 import { type RefObject, memo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
-import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 import { type ClrColors, type NavigateFn, clr, greeting, obraColors } from '../dashboard-shared'
 import { DashboardFilterMenuItem } from '../dashboard-widgets'
 import {

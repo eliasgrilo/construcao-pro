@@ -32,7 +32,7 @@ import {
 import { accents } from '@/lib/utils'
 import { motion } from 'framer-motion'
 import { Package, Pencil, Plus, Tag, Trash2 } from 'lucide-react'
-import { useState, useRef } from 'react'
+import { useRef, useState } from 'react'
 import {
   UNIDADES,
   getUnidadeAbbr,

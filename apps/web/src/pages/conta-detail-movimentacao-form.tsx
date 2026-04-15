@@ -1,9 +1,11 @@
+import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
 import { formatBRL, parseCurrency } from '@/components/ui/currency-input'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { StickyFooter } from '@/components/ui/sticky-footer'
 import { useToast } from '@/components/ui/toast'
 import { useFormDraft } from '@/hooks/use-form-draft'
 import { useRegisterFinanceiroMovement } from '@/hooks/use-supabase'
+import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 import { type CreateMovimentacaoInput, createMovimentacaoSchema } from '@/lib/schemas'
 import { cn, formatCurrency, todayISO } from '@/lib/utils'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -17,10 +19,9 @@ import {
   Wallet,
   X,
 } from 'lucide-react'
-import React, { useId, useRef } from 'react'
+import type React from 'react'
+import { useId, useRef } from 'react'
 import { Controller, useForm } from 'react-hook-form'
-import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
-import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 import { DestinoCard } from './conta-detail-components'
 
 // Using types mapped from conta-detail.tsx
@@ -240,7 +241,10 @@ export function NovaMovimentacaoDialog({
         </div>
 
         {/* Form area rolável */}
-        <div ref={formRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 space-y-[10px] pb-3">
+        <div
+          ref={formRef}
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 space-y-[10px] pb-3"
+        >
           {/* Tipo selector */}
           <div className="rounded-[14px] overflow-hidden bg-white dark:bg-[#2C2C2E]">
             <div className="px-3 py-[10px]">

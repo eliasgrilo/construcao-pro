@@ -113,15 +113,16 @@ export function ReceberParcelaModal({
   if (parcela) cachedParcela.current = parcela
   const activeParcela = parcela || cachedParcela.current
 
-  if (!activeParcela) return null
+  const shakeControls = useAnimation()
 
   const valorRecebido = parseCurrency(valorStr)
-  const desc = activeParcela.contas_receber?.descricao ?? '—'
-  const isMulti = activeParcela.total_parcelas > 1
+  const desc = activeParcela?.contas_receber?.descricao ?? '—'
+  const isMulti = (activeParcela?.total_parcelas ?? 0) > 1
   const selectedConta = contas.find((c) => c.id === contaId)
   const canConfirm = !!contaId && !!dataReceb && valorRecebido > 0 && !isPending
 
-  const shakeControls = useAnimation()
+  if (!activeParcela) return null
+
   const handleConfirm = async () => {
     if (!canConfirm) {
       await shakeControls.start({

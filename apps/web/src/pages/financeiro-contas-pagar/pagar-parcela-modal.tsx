@@ -42,20 +42,20 @@ export function PagarParcelaModal({
   if (parcela) cachedParcela.current = parcela
   const activeParcela = parcela || cachedParcela.current
 
-  if (!activeParcela) return null
+  const shakeControls = useAnimation()
 
   const valorPago = parseCurrency(valorStr)
-  const desc = activeParcela.contas_pagar?.descricao ?? '—'
-  const categoria = activeParcela.contas_pagar?.categoria ?? 'Outros'
-  const isMulti = activeParcela.total_parcelas > 1
-  const hasNF = !!activeParcela.contas_pagar?.nf_id
+  const desc = activeParcela?.contas_pagar?.descricao ?? '—'
+  const categoria = activeParcela?.contas_pagar?.categoria ?? 'Outros'
+  const isMulti = (activeParcela?.total_parcelas ?? 0) > 1
+  const hasNF = !!activeParcela?.contas_pagar?.nf_id
   const selectedConta = contas.find((c) => c.id === contaId)
   const saldoCaixa = Number(selectedConta?.valor_caixa ?? 0)
   const saldoAposDebito = saldoCaixa - valorPago
   const saldoPositivo = saldoAposDebito >= 0
   const canConfirm = !!contaId && !!dataPag && valorPago > 0 && saldoPositivo && !isPending
 
-  const shakeControls = useAnimation()
+  if (!activeParcela) return null
   const handleConfirm = async () => {
     if (!canConfirm) {
       await shakeControls.start({

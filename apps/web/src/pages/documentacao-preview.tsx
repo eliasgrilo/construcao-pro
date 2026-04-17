@@ -212,7 +212,7 @@ export function FilePreviewModal({
             transition={{ duration: 0.25 }}
             style={{ position: 'absolute', inset: 0 }}
           >
-            <ZoomablePdfViewer src={url} alt={doc.nome} />
+            <ZoomablePdfViewer src={url} alt={doc.nome} contentInsets={{ top: 60, bottom: 8 }} />
           </motion.div>
         )}
 

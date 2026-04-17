@@ -1,5 +1,38 @@
 import { type RefObject, useCallback, useEffect, useState } from 'react'
 
+function findScrollableAncestor(el: HTMLElement): HTMLElement | null {
+  let parent = el.parentElement
+  while (parent && parent !== document.body) {
+    const { overflow, overflowY } = getComputedStyle(parent)
+    if (/auto|scroll/.test(overflow + overflowY)) return parent
+    parent = parent.parentElement
+  }
+  return null
+}
+
+export function scrollFieldIntoView(el: HTMLElement, breathingRoom = 16) {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const scrollable = findScrollableAncestor(el)
+      if (!scrollable) return
+
+      const containerRect = scrollable.getBoundingClientRect()
+      const elRect = el.getBoundingClientRect()
+      const visibleBottom = containerRect.bottom - breathingRoom
+      const visibleTop = containerRect.top + breathingRoom
+
+      if (elRect.bottom > visibleBottom) {
+        scrollable.scrollBy({ top: elRect.bottom - visibleBottom, behavior: 'smooth' })
+        return
+      }
+
+      if (elRect.top < visibleTop) {
+        scrollable.scrollBy({ top: elRect.top - visibleTop, behavior: 'smooth' })
+      }
+    })
+  })
+}
+
 /**
  * Registers all form inputs and enables Anterior/Próximo/Concluir navigation
  * via the KeyboardToolbar.
@@ -31,45 +64,6 @@ export function useFormFieldNavigation(formRef: RefObject<HTMLElement | null>) {
       ) as HTMLElement[],
     [formRef],
   )
-
-  /**
-   * Find the nearest scrollable ancestor of `el`.
-   * Does NOT check scrollHeight > clientHeight because at focus-time the dialog
-   * may not have reflowed to its post-keyboard size yet.
-   */
-  const findScrollableAncestor = (el: HTMLElement): HTMLElement | null => {
-    let parent = el.parentElement
-    while (parent && parent !== document.body) {
-      const { overflow, overflowY } = getComputedStyle(parent)
-      if (/auto|scroll/.test(overflow + overflowY)) return parent
-      parent = parent.parentElement
-    }
-    return null
-  }
-
-  /**
-   * Scroll the nearest scrollable container so `el` clears the container's
-   * bottom edge by at least BREATHING_ROOM px (= 16pt, Apple minimum).
-   * Runs after a double-rAF to ensure layout has settled post-keyboard.
-   */
-  const scrollFieldIntoView = (el: HTMLElement) => {
-    const BREATHING_ROOM = 16
-
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const scrollable = findScrollableAncestor(el)
-        if (!scrollable) return
-
-        const containerBottom = scrollable.getBoundingClientRect().bottom
-        const elRect = el.getBoundingClientRect()
-
-        if (elRect.bottom > containerBottom - BREATHING_ROOM) {
-          const delta = elRect.bottom - containerBottom + BREATHING_ROOM
-          scrollable.scrollBy({ top: delta, behavior: 'smooth' })
-        }
-      })
-    })
-  }
 
   /** Recompute canGoPrev / canGoNext from the currently active element. */
   const refreshState = useCallback(() => {

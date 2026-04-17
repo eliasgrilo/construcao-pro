@@ -32,7 +32,7 @@ import {
   type useUpsertFinanceiroMeta,
 } from '@/hooks/use-supabase'
 import { useUndoableDelete } from '@/hooks/use-undoable-delete'
-import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
+import { scrollFieldIntoView, useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 import { exportMovimentacoesCsv } from '@/lib/export-csv'
 import {
   type CreateContaPagarInput,
@@ -106,10 +106,15 @@ export function NovaContaModal({
     if (!isValid || !canSubmit) {
       try {
         const firstError = Object.keys(form.formState.errors)[0]
-        form.setFocus(firstError as Parameters<typeof form.setFocus>[0])
-        document
-          .querySelector(`[name="${firstError}"]`)
-          ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        if (firstError) {
+          form.setFocus(firstError as Parameters<typeof form.setFocus>[0])
+          const field = document.querySelector(
+            `[name="${window.CSS?.escape?.(firstError) ?? firstError}"]`,
+          )
+          if (field instanceof HTMLElement) {
+            scrollFieldIntoView(field)
+          }
+        }
       } catch {}
       await shakeControls.start({
         x: [0, -6, 6, -5, 5, -3, 3, 0],

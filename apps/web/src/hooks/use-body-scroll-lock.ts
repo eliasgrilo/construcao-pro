@@ -11,7 +11,6 @@ let savedBodyPosition = ''
 let savedBodyTop = ''
 let savedBodyLeft = ''
 let savedBodyRight = ''
-let savedBodyOverflow = ''
 let savedBodyMinHeight = ''
 
 /**
@@ -27,13 +26,11 @@ function applyLock() {
   savedBodyTop = body.style.top
   savedBodyLeft = body.style.left
   savedBodyRight = body.style.right
-  savedBodyOverflow = body.style.overflow
   savedBodyMinHeight = body.style.minHeight
   body.style.position = 'fixed'
   body.style.top = `-${savedScrollY}px`
   body.style.left = '0'
   body.style.right = '0'
-  body.style.overflow = 'hidden'
   // Ensure body extends to the viewport bottom even when offset by savedScrollY,
   // preventing a visible gap at the bottom behind the drawer backdrop.
   body.style.minHeight = `calc(100dvh + ${savedScrollY}px)`
@@ -48,7 +45,6 @@ function releaseLock() {
   body.style.top = savedBodyTop
   body.style.left = savedBodyLeft
   body.style.right = savedBodyRight
-  body.style.overflow = savedBodyOverflow
   body.style.minHeight = savedBodyMinHeight
   isDomLocked = false
   requestAnimationFrame(() => {

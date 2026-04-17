@@ -259,7 +259,13 @@ export function useDashboardAI(baseContext: DashAIBaseContext) {
   contextRef.current = context
 
   const scrollToBottom = useCallback(() => {
-    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const container = messagesEndRef.current?.parentElement
+        if (!(container instanceof HTMLElement)) return
+        container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
+      })
+    })
   }, [])
 
   const addMessage = useCallback(

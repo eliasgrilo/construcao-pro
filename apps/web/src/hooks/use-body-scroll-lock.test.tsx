@@ -57,7 +57,7 @@ describe('useBodyScrollLock', () => {
     const { rerender, unmount } = renderHarness(<ScrollLockHarness locked={true} />)
 
     expect(document.body.style.position).toBe('fixed')
-    expect(document.body.style.overflow).toBe('hidden')
+    expect(document.body.style.overflow).toBe('')
 
     rerender(<ScrollLockHarness locked={false} />)
 

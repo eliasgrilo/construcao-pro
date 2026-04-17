@@ -5,7 +5,7 @@ import { StickyFooter } from '@/components/ui/sticky-footer'
 import { useToast } from '@/components/ui/toast'
 import { useFormDraft } from '@/hooks/use-form-draft'
 import { type ObraRow, useCreateContaPagar } from '@/hooks/use-supabase'
-import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
+import { scrollFieldIntoView, useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 import { buildInstallmentSchedule } from '@/lib/installments'
 import { type CreateContaPagarInput, createContaPagarSchema } from '@/lib/schemas'
 import { cn, formatCurrency } from '@/lib/utils'
@@ -147,9 +147,12 @@ export function NovaContaPagarModal({
     if (firstError) {
       try {
         form.setFocus(firstError as Parameters<typeof form.setFocus>[0])
-        document
-          .querySelector(`[name="${firstError}"]`)
-          ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        const field = document.querySelector(
+          `[name="${window.CSS?.escape?.(firstError) ?? firstError}"]`,
+        )
+        if (field instanceof HTMLElement) {
+          scrollFieldIntoView(field)
+        }
       } catch {
         /* Controller fields not focusable via setFocus */
       }

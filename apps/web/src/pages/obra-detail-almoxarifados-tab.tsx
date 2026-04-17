@@ -11,13 +11,33 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/toast'
 import { usePermissions } from '@/hooks/use-permissions'
-import { useCreateAlmoxarifado, useDeleteAlmoxarifado } from '@/hooks/use-supabase'
+import {
+  useCreateAlmoxarifado,
+  useDeleteAlmoxarifado,
+  useDeleteObraLancamentoMaoDeObra,
+  useObraLancamentosMaoDeObra,
+} from '@/hooks/use-supabase'
 import { cn, formatCurrency } from '@/lib/utils'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, ChevronRight, Package, Plus, Search, Trash2, Warehouse, X } from 'lucide-react'
+import {
+  ArrowLeft,
+  ChevronRight,
+  Hammer,
+  Package,
+  Plus,
+  Search,
+  Trash2,
+  Warehouse,
+  X,
+} from 'lucide-react'
 import { useMemo, useState } from 'react'
 import type { Almoxarifado, BaixaTarget, DeleteEstoqueTarget, EstoqueItem } from './obra-detail'
 import { Empty, ObraDetailAlmoxarifadoCard, ObraDetailAlmoxarifadoItem } from './obra-detail'
+
+function formatLocalDate(isoDate: string): string {
+  const [y, m, d] = isoDate.split('-')
+  return `${d}/${m}/${y}`
+}
 
 interface CreateAlmoxProps {
   createAlmoxOpen: boolean
@@ -210,6 +230,13 @@ export function ObraDetailAlmoxarifadosTab({
   // Mutations
   const createAlmox = useCreateAlmoxarifado()
   const deleteAlmox = useDeleteAlmoxarifado()
+  const deleteMdo = useDeleteObraLancamentoMaoDeObra()
+
+  // Mão de Obra
+  const [deleteMdoTarget, setDeleteMdoTarget] = useState<{ id: string; descricao: string } | null>(
+    null,
+  )
+  const { data: allMaoDeObra = [] } = useObraLancamentosMaoDeObra(obraId)
 
   // Memoized filter calculations for the selected almoxarifado detail view
   const aEstoque = useMemo(
@@ -235,6 +262,12 @@ export function ObraDetailAlmoxarifadosTab({
       return matchSearch && matchFilter
     })
   }, [aEstoque, almoxSearch, almoxFilter])
+
+  const aMaoDeObra = useMemo(
+    () => allMaoDeObra.filter((m) => m.almoxarifado_id === selectedAlmox?.id),
+    [allMaoDeObra, selectedAlmox],
+  )
+  const mdoTotal = useMemo(() => aMaoDeObra.reduce((s, m) => s + Number(m.valor), 0), [aMaoDeObra])
 
   return (
     <>
@@ -469,6 +502,55 @@ export function ObraDetailAlmoxarifadosTab({
                 </div>
               </div>
             )}
+
+            {/* ── Mão de Obra section ── */}
+            {aMaoDeObra.length > 0 && (
+              <div className="mt-5">
+                <div className="flex items-center gap-2 mb-2.5">
+                  <Hammer className="h-3.5 w-3.5 text-muted-foreground/50" />
+                  <p className="text-[11px] font-semibold text-muted-foreground/50 uppercase tracking-wider">
+                    Mão de Obra
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  {aMaoDeObra.map((m) => (
+                    <div
+                      key={m.id}
+                      className="flex items-center gap-3 px-4 py-3 rounded-xl bg-accent/30 border border-border/40"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-medium truncate">{m.descricao}</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          {formatLocalDate(m.data)}
+                          {m.prestador ? ` · ${m.prestador}` : ''}
+                        </p>
+                      </div>
+                      <p className="text-[13px] font-semibold tabular-nums text-orange-600 dark:text-orange-400 flex-shrink-0">
+                        {formatCurrency(Number(m.valor))}
+                      </p>
+                      {canManageEstoque && (
+                        <button
+                          type="button"
+                          onClick={() => setDeleteMdoTarget({ id: m.id, descricao: m.descricao })}
+                          className="h-9 w-9 sm:h-7 sm:w-7 flex items-center justify-center rounded-full text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-all flex-shrink-0"
+                          aria-label="Excluir lançamento"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between px-4 py-2 mt-1">
+                  <p className="text-[11px] text-muted-foreground/60 uppercase tracking-wider">
+                    Total Mão de Obra
+                  </p>
+                  <p className="text-[13px] font-semibold tabular-nums text-orange-600 dark:text-orange-400">
+                    {formatCurrency(mdoTotal)}
+                  </p>
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -489,6 +571,50 @@ export function ObraDetailAlmoxarifadosTab({
         setSelectedAlmox={setSelectedAlmox}
         toast={toast}
       />
+
+      <Dialog open={!!deleteMdoTarget} onOpenChange={(o) => !o && setDeleteMdoTarget(null)}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Excluir Lançamento</DialogTitle>
+            <DialogDescription>
+              Confirma a exclusão de{' '}
+              <strong className="text-foreground">{deleteMdoTarget?.descricao}</strong>? Esta ação
+              não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => setDeleteMdoTarget(null)}>
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              loading={deleteMdo.isPending}
+              onClick={() => {
+                if (!deleteMdoTarget) return
+                deleteMdo.mutate(
+                  { id: deleteMdoTarget.id, obraId },
+                  {
+                    onSuccess: () => {
+                      toast({ title: 'Lançamento excluído!', variant: 'success' })
+                      setDeleteMdoTarget(null)
+                    },
+                    onError: (err: Error) => {
+                      toast({
+                        title: 'Erro ao excluir lançamento',
+                        description: err?.message,
+                        variant: 'error',
+                      })
+                    },
+                  },
+                )
+              }}
+            >
+              Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

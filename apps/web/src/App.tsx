@@ -68,6 +68,7 @@ const UsuariosPage = lazy(() =>
 const AnalisesPage = lazy(() =>
   import('@/pages/analises').then((m) => ({ default: m.AnalisesPage })),
 )
+const SignupPage = lazy(() => import('@/pages/signup').then((m) => ({ default: m.SignupPage })))
 
 // Minimal spinner shown while a page chunk loads after auth resolves
 function PageLoader() {
@@ -103,7 +104,10 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore()
 
   if (isLoading) return <AppLoader />
-  if (!isAuthenticated) return <Navigate to="/login" />
+  if (!isAuthenticated) {
+    sessionStorage.setItem('cpro_auth_redirect', window.location.pathname + window.location.search)
+    return <Navigate to="/login" />
+  }
 
   return (
     <AppLayout>
@@ -129,6 +133,21 @@ const loginRoute = createRoute({
     return (
       <Suspense fallback={null}>
         <LoginPage />
+      </Suspense>
+    )
+  },
+})
+
+const signupRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/cadastro',
+  component: () => {
+    const { isAuthenticated, isLoading } = useAuthStore()
+    if (isLoading) return null
+    if (isAuthenticated) return <Navigate to="/" />
+    return (
+      <Suspense fallback={null}>
+        <SignupPage />
       </Suspense>
     )
   },
@@ -342,6 +361,7 @@ const analisesRoute = createRoute({
 // Build route tree
 const routeTree = rootRoute.addChildren([
   loginRoute,
+  signupRoute,
   forgotPasswordRoute,
   resetPasswordRoute,
   indexRoute,
@@ -398,6 +418,7 @@ const routeTitles: Record<string, string> = {
   '/usuarios': 'Usuários',
   '/configuracoes': 'Configurações',
   '/login': 'Entrar',
+  '/cadastro': 'Criar Conta',
   '/esqueci-senha': 'Recuperar Senha',
   '/redefinir-senha': 'Redefinir Senha',
 }
@@ -431,6 +452,11 @@ export function App() {
 
       if (event === 'TOKEN_REFRESHED' && !session) {
         // Token refresh failed — session is dead, force clean logout
+        toast({
+          title: 'Sessão expirada',
+          description: 'Faça login novamente para continuar.',
+          variant: 'error',
+        })
         logout()
         return
       }

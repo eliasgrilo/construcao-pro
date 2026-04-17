@@ -53,7 +53,7 @@ export function PagarParcelaModal({
   const saldoCaixa = Number(selectedConta?.valor_caixa ?? 0)
   const saldoAposDebito = saldoCaixa - valorPago
   const saldoPositivo = saldoAposDebito >= 0
-  const canConfirm = !!contaId && !!dataPag && valorPago > 0 && saldoPositivo && !isPending
+  const canConfirm = !!contaId && !!dataPag && valorPago > 0 && !isPending
 
   if (!activeParcela) return null
   const handleConfirm = async () => {
@@ -279,8 +279,8 @@ export function PagarParcelaModal({
                 transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                 className="rounded-[14px] px-4 py-3"
                 style={{
-                  backgroundColor: saldoPositivo ? 'rgba(52,199,89,0.06)' : 'rgba(255,59,48,0.06)',
-                  border: `1px solid ${saldoPositivo ? '#34C75920' : '#FF3B3020'}`,
+                  backgroundColor: saldoPositivo ? 'rgba(52,199,89,0.06)' : 'rgba(255,159,10,0.06)',
+                  border: `1px solid ${saldoPositivo ? '#34C75920' : '#FF9F0A20'}`,
                 }}
               >
                 <div className="flex items-center justify-between mb-1">
@@ -292,13 +292,13 @@ export function PagarParcelaModal({
                 <div className="flex items-center justify-between">
                   <span
                     className="text-[13px] font-semibold"
-                    style={{ color: saldoPositivo ? '#34C759' : clr.red }}
+                    style={{ color: saldoPositivo ? '#34C759' : '#FF9F0A' }}
                   >
                     Novo saldo em caixa
                   </span>
                   <span
                     className="text-[15px] font-bold tabular-nums"
-                    style={{ color: saldoPositivo ? '#34C759' : clr.red }}
+                    style={{ color: saldoPositivo ? '#34C759' : '#FF9F0A' }}
                   >
                     {formatCurrency(saldoAposDebito)}
                   </span>
@@ -312,9 +312,9 @@ export function PagarParcelaModal({
                       exit={{ opacity: 0, height: 0 }}
                       transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                       className="text-[11px] mt-1.5 overflow-hidden"
-                      style={{ color: clr.red }}
+                      style={{ color: '#FF9F0A' }}
                     >
-                      Saldo insuficiente em caixa para cobrir este pagamento
+                      Saldo em caixa ficará negativo após este pagamento
                     </motion.p>
                   )}
                 </AnimatePresence>

@@ -80,6 +80,7 @@ export const queryKeys = {
       todasAtivas: () => ['obra_manutencao', 'todas_ativas'] as const,
     },
     burocracia: (obraId: string) => ['obra-lancamentos-burocracia', obraId] as const,
+    maoDeObra: (obraId: string) => ['obra-lancamentos-mao-de-obra', obraId] as const,
   },
   tarefas: {
     all: () => ['tarefas'] as const,

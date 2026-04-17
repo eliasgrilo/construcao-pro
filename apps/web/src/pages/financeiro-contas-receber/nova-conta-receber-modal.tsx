@@ -2,59 +2,68 @@ import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
 import { formatBRL, parseCurrency } from '@/components/ui/currency-input'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { StickyFooter } from '@/components/ui/sticky-footer'
-import type { ObraRow } from '@/hooks/use-supabase'
+import { useToast } from '@/components/ui/toast'
+import { useFormDraft } from '@/hooks/use-form-draft'
+import { type ObraRow, useCreateContaReceber } from '@/hooks/use-supabase'
 import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
-import { buildInstallmentPreview, buildInstallmentSchedule } from '@/lib/installments'
-import type { CreateContaReceberInput } from '@/lib/schemas'
+import { buildInstallmentSchedule } from '@/lib/installments'
+import { type CreateContaReceberInput, createContaReceberSchema } from '@/lib/schemas'
 import { cn, formatCurrency } from '@/lib/utils'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { AnimatePresence, motion, useAnimation } from 'framer-motion'
 import { ArrowDownRight, CheckCircle2, CreditCard, FileText, X } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
-import { Controller, type UseFormReturn, useWatch } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 
 import { modalCn } from '../financeiro'
+
+const FORMAS_RECEBIMENTO = [
+  { value: 'PIX', label: 'PIX', color: '#34C759' },
+  { value: 'CARTAO_CREDITO', label: 'Cartão', color: '#5856D6' },
+  { value: 'BOLETO', label: 'Boleto', color: '#FF375F' },
+  { value: 'TED', label: 'TED', color: '#FF9500' },
+  { value: 'CHEQUE', label: 'Cheque', color: '#8E8E93' },
+  { value: 'DINHEIRO', label: 'Dinheiro', color: '#30B0C7' },
+] as const
+
 export function NovaContaReceberModal({
   open,
   setOpen,
-  form,
-  isPending,
-  onSubmit,
   obras,
 }: {
   open: boolean
   setOpen: (v: boolean) => void
-  form: UseFormReturn<CreateContaReceberInput>
-  isPending: boolean
-  onSubmit: () => void
   obras: ObraRow[]
 }) {
-  const descricao = useWatch({ control: form.control, name: 'descricao' })
-  const valor = useWatch({ control: form.control, name: 'valor' })
-  const vencimento = useWatch({ control: form.control, name: 'vencimento' })
-  const nParcelas = useWatch({ control: form.control, name: 'nParcelas' })
+  const { toast } = useToast()
+  const createContaReceber = useCreateContaReceber()
+
+  const form = useForm<CreateContaReceberInput>({
+    resolver: zodResolver(createContaReceberSchema),
+    mode: 'onTouched',
+    defaultValues: {
+      descricao: '',
+      cliente: '',
+      obraId: '',
+      observacoes: '',
+      valor: 0,
+      vencimento: '',
+      nParcelas: 1,
+    },
+  })
+  const { clearDraft } = useFormDraft(form, 'conta-receber')
+
+  const valor = form.watch('valor')
+  const nParcelas = form.watch('nParcelas')
+  const vencimento = form.watch('vencimento')
+  const descricaoVal = form.watch('descricao')
 
   const formRef = useRef<HTMLDivElement>(null)
   const { focusNext, focusPrev, dismiss, canGoPrev, canGoNext } = useFormFieldNavigation(formRef)
 
   const [formaRecebimento, setFormaRecebimento] = useState('')
-  const [taxaCartaoReceber, setTaxaCartaoReceber] = useState('')
-  const [diaVencBoletoReceber, setDiaVencBoletoReceber] = useState('')
-
-  const boletoInvalidoRec =
-    formaRecebimento === 'BOLETO' &&
-    (diaVencBoletoReceber.trim() === '' ||
-      Number(diaVencBoletoReceber) < 1 ||
-      Number(diaVencBoletoReceber) > 31)
-  const canSubmit =
-    descricao.trim().length >= 2 && valor > 0 && !!vencimento && !boletoInvalidoRec && !isPending
-  const FORMAS_RECEBIMENTO = [
-    { value: 'PIX', label: 'PIX', color: '#34C759' },
-    { value: 'CARTAO_CREDITO', label: 'Cartão', color: '#5856D6' },
-    { value: 'BOLETO', label: 'Boleto', color: '#FF375F' },
-    { value: 'TED', label: 'TED', color: '#FF9500' },
-    { value: 'CHEQUE', label: 'Cheque', color: '#8E8E93' },
-    { value: 'DINHEIRO', label: 'Dinheiro', color: '#30B0C7' },
-  ] as const
+  const [taxaCartaoStr, setTaxaCartaoStr] = useState('')
+  const [diaVencBoletoStr, setDiaVencBoletoStr] = useState('')
 
   const parcelas = useMemo(
     () =>
@@ -66,13 +75,65 @@ export function NovaContaReceberModal({
     [nParcelas, valor, vencimento],
   )
 
-  const parcelasPreview = useMemo(() => {
-    if (parcelas.length <= 1) return []
-    return buildInstallmentPreview(parcelas, { limit: 3 })
-  }, [parcelas])
+  const isPending = createContaReceber.isPending
+
+  const boletoInvalido =
+    formaRecebimento === 'BOLETO' &&
+    (diaVencBoletoStr.trim() === '' ||
+      Number(diaVencBoletoStr) < 1 ||
+      Number(diaVencBoletoStr) > 31)
+
+  const canSubmit =
+    descricaoVal.trim().length >= 2 && valor > 0 && !!vencimento && !boletoInvalido && !isPending
+
+  const resetLocalState = () => {
+    setFormaRecebimento('')
+    setTaxaCartaoStr('')
+    setDiaVencBoletoStr('')
+  }
+
+  const handleSubmit = form.handleSubmit(async (data) => {
+    try {
+      const obsBase = data.observacoes?.trim() ?? ''
+      let obsComForma: string | null = null
+      if (formaRecebimento) {
+        const formaLabel =
+          FORMAS_RECEBIMENTO.find((f) => f.value === formaRecebimento)?.label ?? formaRecebimento
+        let extras = ''
+        if (formaRecebimento === 'CARTAO_CREDITO' && taxaCartaoStr)
+          extras = ` · Taxa: ${taxaCartaoStr}%/parcela`
+        if (formaRecebimento === 'BOLETO' && diaVencBoletoStr)
+          extras = ` · Venc. dia ${diaVencBoletoStr}`
+        const prefix = `Forma: ${formaLabel}${extras}`
+        obsComForma = obsBase ? `${prefix}\n${obsBase}` : prefix
+      } else {
+        obsComForma = obsBase || null
+      }
+
+      await createContaReceber.mutateAsync({
+        descricao: data.descricao,
+        cliente: data.cliente || null,
+        obra_id: data.obraId || null,
+        observacoes: obsComForma,
+        valor_total: data.valor,
+        parcelas,
+      })
+      setOpen(false)
+      form.reset()
+      clearDraft()
+      resetLocalState()
+      toast({ title: 'Recebimento cadastrado', variant: 'success' })
+    } catch (err) {
+      toast({
+        title: 'Erro ao cadastrar recebimento',
+        description: err instanceof Error ? err.message : undefined,
+        variant: 'error',
+      })
+    }
+  })
 
   const shakeControls = useAnimation()
-  const handleSubmit = async () => {
+  const handleTap = async () => {
     if (isPending) return
     await form.trigger()
     const firstError = Object.keys(form.formState.errors)[0]
@@ -98,22 +159,7 @@ export function NovaContaReceberModal({
       })
       return
     }
-    // Inject forma de recebimento into observacoes before calling parent onSubmit
-    if (formaRecebimento) {
-      const obsAtual = form.getValues('observacoes') ?? ''
-      const label =
-        FORMAS_RECEBIMENTO.find((f) => f.value === formaRecebimento)?.label ?? formaRecebimento
-      let prefix = `Forma: ${label}`
-      if (formaRecebimento === 'CARTAO_CREDITO' && taxaCartaoReceber) {
-        prefix += ` · Taxa: ${taxaCartaoReceber}%/parcela`
-      }
-      if (formaRecebimento === 'BOLETO' && diaVencBoletoReceber) {
-        prefix += ` · Dia venc.: ${diaVencBoletoReceber}`
-      }
-      const novaObs = obsAtual.trim() ? `${prefix}\n${obsAtual}` : prefix
-      form.setValue('observacoes', novaObs)
-    }
-    onSubmit()
+    handleSubmit()
   }
 
   return (
@@ -124,9 +170,8 @@ export function NovaContaReceberModal({
         setOpen(v)
         if (!v) {
           form.reset()
-          setFormaRecebimento('')
-          setTaxaCartaoReceber('')
-          setDiaVencBoletoReceber('')
+          clearDraft()
+          resetLocalState()
         }
       }}
     >
@@ -155,6 +200,8 @@ export function NovaContaReceberModal({
             onClick={() => {
               setOpen(false)
               form.reset()
+              clearDraft()
+              resetLocalState()
             }}
             className="absolute right-4 flex h-10 w-10 items-center justify-center rounded-full bg-black/[0.08] dark:bg-white/[0.12] hover:bg-black/[0.13] dark:hover:bg-white/[0.18] transition-colors focus-visible:outline-none"
           >
@@ -181,7 +228,7 @@ export function NovaContaReceberModal({
           ref={formRef}
           className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 space-y-[10px] pb-3"
         >
-          {/* Grupo 1: descricao + cliente */}
+          {/* Grupo 1: Descrição + Cliente + Obra */}
           <div className="rounded-[14px] overflow-hidden bg-white dark:bg-[#2C2C2E]">
             <div className="flex items-center min-h-[52px] px-4 gap-3">
               <span className="text-[16px] font-medium w-[90px] flex-shrink-0 text-foreground">
@@ -221,19 +268,43 @@ export function NovaContaReceberModal({
                 className="flex-1 text-[16px] text-right bg-transparent outline-none min-w-0 placeholder:text-black/20 dark:placeholder:text-white/20"
               />
             </div>
+            {obras.length > 0 && (
+              <>
+                <div className="h-px ml-4 bg-black/[0.07] dark:bg-white/[0.07]" />
+                <div className="flex items-center min-h-[52px] px-4 gap-3">
+                  <span className="text-[16px] font-medium flex-shrink-0 text-foreground">
+                    Obra
+                  </span>
+                  <span className="text-[12px] text-foreground/35 flex-shrink-0">opcional</span>
+                  <select
+                    {...form.register('obraId')}
+                    className="flex-1 text-[16px] text-right bg-transparent outline-none min-w-0 appearance-none cursor-pointer text-foreground/70"
+                    style={{ direction: 'rtl' }}
+                  >
+                    <option value="" style={{ direction: 'ltr' }}>
+                      Nenhuma
+                    </option>
+                    {obras.map((o) => (
+                      <option key={o.id} value={o.id} style={{ direction: 'ltr' }}>
+                        {o.nome}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
           </div>
 
-          {/* Grupo 2: valor + parcelas + vencimento */}
+          {/* Grupo 2: Valor + Vencimento */}
           <div className="rounded-[14px] overflow-hidden bg-white dark:bg-[#2C2C2E]">
-            {/* Valor */}
             <div className="flex items-center min-h-[52px] px-4 gap-3">
-              <span className="text-[16px] font-medium flex-shrink-0 text-foreground">
+              <span className="text-[16px] font-medium w-[90px] flex-shrink-0 text-foreground/55">
                 Valor Total
               </span>
-              <div className="flex-1 flex items-center justify-end gap-1.5">
+              <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
                 <span
                   className="text-[14px] flex-shrink-0 font-semibold"
-                  style={{ color: '#34C75980' }}
+                  style={{ color: 'rgba(52,199,89,0.6)' }}
                 >
                   R$
                 </span>
@@ -277,8 +348,35 @@ export function NovaContaReceberModal({
               )}
             </AnimatePresence>
             <div className="h-px ml-4 bg-black/[0.07] dark:bg-white/[0.07]" />
+            <div className="flex items-center min-h-[52px] px-4 gap-3">
+              <span className="text-[16px] font-medium flex-shrink-0 text-foreground">
+                {nParcelas > 1 ? '1º Vencimento' : 'Vencimento'}
+              </span>
+              <input
+                type="date"
+                {...form.register('vencimento')}
+                className="flex-1 text-[16px] text-right bg-transparent outline-none min-w-0 tabular-nums text-foreground cursor-pointer focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 rounded-sm"
+              />
+            </div>
+            <AnimatePresence>
+              {form.formState.errors.vencimento && (
+                <motion.p
+                  key="err-vencimento"
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                  className="text-[12px] px-4 pb-2"
+                  style={{ color: '#FF3B30' }}
+                >
+                  {form.formState.errors.vencimento.message}
+                </motion.p>
+              )}
+            </AnimatePresence>
+          </div>
 
-            {/* Parcelas stepper */}
+          {/* Grupo 3: Parcelas stepper + inline preview */}
+          <div className="rounded-[14px] overflow-hidden bg-white dark:bg-[#2C2C2E]">
             <div className="flex items-center min-h-[52px] px-4 gap-3">
               <span className="text-[16px] font-medium flex-shrink-0 text-foreground">
                 Parcelas
@@ -308,88 +406,59 @@ export function NovaContaReceberModal({
                 </motion.button>
               </div>
             </div>
-            <div className="h-px ml-4 bg-black/[0.07] dark:bg-white/[0.07]" />
 
-            {/* 1º Vencimento */}
-            <div className="flex items-center min-h-[52px] px-4 gap-3">
-              <span className="text-[16px] font-medium flex-shrink-0 text-foreground">
-                {nParcelas > 1 ? '1º Vencimento' : 'Vencimento'}
-              </span>
-              <input
-                type="date"
-                {...form.register('vencimento')}
-                className="flex-1 text-[16px] text-right bg-transparent outline-none tabular-nums cursor-pointer min-w-0 focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 rounded-sm"
-              />
-            </div>
             <AnimatePresence>
-              {form.formState.errors.vencimento && (
-                <motion.p
-                  key="err-vencimento"
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
+              {parcelas.length > 1 && (
+                <motion.div
+                  key="parcelas-preview"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                  className="text-[12px] px-4 pb-2"
-                  style={{ color: '#FF3B30' }}
+                  className="overflow-hidden border-t border-black/[0.07] dark:border-white/[0.07]"
                 >
-                  {form.formState.errors.vencimento.message}
-                </motion.p>
+                  <div className="px-4 py-2 relative">
+                    <div
+                      className="absolute top-4 bottom-4 w-px"
+                      style={{ left: '26px', backgroundColor: '#34C75922' }}
+                    />
+                    {parcelas.slice(0, 12).map((p) => (
+                      <div key={p.numero_parcela} className="flex items-center gap-3 py-[9px]">
+                        <span
+                          className="flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold text-white flex-shrink-0 relative z-10"
+                          style={{ backgroundColor: '#34C759' }}
+                        >
+                          {p.numero_parcela}
+                        </span>
+                        <span className="flex-1 text-[13px] text-muted-foreground/60 tabular-nums">
+                          {new Date(`${p.vencimento}T12:00:00`).toLocaleDateString('pt-BR', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                        </span>
+                        <span
+                          className="text-[13px] font-semibold tabular-nums"
+                          style={{ color: '#34C759' }}
+                        >
+                          {formatCurrency(p.valor)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  {nParcelas > 12 && (
+                    <div className="flex items-center justify-center py-2 border-t border-black/[0.04] dark:border-white/[0.04]">
+                      <span className="text-[12px] text-muted-foreground/40">
+                        +{nParcelas - 12} parcelas adicionais…
+                      </span>
+                    </div>
+                  )}
+                </motion.div>
               )}
             </AnimatePresence>
           </div>
 
-          {/* Preview parcelas */}
-          <AnimatePresence>
-            {nParcelas > 1 && valor > 0 && vencimento && parcelasPreview.length > 0 && (
-              <motion.div
-                key="parcelas-preview"
-                initial={{ opacity: 0, y: 6, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 6, scale: 0.98 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                className="rounded-[14px] overflow-hidden bg-white dark:bg-[#2C2C2E]"
-              >
-                <p
-                  className="text-[11px] font-semibold uppercase tracking-wide px-4 pt-3 pb-1"
-                  style={{ color: '#8E8E93' }}
-                >
-                  Previsão de parcelas
-                </p>
-                <div className="px-4 py-2 relative">
-                  <div
-                    className="absolute top-4 bottom-4 w-px"
-                    style={{ left: '26px', backgroundColor: '#34C75922' }}
-                  />
-                  {parcelasPreview.map((p, i) => (
-                    <div key={p.label} className="flex items-center gap-3 py-[9px]">
-                      <span
-                        className="flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold text-white flex-shrink-0 relative z-10"
-                        style={{ backgroundColor: '#34C759' }}
-                      >
-                        {i + 1}
-                      </span>
-                      <span className="flex-1 text-[13px] text-muted-foreground/60 tabular-nums">
-                        {p.data}
-                      </span>
-                      <span
-                        className="text-[13px] font-semibold tabular-nums"
-                        style={{ color: '#34C759' }}
-                      >
-                        {formatCurrency(p.valor)}
-                      </span>
-                    </div>
-                  ))}
-                  {nParcelas > 3 && (
-                    <p className="text-[11px] text-muted-foreground/50 pl-8 pb-1">
-                      +{nParcelas - 3} parcelas adicionais…
-                    </p>
-                  )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Forma de recebimento esperada */}
+          {/* Forma de recebimento (opcional) */}
           <div className="rounded-[14px] overflow-hidden bg-white dark:bg-[#2C2C2E] px-4 py-3">
             <p
               className="text-[11px] font-semibold uppercase tracking-wide mb-2.5"
@@ -443,92 +512,86 @@ export function NovaContaReceberModal({
             {(formaRecebimento === 'CARTAO_CREDITO' || formaRecebimento === 'BOLETO') && (
               <motion.div
                 key={`extra-${formaRecebimento}`}
-                initial={{ opacity: 0, y: 6, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 6, scale: 0.98 }}
-                transition={{ type: 'spring', stiffness: 380, damping: 28 }}
-                className="rounded-[14px] overflow-hidden bg-white dark:bg-[#2C2C2E]"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                className="overflow-hidden"
               >
-                {formaRecebimento === 'CARTAO_CREDITO' && (
-                  <div className="flex items-center min-h-[52px] px-4 gap-3">
-                    <CreditCard
-                      className="h-[18px] w-[18px] flex-shrink-0"
-                      style={{ color: '#5856D6' }}
-                    />
-                    <span className="text-[16px] font-medium flex-shrink-0 text-foreground">
-                      Taxa por parcela
-                    </span>
-                    <div className="flex-1 flex items-center justify-end gap-1">
-                      <input
-                        value={taxaCartaoReceber}
-                        onChange={(e) => {
-                          const v = e.target.value.replace(/[^0-9.,]/g, '')
-                          setTaxaCartaoReceber(v)
-                        }}
-                        placeholder="0,00"
-                        inputMode="decimal"
-                        className="text-[16px] text-right bg-transparent outline-none tabular-nums w-[80px] placeholder:text-black/20 dark:placeholder:text-white/20 focus-visible:ring-2 focus-visible:ring-[#5856D6]/60 rounded-sm"
-                      />
-                      <span
-                        className="text-[14px] font-semibold flex-shrink-0"
-                        style={{ color: '#5856D680' }}
-                      >
-                        %
+                <div className="rounded-[14px] overflow-hidden bg-white dark:bg-[#2C2C2E]">
+                  {formaRecebimento === 'CARTAO_CREDITO' && (
+                    <div className="flex items-center min-h-[52px] px-4 gap-3">
+                      <CreditCard className="h-4 w-4 flex-shrink-0" style={{ color: '#5856D6' }} />
+                      <div className="flex flex-col flex-1 min-w-0">
+                        <span className="text-[16px] font-medium text-foreground">
+                          Taxa por parcela
+                        </span>
+                        {nParcelas > 1 && (
+                          <span className="text-[11px]" style={{ color: '#5856D680' }}>
+                            incide em {nParcelas}× abaixo
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 min-w-0">
+                        <input
+                          value={taxaCartaoStr}
+                          onChange={(e) => {
+                            const v = e.target.value.replace(/[^0-9,.]/, '').replace('.', ',')
+                            setTaxaCartaoStr(v)
+                          }}
+                          onFocus={(e) => e.target.select()}
+                          placeholder="0,00"
+                          inputMode="decimal"
+                          className="w-[72px] text-[16px] text-right bg-transparent outline-none tabular-nums font-semibold placeholder:text-black/20 dark:placeholder:text-white/20 focus-visible:ring-2 focus-visible:ring-[#5856D6]/60 rounded-sm"
+                        />
+                        <span className="text-[14px] font-semibold text-foreground/50 flex-shrink-0">
+                          %
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  {formaRecebimento === 'BOLETO' && (
+                    <div className="flex items-center min-h-[52px] px-4 gap-3">
+                      <FileText className="h-4 w-4 flex-shrink-0 text-foreground/40" />
+                      <span className="text-[16px] font-medium flex-1 text-foreground">
+                        Dia de vencimento
                       </span>
+                      <div className="flex items-center gap-1 min-w-0">
+                        <input
+                          value={diaVencBoletoStr}
+                          onChange={(e) => {
+                            const n = e.target.value.replace(/\D/g, '').slice(0, 2)
+                            const num = Number(n)
+                            if (n === '' || (num >= 1 && num <= 31)) setDiaVencBoletoStr(n)
+                          }}
+                          onFocus={(e) => e.target.select()}
+                          placeholder="10"
+                          inputMode="numeric"
+                          className="w-[48px] text-[16px] text-right bg-transparent outline-none tabular-nums font-semibold placeholder:text-black/20 dark:placeholder:text-white/20 focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 rounded-sm"
+                        />
+                        <span className="text-[13px] text-foreground/40 flex-shrink-0">/ mês</span>
+                      </div>
                     </div>
-                  </div>
-                )}
-                {formaRecebimento === 'BOLETO' && (
-                  <div className="flex items-center min-h-[52px] px-4 gap-3">
-                    <FileText
-                      className="h-[18px] w-[18px] flex-shrink-0"
-                      style={{ color: '#FF375F' }}
-                    />
-                    <span className="text-[16px] font-medium flex-shrink-0 text-foreground">
-                      Dia de vencimento
-                    </span>
-                    <div className="flex-1 flex items-center justify-end gap-1">
-                      <input
-                        value={diaVencBoletoReceber}
-                        onChange={(e) => {
-                          const v = e.target.value.replace(/\D/g, '').slice(0, 2)
-                          const n = Number.parseInt(v, 10)
-                          if (!v || (n >= 1 && n <= 31)) setDiaVencBoletoReceber(v)
-                        }}
-                        placeholder="Ex: 10"
-                        inputMode="numeric"
-                        maxLength={2}
-                        className="text-[16px] text-right bg-transparent outline-none tabular-nums w-[60px] placeholder:text-black/20 dark:placeholder:text-white/20 focus-visible:ring-2 focus-visible:ring-[#FF375F]/60 rounded-sm"
-                      />
-                      <span className="text-[13px] text-foreground/40 flex-shrink-0">do mês</span>
-                    </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Obra (optional) */}
-          {obras.length > 0 && (
-            <div className="rounded-[14px] overflow-hidden bg-white dark:bg-[#2C2C2E]">
-              <div className="flex items-center min-h-[52px] px-4 gap-3">
-                <span className="text-[16px] font-medium flex-shrink-0 text-foreground">Obra</span>
-                <span className="text-[12px] text-foreground/35 flex-shrink-0">opcional</span>
-                <select
-                  {...form.register('obraId')}
-                  className="flex-1 text-[16px] text-right bg-transparent outline-none min-w-0 cursor-pointer"
-                  style={{ direction: 'rtl' }}
-                >
-                  <option value="">—</option>
-                  {obras.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.nome}
-                    </option>
-                  ))}
-                </select>
-              </div>
+          {/* Observações */}
+          <div className="rounded-[14px] overflow-hidden bg-white dark:bg-[#2C2C2E]">
+            <div className="flex items-start min-h-[52px] px-4 py-3 gap-3">
+              <span className="text-[16px] font-medium flex-shrink-0 text-foreground/55 mt-[2px]">
+                Obs.
+              </span>
+              <textarea
+                {...form.register('observacoes')}
+                placeholder="Anotações opcionais…"
+                rows={2}
+                className="flex-1 text-[15px] bg-transparent outline-none min-w-0 resize-none placeholder:text-black/20 dark:placeholder:text-white/20 text-foreground"
+              />
             </div>
-          )}
+          </div>
         </div>
 
         {/* CTA footer */}
@@ -537,7 +600,8 @@ export function NovaContaReceberModal({
             <motion.button
               animate={shakeControls}
               whileTap={{ scale: canSubmit ? 0.97 : 1 }}
-              onClick={handleSubmit}
+              disabled={isPending}
+              onClick={handleTap}
               className={cn(
                 'w-full flex items-center justify-center gap-2 h-[54px] rounded-[14px] text-[17px] font-semibold tracking-tight transition-all',
                 canSubmit

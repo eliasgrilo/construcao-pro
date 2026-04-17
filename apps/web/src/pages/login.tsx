@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { mapAuthError } from '@/lib/auth-errors'
 import { type LoginInput, loginSchema } from '@/lib/schemas'
 import { useAuthStore } from '@/stores/auth-store'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -29,9 +30,15 @@ export function LoginPage() {
     try {
       setError('')
       await login(data.email, data.password)
-      navigate({ to: '/' })
+      const redirectTo = sessionStorage.getItem('cpro_auth_redirect')
+      sessionStorage.removeItem('cpro_auth_redirect')
+      if (redirectTo && redirectTo !== '/login' && redirectTo !== '/cadastro') {
+        window.location.replace(redirectTo)
+      } else {
+        navigate({ to: '/' })
+      }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erro ao fazer login')
+      setError(mapAuthError(err))
     }
   }
 

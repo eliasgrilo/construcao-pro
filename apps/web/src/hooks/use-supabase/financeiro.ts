@@ -184,36 +184,6 @@ export function useCreateFinanceiroMovimentacao() {
   })
 }
 
-export function useDeleteFinanceiroMovimentacao() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (body: {
-      mov_id: string
-      conta_id: string
-      delta_caixa: number
-      delta_aplicado: number
-      destino_conta_id?: string | null
-      delta_destino_caixa?: number
-    }) => {
-      const { error } = await supabase.rpc('cancelar_financeiro_movement', {
-        p_mov_id: body.mov_id,
-        p_conta_id: body.conta_id,
-        p_delta_caixa: body.delta_caixa,
-        p_delta_aplicado: body.delta_aplicado,
-        p_destino_conta_id: body.destino_conta_id ?? null,
-        p_delta_destino_caixa: body.delta_destino_caixa ?? 0,
-      })
-      if (error) throw error
-      return body.conta_id
-    },
-    onSuccess: (contaId) => {
-      qc.invalidateQueries({ queryKey: queryKeys.financeiro.movimentacoes.byConta(contaId) })
-      qc.invalidateQueries({ queryKey: queryKeys.financeiro.movimentacoes.all() })
-      qc.invalidateQueries({ queryKey: queryKeys.financeiro.contas() })
-    },
-  })
-}
-
 /**
  * Atomically registers a financeiro movement AND updates the account balance
  * in a single DB transaction (no read-then-write race condition).
@@ -315,7 +285,7 @@ export function useReverseFinanceiroMovement() {
       destino_conta_id?: string | null
       delta_destino_caixa?: number
     }) => {
-      const { error } = await supabase.rpc('cancelar_financeiro_movement', {
+      const { error } = await supabase.rpc('reverse_financeiro_movement', {
         p_mov_id: body.mov_id,
         p_conta_id: body.conta_id,
         p_delta_caixa: body.delta_caixa,

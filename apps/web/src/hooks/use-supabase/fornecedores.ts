@@ -39,7 +39,7 @@ export function useFornecedores(options?: { enabled?: boolean; includeInactive?:
       if (!options?.includeInactive) query = query.is('deleted_at', null)
       const { data, error } = await query
       if (error) throw error
-      return (data ?? []) as FornecedorTableRow[]
+      return (data ?? []) as FornecedorRow[]
     },
   })
 }

@@ -7,6 +7,19 @@ export const loginSchema = z.object({
 })
 export type LoginInput = z.infer<typeof loginSchema>
 
+export const signupSchema = z
+  .object({
+    nome: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres'),
+    email: z.string().email('E-mail inválido'),
+    password: z.string().min(8, 'Senha deve ter no mínimo 8 caracteres'),
+    confirmPassword: z.string().min(1, 'Confirme sua senha'),
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    message: 'Senhas não coincidem',
+    path: ['confirmPassword'],
+  })
+export type SignupInput = z.infer<typeof signupSchema>
+
 // ─── Helpers ────────────────────────────────────────────
 const emptyToUndefined = (v: unknown) => (typeof v === 'string' && v.trim() === '' ? undefined : v)
 
@@ -99,6 +112,7 @@ export const createMovimentacaoSchema = z.object({
     .positive('Valor deve ser maior que zero')
     .finite('Valor inválido')
     .max(999_999_999, 'Valor máximo excedido'),
+  data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida'),
   transferenciaDestinoId: z.string().nullable().default(null),
 })
 export type CreateMovimentacaoInput = z.infer<typeof createMovimentacaoSchema>

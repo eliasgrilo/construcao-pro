@@ -16,6 +16,26 @@ import { useMemo, useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 
 import { clr, modalCn } from '../financeiro'
+
+const FORMAS_PAGAMENTO = [
+  { value: 'PIX', label: 'PIX' },
+  { value: 'BOLETO', label: 'Boleto' },
+  { value: 'TED', label: 'TED' },
+  { value: 'CARTAO', label: 'Cartão' },
+  { value: 'DINHEIRO', label: 'Dinheiro' },
+]
+
+const CATEGORIAS = [
+  'Materiais',
+  'Fornecedores',
+  'Funcionários',
+  'Aluguel',
+  'Equipamentos',
+  'Serviços',
+  'Impostos',
+  'Outros',
+]
+
 export function NovaContaPagarModal({
   open,
   setOpen,
@@ -67,13 +87,6 @@ export function NovaContaPagarModal({
   const [formaPagamento, setFormaPagamento] = useState<string>('')
   const [taxaCartaoStr, setTaxaCartaoStr] = useState('') // "2,5" → %/parcela para CARTAO
   const [diaVencBoleto, setDiaVencBoleto] = useState('') // "10" → dia do mês para BOLETO
-  const FORMAS_PAGAMENTO = [
-    { value: 'PIX', label: 'PIX' },
-    { value: 'BOLETO', label: 'Boleto' },
-    { value: 'TED', label: 'TED' },
-    { value: 'CARTAO', label: 'Cartão' },
-    { value: 'DINHEIRO', label: 'Dinheiro' },
-  ]
 
   const boletoInvalido =
     formaPagamento === 'BOLETO' &&
@@ -156,17 +169,6 @@ export function NovaContaPagarModal({
     handleSubmit()
   }
 
-  const CATEGORIAS = [
-    'Materiais',
-    'Fornecedores',
-    'Funcionários',
-    'Aluguel',
-    'Equipamentos',
-    'Serviços',
-    'Impostos',
-    'Outros',
-  ]
-
   return (
     <Dialog
       open={open}
@@ -209,6 +211,8 @@ export function NovaContaPagarModal({
               form.reset()
               clearDraft()
               setFormaPagamento('')
+              setTaxaCartaoStr('')
+              setDiaVencBoleto('')
             }}
             className="absolute right-4 flex h-10 w-10 items-center justify-center rounded-full bg-black/[0.08] dark:bg-white/[0.12] hover:bg-black/[0.13] dark:hover:bg-white/[0.18] transition-colors focus-visible:outline-none"
           >

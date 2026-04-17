@@ -2,85 +2,14 @@ import { KeyboardToolbar } from '@/components/KeyboardToolbar/KeyboardToolbar'
 import { formatBRL, parseCurrency } from '@/components/ui/currency-input'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { StickyFooter } from '@/components/ui/sticky-footer'
-import { useToast } from '@/components/ui/toast'
-import { useFormDraft } from '@/hooks/use-form-draft'
-import { usePermissions } from '@/hooks/use-permissions'
-import {
-  type ContaPagarParcela,
-  type ContaReceberParcela,
-  type FinanceiroConta,
-  type FinanceiroMovimentacaoWithConta,
-  type MaterialCostTrendPoint,
-  type ObraRow,
-  useAllFinanceiroMovimentacoes,
-  useContasPagarParcelas,
-  useContasReceberParcelas,
-  useCreateContaPagar,
-  useCreateContaReceber,
-  useCreateFinanceiroConta,
-  useCreateFinanceiroMovimentacao,
-  useDashboardStats,
-  useDeleteContaPagar,
-  useDeleteContaReceber,
-  useDeleteFinanceiroConta,
-  useFinanceiroContas,
-  useFinanceiroMeta,
-  useMaterialCostTrend,
-  useObras,
-  usePagarParcela,
-  useReceberParcela,
-  useUpsertFinanceiroMeta,
-} from '@/hooks/use-supabase'
-import { useUndoableDelete } from '@/hooks/use-undoable-delete'
+import type { ContaReceberParcela, FinanceiroConta } from '@/hooks/use-supabase'
 import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
-import { exportMovimentacoesCsv } from '@/lib/export-csv'
-import {
-  buildInstallmentPreview,
-  buildInstallmentSchedule,
-  getRelativeDueLabel,
-  groupItemsByMonth,
-} from '@/lib/installments'
-import {
-  type CreateContaPagarInput,
-  type CreateContaReceberInput,
-  type CreateFinanceiroContaInput,
-  createContaPagarSchema,
-  createContaReceberSchema,
-  createFinanceiroContaSchema,
-} from '@/lib/schemas'
-import { accents, cn, formatCurrency, formatDate, todayISO } from '@/lib/utils'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useNavigate } from '@tanstack/react-router'
+import { cn, formatCurrency, todayISO } from '@/lib/utils'
 import { AnimatePresence, motion, useAnimation } from 'framer-motion'
-import {
-  AlertCircle,
-  ArrowDownRight,
-  ArrowLeftRight,
-  ArrowUpRight,
-  Calendar,
-  CheckCircle2,
-  ChevronDown,
-  Clock,
-  CreditCard,
-  Download,
-  FileText,
-  Landmark,
-  Package,
-  Plus,
-  Receipt,
-  Search,
-  Target,
-  Trash2,
-  TrendingDown,
-  TrendingUp,
-  Wallet,
-  X,
-} from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Controller, type UseFormReturn, useForm } from 'react-hook-form'
+import { ArrowDownRight, CheckCircle2, Landmark, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 
-import { clr, modalCn, tipos } from '../financeiro'
-import { MovimentacaoListItem, ringColor } from '../financeiro-widgets'
+import { modalCn } from '../financeiro'
 export function ReceberParcelaModal({
   parcela,
   contas,
@@ -122,6 +51,11 @@ export function ReceberParcelaModal({
   const canConfirm = !!contaId && !!dataReceb && valorRecebido > 0 && !isPending
 
   if (!activeParcela) return null
+
+  const showSaldoPreview = !!selectedConta && valorRecebido > 0
+  const novoSaldo = showSaldoPreview ? (Number(selectedConta?.valor_caixa) || 0) + valorRecebido : 0
+  const saldoAposCredito = novoSaldo
+  const saldoCor = saldoAposCredito >= 0 ? '#34C759' : '#FF3B30'
 
   const handleConfirm = async () => {
     if (!canConfirm) {
@@ -194,7 +128,10 @@ export function ReceberParcelaModal({
         </div>
 
         {/* Form */}
-        <div ref={formRef} className="flex-shrink-0 px-4 space-y-[10px] pb-3">
+        <div
+          ref={formRef}
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 space-y-[10px] pb-3"
+        >
           {/* Conta bancária picker */}
           {contas.length > 1 ? (
             <div className="rounded-[14px] overflow-hidden bg-white dark:bg-[#2C2C2E]">
@@ -315,42 +252,36 @@ export function ReceberParcelaModal({
 
           {/* New balance preview */}
           <AnimatePresence>
-            {selectedConta &&
-              valorRecebido > 0 &&
-              (() => {
-                const novoSaldo = (Number(selectedConta.valor_caixa) || 0) + valorRecebido
-                const positivo = novoSaldo >= 0
-                const cor = positivo ? '#34C759' : '#FF3B30'
-                return (
-                  <motion.div
-                    key="saldo-preview"
-                    initial={{ opacity: 0, y: 6, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 6, scale: 0.98 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                    className="rounded-[14px] px-4 py-3"
-                    style={{
-                      backgroundColor: positivo ? 'rgba(52,199,89,0.06)' : 'rgba(255,59,48,0.06)',
-                      border: `1px solid ${cor}20`,
-                    }}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[13px] text-muted-foreground">Saldo atual (caixa)</span>
-                      <span className="text-[13px] font-medium tabular-nums text-muted-foreground">
-                        {formatCurrency(Number(selectedConta.valor_caixa) || 0)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[13px] font-semibold" style={{ color: cor }}>
-                        {positivo ? 'Novo saldo em caixa' : 'Saldo insuficiente'}
-                      </span>
-                      <span className="text-[15px] font-bold tabular-nums" style={{ color: cor }}>
-                        {formatCurrency(novoSaldo)}
-                      </span>
-                    </div>
-                  </motion.div>
-                )
-              })()}
+            {showSaldoPreview && (
+              <motion.div
+                key="saldo-preview"
+                initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 6, scale: 0.98 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                className="rounded-[14px] px-4 py-3"
+                style={{
+                  backgroundColor:
+                    saldoAposCredito >= 0 ? 'rgba(52,199,89,0.06)' : 'rgba(255,59,48,0.06)',
+                  border: `1px solid ${saldoCor}20`,
+                }}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[13px] text-muted-foreground">Saldo atual (caixa)</span>
+                  <span className="text-[13px] font-medium tabular-nums text-muted-foreground">
+                    {formatCurrency(Number(selectedConta?.valor_caixa) || 0)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[13px] font-semibold" style={{ color: saldoCor }}>
+                    Novo saldo em caixa
+                  </span>
+                  <span className="text-[15px] font-bold tabular-nums" style={{ color: saldoCor }}>
+                    {formatCurrency(saldoAposCredito)}
+                  </span>
+                </div>
+              </motion.div>
+            )}
           </AnimatePresence>
         </div>
 

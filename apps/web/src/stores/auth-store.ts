@@ -19,6 +19,7 @@ interface AuthState {
   isAuthenticated: boolean
   isLoading: boolean
   login: (email: string, password: string) => Promise<void>
+  signup: (nome: string, email: string, password: string) => Promise<void>
   logout: () => Promise<void>
   loadProfile: (
     session?: Session | null,
@@ -102,6 +103,21 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     if (error) throw new Error(error.message)
     // Pass session directly — avoids a redundant getSession() call inside loadProfile
     await get().loadProfile(data.session, { forceRefresh: true })
+  },
+
+  signup: async (nome: string, email: string, password: string) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { nome } },
+    })
+    if (error) throw new Error(error.message)
+    // Auto-confirm envs return a session immediately; load the profile so the
+    // user lands authenticated. Email-confirm envs return session: null — the
+    // caller shows a "check your inbox" state in that case.
+    if (data.session) {
+      await get().loadProfile(data.session, { forceRefresh: true })
+    }
   },
 
   logout: async () => {

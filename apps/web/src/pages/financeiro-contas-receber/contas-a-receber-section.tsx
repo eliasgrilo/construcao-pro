@@ -1,8 +1,5 @@
-import { formatBRL, parseCurrency } from '@/components/ui/currency-input'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
-import { StickyFooter } from '@/components/ui/sticky-footer'
 import { useToast } from '@/components/ui/toast'
-import { useFormDraft } from '@/hooks/use-form-draft'
 import { usePermissions } from '@/hooks/use-permissions'
 import {
   type ContaPagarParcela,
@@ -15,7 +12,6 @@ import {
   useContasPagarParcelas,
   useContasReceberParcelas,
   useCreateContaPagar,
-  useCreateContaReceber,
   useCreateFinanceiroConta,
   useCreateFinanceiroMovimentacao,
   useDashboardStats,
@@ -32,22 +28,14 @@ import {
 } from '@/hooks/use-supabase'
 import { useUndoableDelete } from '@/hooks/use-undoable-delete'
 import { exportMovimentacoesCsv } from '@/lib/export-csv'
-import {
-  buildInstallmentPreview,
-  buildInstallmentSchedule,
-  getRelativeDueLabel,
-  groupItemsByMonth,
-} from '@/lib/installments'
+import { getRelativeDueLabel, groupItemsByMonth } from '@/lib/installments'
 import {
   type CreateContaPagarInput,
-  type CreateContaReceberInput,
   type CreateFinanceiroContaInput,
   createContaPagarSchema,
-  createContaReceberSchema,
   createFinanceiroContaSchema,
 } from '@/lib/schemas'
 import { accents, cn, formatCurrency, formatDate, todayISO } from '@/lib/utils'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { useNavigate } from '@tanstack/react-router'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
@@ -74,8 +62,8 @@ import {
   Wallet,
   X,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
-import { Controller, type UseFormReturn, useForm } from 'react-hook-form'
+import { useEffect, useState } from 'react'
+import { Controller, useForm } from 'react-hook-form'
 
 import { clr, modalCn, tipos } from '../financeiro'
 import { MovimentacaoListItem, ringColor } from '../financeiro-widgets'
@@ -90,7 +78,6 @@ export function ContasAReceberSection({
 }) {
   const { toast } = useToast()
   const { data: parcelas = [], isLoading } = useContasReceberParcelas()
-  const createMutation = useCreateContaReceber()
   const deleteMutation = useDeleteContaReceber()
   const receberMutation = useReceberParcela()
 
@@ -98,55 +85,6 @@ export function ContasAReceberSection({
   const [receberModal, setReceberModal] = useState<ContaReceberParcela | null>(null)
   const [pagasExpanded, setPagasExpanded] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
-
-  const crForm = useForm<CreateContaReceberInput>({
-    resolver: zodResolver(createContaReceberSchema),
-    mode: 'onTouched',
-    defaultValues: {
-      descricao: '',
-      cliente: '',
-      obraId: '',
-      observacoes: '',
-      valor: 0,
-      vencimento: '',
-      nParcelas: 1,
-    },
-  })
-
-  const crValorParsed = crForm.watch('valor')
-  const crNParcelas = crForm.watch('nParcelas')
-  const crVencimento = crForm.watch('vencimento')
-  const parcelasReceber = useMemo(
-    () =>
-      buildInstallmentSchedule({
-        total: crValorParsed,
-        firstDueDate: crVencimento,
-        installmentCount: crNParcelas,
-      }),
-    [crNParcelas, crValorParsed, crVencimento],
-  )
-
-  const handleAddContaReceber = crForm.handleSubmit(async (data) => {
-    try {
-      await createMutation.mutateAsync({
-        descricao: data.descricao,
-        cliente: data.cliente || null,
-        obra_id: data.obraId || null,
-        observacoes: data.observacoes || null,
-        valor_total: data.valor,
-        parcelas: parcelasReceber,
-      })
-      setNovaModalOpen(false)
-      crForm.reset()
-      toast({ title: 'Recebimento cadastrado', variant: 'success' })
-    } catch (err) {
-      toast({
-        title: 'Erro ao cadastrar recebimento',
-        description: err instanceof Error ? err.message : undefined,
-        variant: 'error',
-      })
-    }
-  })
 
   const handleReceberParcela = async (
     contaBancariaId: string,
@@ -639,14 +577,7 @@ export function ContasAReceberSection({
       )}
 
       {/* Modals */}
-      <NovaContaReceberModal
-        open={novaModalOpen}
-        setOpen={setNovaModalOpen}
-        form={crForm}
-        isPending={createMutation.isPending}
-        onSubmit={handleAddContaReceber}
-        obras={obras}
-      />
+      <NovaContaReceberModal open={novaModalOpen} setOpen={setNovaModalOpen} obras={obras} />
       <ReceberParcelaModal
         parcela={receberModal}
         contas={contas}

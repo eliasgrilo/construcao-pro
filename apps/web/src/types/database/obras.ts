@@ -172,6 +172,70 @@ export type ObrasTables = {
       },
     ]
   }
+  obra_lancamentos_mao_de_obra: {
+    Row: {
+      id: string
+      obra_id: string
+      almoxarifado_id: string | null
+      descricao: string
+      valor: number
+      data: string
+      forma_pagamento: string | null
+      conta_id: string | null
+      prestador: string | null
+      observacao: string | null
+      created_at: string
+    }
+    Insert: {
+      id?: string
+      obra_id: string
+      almoxarifado_id?: string | null
+      descricao: string
+      valor: number
+      data?: string
+      forma_pagamento?: string | null
+      conta_id?: string | null
+      prestador?: string | null
+      observacao?: string | null
+      created_at?: string
+    }
+    Update: {
+      id?: string
+      obra_id?: string
+      almoxarifado_id?: string | null
+      descricao?: string
+      valor?: number
+      data?: string
+      forma_pagamento?: string | null
+      conta_id?: string | null
+      prestador?: string | null
+      observacao?: string | null
+      created_at?: string
+    }
+    Relationships: [
+      {
+        foreignKeyName: 'obra_lancamentos_mao_de_obra_obra_id_fkey'
+        columns: ['obra_id']
+        isOneToOne: false
+        referencedRelation: 'obras'
+        referencedColumns: ['id']
+      },
+      {
+        foreignKeyName: 'obra_lancamentos_mao_de_obra_almoxarifado_id_fkey'
+        columns: ['almoxarifado_id']
+        isOneToOne: false
+        referencedRelation: 'almoxarifados'
+        referencedColumns: ['id']
+      },
+      {
+        foreignKeyName: 'obra_lancamentos_mao_de_obra_conta_id_fkey'
+        columns: ['conta_id']
+        isOneToOne: false
+        referencedRelation: 'financeiro_contas'
+        referencedColumns: ['id']
+      },
+    ]
+  }
   obra_lancamentos_burocracia: {
     Row: {
       categoria: string

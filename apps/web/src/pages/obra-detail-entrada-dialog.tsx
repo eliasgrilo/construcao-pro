@@ -303,6 +303,7 @@ export function ObraDetailEntradaDialog({
           data: mdoData || todayISO(),
           forma_pagamento: mdoPagamento || null,
           conta_id: mdoContaId || null,
+          subconta: mdoContaId ? mdoSubconta : null,
           prestador: mdoPrestador.trim() || null,
           observacao: mdoObs.trim() || null,
         })

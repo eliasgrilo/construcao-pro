@@ -20,7 +20,7 @@ import {
   useMateriais,
 } from '@/hooks/use-supabase'
 import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
-import { cn, formatCurrency } from '@/lib/utils'
+import { cn, formatCurrency, todayISO } from '@/lib/utils'
 import { useEffect, useRef, useState } from 'react'
 import { iosMediumDialogCn } from './dialog-styles'
 
@@ -38,11 +38,6 @@ const plainInputCn =
   'w-full px-4 py-3.5 bg-transparent text-[15px] border-0 focus:outline-none placeholder:text-muted-foreground/25'
 
 type Mode = 'material' | 'mao-de-obra'
-
-function getTodayStr() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
 
 // ── iOS-style segmented control ────────────────────────────────────────────────
 function SegmentedControl({ value, onChange }: { value: Mode; onChange: (v: Mode) => void }) {
@@ -154,7 +149,7 @@ export function ObraDetailEntradaDialog({
   // ── Mão de Obra state ─────────────────────────────────
   const [mdoDescricao, setMdoDescricao] = useState('')
   const [mdoValor, setMdoValor] = useState('')
-  const [mdoData, setMdoData] = useState(getTodayStr)
+  const [mdoData, setMdoData] = useState(todayISO)
   const [mdoPrestador, setMdoPrestador] = useState('')
   const [mdoPagamento, setMdoPagamento] = useState('')
   const [mdoContaId, setMdoContaId] = useState('')
@@ -181,7 +176,7 @@ export function ObraDetailEntradaDialog({
     setObs('')
     setMdoDescricao('')
     setMdoValor('')
-    setMdoData(getTodayStr())
+    setMdoData(todayISO())
     setMdoPrestador('')
     setMdoPagamento('')
     setMdoContaId('')
@@ -209,10 +204,11 @@ export function ObraDetailEntradaDialog({
   const entradaTotal = qtyNumber > 0 ? qtyNumber * precoNumber : 0
   const needsFinanceiro = entradaTotal > 0
   const selectedConta = contasFinanceiras.find((c) => c.id === contaId)
+  const resolvedAlmoxId = (almoxId || preAlmoxId || '').trim()
 
   const canSubmitMaterial =
     !!materialId &&
-    !!almoxId &&
+    !!resolvedAlmoxId &&
     !!qty &&
     qtyNumber > 0 &&
     !!unidade &&
@@ -223,7 +219,11 @@ export function ObraDetailEntradaDialog({
   const mdoValorNumber = parseCurrency(mdoValor) || 0
   const mdoSelectedConta = contasFinanceiras.find((c) => c.id === mdoContaId)
   const canSubmitMdo =
-    !!mdoDescricao.trim() && mdoValorNumber > 0 && (!mdoContaId || !!mdoPagamento) && !isSubmitting
+    !!resolvedAlmoxId &&
+    !!mdoDescricao.trim() &&
+    mdoValorNumber > 0 &&
+    (!mdoContaId || !!mdoPagamento) &&
+    !isSubmitting
 
   const canSubmit = mode === 'material' ? canSubmitMaterial : canSubmitMdo
 
@@ -245,7 +245,7 @@ export function ObraDetailEntradaDialog({
   function resetMdo() {
     setMdoDescricao('')
     setMdoValor('')
-    setMdoData(getTodayStr())
+    setMdoData(todayISO())
     setMdoPrestador('')
     setMdoPagamento('')
     setMdoContaId('')
@@ -270,10 +270,11 @@ export function ObraDetailEntradaDialog({
             p_material_id: materialId,
             p_quantidade: qtyNumber,
             p_preco_unitario: precoNumber,
-            p_almoxarifado_id: almoxId,
+            p_almoxarifado_id: resolvedAlmoxId,
             p_conta_id: contaId,
             p_subconta: subconta,
             p_motivo: `Compra: ${selectedMat?.nome ?? 'Material'}${obs ? ` — ${obs}` : ''}`,
+            p_data: todayISO(),
             p_fornecedor_id: fornecedorId || undefined,
             p_observacao: obs.trim() || undefined,
             p_unidade: unidade || undefined,
@@ -284,7 +285,7 @@ export function ObraDetailEntradaDialog({
             p_material_id: materialId,
             p_quantidade: qtyNumber,
             p_preco_unitario: precoNumber,
-            p_almoxarifado_id: almoxId,
+            p_almoxarifado_id: resolvedAlmoxId,
             p_unidade: unidade || undefined,
             p_fornecedor_id: fornecedorId || undefined,
             p_observacao: obs.trim() || undefined,
@@ -296,10 +297,10 @@ export function ObraDetailEntradaDialog({
       } else {
         await createMaoDeObra.mutateAsync({
           obra_id: obraId,
-          almoxarifado_id: preAlmoxId ?? null,
+          almoxarifado_id: resolvedAlmoxId || null,
           descricao: mdoDescricao.trim(),
           valor: mdoValorNumber,
-          data: mdoData,
+          data: mdoData || todayISO(),
           forma_pagamento: mdoPagamento || null,
           conta_id: mdoContaId || null,
           prestador: mdoPrestador.trim() || null,
@@ -391,7 +392,7 @@ export function ObraDetailEntradaDialog({
                   {preAlmoxId ? (
                     <div className="h-[50px] px-4 flex items-center">
                       <span className="text-[15px]">
-                        {almoxarifados.find((a) => a.id === preAlmoxId)?.nome ??
+                        {almoxarifados.find((a) => a.id === resolvedAlmoxId)?.nome ??
                           'Local selecionado'}
                       </span>
                     </div>

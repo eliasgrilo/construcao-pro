@@ -1,22 +1,13 @@
 import { queryKeys } from '@/lib/query-keys'
 import { supabase } from '@/lib/supabase'
+import type { Database } from '@/types/database'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-export interface ObraLancamentoMaoDeObra {
-  id: string
-  obra_id: string
-  almoxarifado_id: string | null
-  descricao: string
-  valor: number
-  data: string
-  forma_pagamento: string | null
-  conta_id: string | null
-  prestador: string | null
-  observacao: string | null
-  created_at: string
-}
+export type ObraLancamentoMaoDeObra =
+  Database['public']['Tables']['obra_lancamentos_mao_de_obra']['Row']
 
-export type CreateObraLancamentoMaoDeObra = Omit<ObraLancamentoMaoDeObra, 'id' | 'created_at'>
+export type CreateObraLancamentoMaoDeObra =
+  Database['public']['Tables']['obra_lancamentos_mao_de_obra']['Insert']
 
 export function useObraLancamentosMaoDeObra(obraId: string) {
   return useQuery({
@@ -38,13 +29,9 @@ export function useCreateObraLancamentoMaoDeObra() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (payload: CreateObraLancamentoMaoDeObra) => {
-      const { data, error } = await supabase
-        .from('obra_lancamentos_mao_de_obra')
-        .insert(payload)
-        .select()
-        .single()
+      const { error } = await supabase.from('obra_lancamentos_mao_de_obra').insert(payload)
       if (error) throw error
-      return data as ObraLancamentoMaoDeObra
+      return payload
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.obras.maoDeObra(variables.obra_id) })

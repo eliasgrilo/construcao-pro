@@ -1,3 +1,5 @@
+import * as pdfjsLib from 'pdfjs-dist'
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url'
 /**
  * ZoomablePdfViewer — pdf.js canvas rendering with iOS Quick Look–level
  * pinch/wheel/double-tap zoom. Mirrors ZoomableImageViewer's fit/pan/zoom
@@ -8,8 +10,6 @@
  * All transform state lives in refs — zero re-renders during gestures.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
-import * as pdfjsLib from 'pdfjs-dist'
-import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
 
@@ -245,7 +245,11 @@ export function ZoomablePdfViewer({ src, alt, fitMargin = FIT_MARGIN, contentIns
 
         const c = cRef.current
         const containerW = c ? c.clientWidth - inL - inR : 1000
-        const targetWidth = clamp(containerW * RENDER_WIDTH_FACTOR, RENDER_WIDTH_MIN, RENDER_WIDTH_MAX)
+        const targetWidth = clamp(
+          containerW * RENDER_WIDTH_FACTOR,
+          RENDER_WIDTH_MIN,
+          RENDER_WIDTH_MAX,
+        )
         const dpr = clamp(window.devicePixelRatio || 1, 1, CANVAS_MAX_PIXEL_RATIO)
 
         const stackEl = stackRef.current

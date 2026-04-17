@@ -208,7 +208,7 @@ $$;
 grant execute on function public.delete_obra_lancamento_mao_de_obra(uuid, text)
   to authenticated;
 
-create or replace function public.get_obra_custos(p_obra_id uuid)
+create or replace function public.get_obra_custos(p_obra_id text)
 returns json
 language plpgsql
 as $function$
@@ -237,7 +237,7 @@ begin
     select coalesce(sum(mdo.valor), 0)
     into v_valor_mao_de_obra
     from public.obra_lancamentos_mao_de_obra mdo
-    where mdo.obra_id = p_obra_id::text;
+    where mdo.obra_id = p_obra_id;
 
     select coalesce(sum(mov.quantidade * coalesce(mov.preco_unitario, 0)), 0)
     into v_valor_construcao
@@ -303,7 +303,7 @@ begin
                 date_trunc('month', mdo.data::timestamptz) as mes_date,
                 mdo.valor as valor
             from public.obra_lancamentos_mao_de_obra mdo
-            where mdo.obra_id = p_obra_id::text
+            where mdo.obra_id = p_obra_id
         ) raw
         group by mes_date
         order by mes_date
@@ -326,7 +326,7 @@ $function$;
 
 create or replace function public.get_custo_por_obra()
 returns table(
-  id uuid,
+  id text,
   obra text,
   endereco text,
   status text,
@@ -367,7 +367,7 @@ begin
         + coalesce((
           select sum(mdo.valor)
           from public.obra_lancamentos_mao_de_obra mdo
-          where mdo.obra_id = o.id::text
+          where mdo.obra_id = o.id
         ), 0)
       )::numeric as valor_construcao
     from public.obras o

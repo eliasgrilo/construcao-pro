@@ -1,11 +1,24 @@
-import { ZoomableImageViewer } from '@/components/ZoomableImageViewer'
-import { ZoomablePdfViewer } from '@/components/ZoomablePdfViewer'
+import {
+  ZoomableImageViewer,
+  type ZoomableImageViewerHandle,
+} from '@/components/ZoomableImageViewer'
+import { ZoomablePdfViewer, type ZoomablePdfViewerHandle } from '@/components/ZoomablePdfViewer'
 import { useToast } from '@/components/ui/toast'
 import { useBodyScrollLock, useOverlayPresence } from '@/hooks/use-body-scroll-lock'
 import type { Documento } from '@/hooks/use-supabase'
 import { cn } from '@/lib/utils'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronLeft, ChevronRight, Copy, Download, Share, Trash2, X } from 'lucide-react'
+import {
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  Download,
+  Share,
+  Trash2,
+  X,
+  ZoomIn,
+  ZoomOut,
+} from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { fmtSize, getFileColor, getFileIcon } from './documentacao-utils'
@@ -55,8 +68,11 @@ export function FilePreviewModal({
   const isMobileRef = useRef(
     typeof window !== 'undefined' ? window.matchMedia('(hover: none)').matches : false,
   )
+  const imageViewerRef = useRef<ZoomableImageViewerHandle>(null)
+  const pdfViewerRef = useRef<ZoomablePdfViewerHandle>(null)
   const allowToolbarAutoHide = isMobileRef.current && !isPdf
   const previewTouchAction = isImage ? 'none' : 'auto'
+  const bottomInset = isMobileRef.current ? 84 : 8
 
   const resetToolbarTimer = useCallback(() => {
     setToolbarVisible(true)
@@ -197,10 +213,11 @@ export function FilePreviewModal({
             style={{ position: 'absolute', inset: 0 }}
           >
             <ZoomableImageViewer
+              ref={imageViewerRef}
               src={url}
               alt={doc.nome}
               fitMargin={0.92}
-              contentInsets={{ top: 60, bottom: 8 }}
+              contentInsets={{ top: 60, bottom: bottomInset }}
             />
           </motion.div>
         )}
@@ -212,7 +229,12 @@ export function FilePreviewModal({
             transition={{ duration: 0.25 }}
             style={{ position: 'absolute', inset: 0 }}
           >
-            <ZoomablePdfViewer src={url} alt={doc.nome} contentInsets={{ top: 60, bottom: 8 }} />
+            <ZoomablePdfViewer
+              ref={pdfViewerRef}
+              src={url}
+              alt={doc.nome}
+              contentInsets={{ top: 60, bottom: bottomInset }}
+            />
           </motion.div>
         )}
 
@@ -401,6 +423,39 @@ export function FilePreviewModal({
                       <Trash2 className="h-[20px] w-[20px] text-[#FF453A]" strokeWidth={1.7} />
                     )}
                   </motion.button>
+                )}
+
+                {!isMobileRef.current && (isImage || isPdf) && (
+                  <>
+                    <motion.button
+                      type="button"
+                      whileTap={{ scale: 0.82 }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (isImage) imageViewerRef.current?.zoomOut()
+                        else pdfViewerRef.current?.zoomOut()
+                        resetToolbarTimer()
+                      }}
+                      className="flex items-center justify-center rounded-full hover:bg-white/[0.12] active:bg-white/[0.08] transition-colors h-11 w-11"
+                      aria-label="Diminuir zoom"
+                    >
+                      <ZoomOut className="h-[20px] w-[20px] text-[#007AFF]" strokeWidth={1.7} />
+                    </motion.button>
+                    <motion.button
+                      type="button"
+                      whileTap={{ scale: 0.82 }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (isImage) imageViewerRef.current?.zoomIn()
+                        else pdfViewerRef.current?.zoomIn()
+                        resetToolbarTimer()
+                      }}
+                      className="flex items-center justify-center rounded-full hover:bg-white/[0.12] active:bg-white/[0.08] transition-colors h-11 w-11"
+                      aria-label="Aumentar zoom"
+                    >
+                      <ZoomIn className="h-[20px] w-[20px] text-[#007AFF]" strokeWidth={1.7} />
+                    </motion.button>
+                  </>
                 )}
 
                 <motion.button

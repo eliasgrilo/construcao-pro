@@ -16,6 +16,7 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { DocumentacaoCategoryModal } from './documentacao-dialogs'
 import { DropZoneOverlay, GroupedFileList } from './documentacao-list'
 import { DocumentacaoObrasSection } from './documentacao-obras-section'
+import { FilePreviewModal } from './documentacao-preview'
 import { DocumentacaoUploadModal } from './documentacao-upload-modal'
 import { cardCn } from './documentacao-utils'
 
@@ -52,6 +53,11 @@ export function DocumentacaoPage() {
   const [uploadDescricao, setUploadDescricao] = useState('')
 
   const [categoryModalOpen, setCategoryModalOpen] = useState(false)
+
+  // Preview modal
+  const [previewDoc, setPreviewDoc] = useState<Documento | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
 
   // Drag per-card
   const [dragOver, setDragOver] = useState<string | null>(null) // "empresa" | obraId | null
@@ -147,36 +153,35 @@ export function DocumentacaoPage() {
   }
 
   const openDoc = async (doc: Documento) => {
-    // Open blank tab synchronously inside the user gesture — browsers block
-    // window.open called after await (no longer a trusted event context).
-    const win = window.open('', '_blank')
-    if (!win) {
-      toast({
-        variant: 'error',
-        title: 'Popup bloqueado',
-        description: 'Permita popups para este site nas configurações do navegador e tente novamente.',
-      })
-      return
-    }
-    win.document.write(
-      '<style>*{margin:0;padding:0;box-sizing:border-box}body{display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f5f5f7;font-family:system-ui,-apple-system,sans-serif}.w{text-align:center;display:flex;flex-direction:column;align-items:center;gap:16px}.s{width:36px;height:36px;border:3px solid #e5e5ea;border-top-color:#007AFF;border-radius:50%;animation:r .8s linear infinite}@keyframes r{to{transform:rotate(360deg)}}p{font-size:15px;color:#6e6e73;font-weight:500}</style><div class="w"><div class="s"></div><p>A abrir o arquivo\u2026</p></div>',
-    )
-    win.document.close()
+    setPreviewDoc(doc)
+    setPreviewUrl(null)
+    setPreviewLoading(true)
     try {
       const url = await getUrlMut.mutateAsync({
         storagePath: doc.storage_path,
         tipoArquivo: doc.tipo_arquivo,
       })
-      win.location.href = url
+      setPreviewUrl(url)
     } catch (err) {
-      win.close()
+      setPreviewDoc(null)
       toast({
         variant: 'error',
         title: 'Erro ao abrir arquivo',
         description: err instanceof Error ? err.message : 'Não foi possível obter o arquivo.',
       })
+    } finally {
+      setPreviewLoading(false)
     }
   }
+
+  const closePreview = () => {
+    setPreviewDoc(null)
+    setPreviewUrl(null)
+  }
+
+  const previewIdx = previewDoc ? documentos.findIndex((d) => d.id === previewDoc.id) : -1
+  const hasPrev = previewIdx > 0
+  const hasNext = previewIdx >= 0 && previewIdx < documentos.length - 1
 
   const downloadDoc = async (doc: Documento) => {
     try {
@@ -502,6 +507,24 @@ export function DocumentacaoPage() {
         categorias={categorias}
         catCounts={catCounts}
       />
+
+      <AnimatePresence>
+        {previewDoc && (
+          <FilePreviewModal
+            doc={previewDoc}
+            url={previewUrl}
+            loading={previewLoading}
+            onClose={closePreview}
+            onDownload={() => downloadDoc(previewDoc)}
+            onDelete={() => deleteDoc(previewDoc).then(closePreview)}
+            onPrev={hasPrev ? () => openDoc(documentos[previewIdx - 1]) : undefined}
+            onNext={hasNext ? () => openDoc(documentos[previewIdx + 1]) : undefined}
+            hasPrev={hasPrev}
+            hasNext={hasNext}
+            canDelete={canManageDocumentos}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

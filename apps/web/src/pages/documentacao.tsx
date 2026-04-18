@@ -16,7 +16,6 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { DocumentacaoCategoryModal } from './documentacao-dialogs'
 import { DropZoneOverlay, GroupedFileList } from './documentacao-list'
 import { DocumentacaoObrasSection } from './documentacao-obras-section'
-import { FilePreviewModal } from './documentacao-preview'
 import { DocumentacaoUploadModal } from './documentacao-upload-modal'
 import { cardCn } from './documentacao-utils'
 
@@ -53,11 +52,6 @@ export function DocumentacaoPage() {
   const [uploadDescricao, setUploadDescricao] = useState('')
 
   const [categoryModalOpen, setCategoryModalOpen] = useState(false)
-
-  // File preview modal
-  const [previewDoc, setPreviewDoc] = useState<Documento | null>(null)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [previewLoading, setPreviewLoading] = useState(false)
 
   // Drag per-card
   const [dragOver, setDragOver] = useState<string | null>(null) // "empresa" | obraId | null
@@ -152,39 +146,19 @@ export function DocumentacaoPage() {
     }
   }
 
-  // Abre o arquivo no visualizador interno (FilePreviewModal).
-  // Exibe spinner imediato enquanto busca a URL assinada do Supabase Storage.
   const openDoc = async (doc: Documento) => {
-    setPreviewDoc(doc)
-    setPreviewUrl(null)
-    setPreviewLoading(true)
     try {
       const url = await getUrlMut.mutateAsync({
         storagePath: doc.storage_path,
         tipoArquivo: doc.tipo_arquivo,
       })
-      // Preload image/PDF in parallel with React render — the browser
-      // starts downloading immediately so by the time ZoomableImageViewer
-      // mounts and creates its <img>, the data is already in cache.
-      if (doc.tipo_arquivo.startsWith('image/')) {
-        const link = document.createElement('link')
-        link.rel = 'preload'
-        link.as = 'image'
-        link.href = url
-        document.head.appendChild(link)
-        // Clean up after 30s — by then it's either cached or irrelevant
-        setTimeout(() => link.remove(), 30_000)
-      }
-      setPreviewUrl(url)
+      window.open(url, '_blank', 'noopener,noreferrer')
     } catch (err) {
       toast({
         variant: 'error',
         title: 'Erro ao abrir arquivo',
         description: err instanceof Error ? err.message : 'Não foi possível obter o arquivo.',
       })
-      setPreviewDoc(null)
-    } finally {
-      setPreviewLoading(false)
     }
   }
 
@@ -505,47 +479,6 @@ export function DocumentacaoPage() {
         categorias={categorias}
         fileInputRef={fileInputRef}
       />
-
-      {/* ══════════════════════════════════════════════════════
-          FILE PREVIEW MODAL — iOS Quick Look style
-          ══════════════════════════════════════════════════════ */}
-      <AnimatePresence>
-        {previewDoc &&
-          (() => {
-            const allDocs = documentos
-            const curIdx = allDocs.findIndex((d) => d.id === previewDoc.id)
-            const prevDoc = curIdx > 0 ? allDocs[curIdx - 1] : null
-            const nextDoc = curIdx < allDocs.length - 1 ? allDocs[curIdx + 1] : null
-            return (
-              <FilePreviewModal
-                key={previewDoc.id}
-                doc={previewDoc}
-                url={previewUrl}
-                loading={previewLoading}
-                onClose={() => {
-                  setPreviewDoc(null)
-                  setPreviewUrl(null)
-                }}
-                onDownload={() => downloadDoc(previewDoc)}
-                onDelete={async () => {
-                  const next = nextDoc || prevDoc
-                  await deleteDoc(previewDoc)
-                  if (next) {
-                    openDoc(next)
-                  } else {
-                    setPreviewDoc(null)
-                    setPreviewUrl(null)
-                  }
-                }}
-                hasPrev={!!prevDoc}
-                hasNext={!!nextDoc}
-                onPrev={prevDoc ? () => openDoc(prevDoc) : undefined}
-                onNext={nextDoc ? () => openDoc(nextDoc) : undefined}
-                canDelete={canManageDocumentos}
-              />
-            )
-          })()}
-      </AnimatePresence>
 
       <DocumentacaoCategoryModal
         open={categoryModalOpen}

@@ -9,20 +9,10 @@ import {
   useObras,
   useUploadDocumento,
 } from '@/hooks/use-supabase'
-import { cn, formatDateShort, generateId } from '@/lib/utils'
+import { cn, generateId } from '@/lib/utils'
 import { AnimatePresence, motion } from 'framer-motion'
-import {
-  ChevronRight,
-  Copy,
-  Download,
-  FolderOpen,
-  FolderPlus,
-  Landmark,
-  Share,
-  Upload,
-} from 'lucide-react'
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { ChevronRight, FolderOpen, FolderPlus, Landmark, Upload } from 'lucide-react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { DocumentacaoCategoryModal } from './documentacao-dialogs'
 import { DropZoneOverlay, GroupedFileList } from './documentacao-list'
 import { DocumentacaoObrasSection } from './documentacao-obras-section'

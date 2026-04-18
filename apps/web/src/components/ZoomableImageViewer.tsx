@@ -239,7 +239,7 @@ export const ZoomableImageViewer = forwardRef<ZoomableImageViewerHandle, Props>(
           return
         }
 
-        fitZ.current = Math.min(cw / nw.current, ch / nh.current) * fitMargin
+        fitZ.current = Math.min(1, Math.min(cw / nw.current, ch / nh.current) * fitMargin)
 
         /* Offset center so image sits in the middle of the *visible* area,
          not the middle of the full container.  shift = (inT - inB) / 2
@@ -320,7 +320,7 @@ export const ZoomableImageViewer = forwardRef<ZoomableImageViewerHandle, Props>(
         const ch = c.clientHeight - inT - inB
         if (cw <= 0 || ch <= 0) return
 
-        const newFitZ = Math.min(cw / nw.current, ch / nh.current) * fitMargin
+        const newFitZ = Math.min(1, Math.min(cw / nw.current, ch / nh.current) * fitMargin)
         fitZ.current = newFitZ
         const centerOffsetY = (inT - inB) / 2
         const centerOffsetX = (inL - inR) / 2

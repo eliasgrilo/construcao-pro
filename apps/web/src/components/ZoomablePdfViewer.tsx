@@ -203,7 +203,7 @@ export const ZoomablePdfViewer = forwardRef<ZoomablePdfViewerHandle, Props>(
         pendingFit.current = true
         return
       }
-      fitZ.current = Math.min(cw / baseW.current, ch / baseH.current) * fitMargin
+      fitZ.current = Math.min(1, Math.min(cw / baseW.current, ch / baseH.current) * fitMargin)
       const centerOffsetX = (inL - inR) / 2
       const centerOffsetY = (inT - inB) / 2
       tr.current = { zoom: fitZ.current, panX: centerOffsetX, panY: centerOffsetY }

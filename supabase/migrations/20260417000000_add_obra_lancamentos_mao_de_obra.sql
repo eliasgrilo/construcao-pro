@@ -1,7 +1,7 @@
 create table if not exists obra_lancamentos_mao_de_obra (
   id uuid primary key default gen_random_uuid(),
-  obra_id text not null references obras(id) on delete cascade,
-  almoxarifado_id text references almoxarifados(id) on delete set null,
+  obra_id uuid not null references obras(id) on delete cascade,
+  almoxarifado_id uuid references almoxarifados(id) on delete set null,
   descricao text not null,
   valor numeric(12, 2) not null check (valor > 0),
   data date not null default current_date,

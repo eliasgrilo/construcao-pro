@@ -55,7 +55,7 @@ begin
     raise exception 'Usuário autenticado não encontrado para registrar mão de obra';
   end if;
 
-  if not public.auth_can_access_obra(p_obra_id) then
+  if not public.auth_can_access_obra(p_obra_id::uuid) then
     raise exception 'Você não tem acesso a esta obra';
   end if;
 
@@ -74,8 +74,8 @@ begin
   if p_almoxarifado_id is not null then
     perform 1
     from public.almoxarifados a
-    where a.id = p_almoxarifado_id
-      and a.obra_id = p_obra_id;
+    where a.id = p_almoxarifado_id::uuid
+      and a.obra_id = p_obra_id::uuid;
 
     if not found then
       raise exception 'Local de construção inválido para esta obra';
@@ -121,8 +121,8 @@ begin
     financeiro_movimentacao_id
   )
   values (
-    p_obra_id,
-    p_almoxarifado_id,
+    p_obra_id::uuid,
+    p_almoxarifado_id::uuid,
     v_descricao,
     p_valor,
     v_data,
@@ -168,7 +168,7 @@ begin
     raise exception 'Usuário autenticado não encontrado para excluir mão de obra';
   end if;
 
-  if not public.auth_can_access_obra(p_obra_id) then
+  if not public.auth_can_access_obra(p_obra_id::uuid) then
     raise exception 'Você não tem acesso a esta obra';
   end if;
 
@@ -180,7 +180,7 @@ begin
   into v_lancamento
   from public.obra_lancamentos_mao_de_obra
   where id = p_id
-    and obra_id = p_obra_id
+    and obra_id = p_obra_id::uuid
   for update;
 
   if not found then
@@ -237,7 +237,7 @@ begin
     select coalesce(sum(mdo.valor), 0)
     into v_valor_mao_de_obra
     from public.obra_lancamentos_mao_de_obra mdo
-    where mdo.obra_id = p_obra_id;
+    where mdo.obra_id = p_obra_id::uuid;
 
     select coalesce(sum(mov.quantidade * coalesce(mov.preco_unitario, 0)), 0)
     into v_valor_construcao
@@ -303,7 +303,7 @@ begin
                 date_trunc('month', mdo.data::timestamptz) as mes_date,
                 mdo.valor as valor
             from public.obra_lancamentos_mao_de_obra mdo
-            where mdo.obra_id = p_obra_id
+            where mdo.obra_id = p_obra_id::uuid
         ) raw
         group by mes_date
         order by mes_date
@@ -321,79 +321,6 @@ begin
         'porCategoria',    v_por_categoria,
         'tendencia',       v_tendencia
     );
-end;
-$function$;
-
-create or replace function public.get_custo_por_obra()
-returns table(
-  id text,
-  obra text,
-  endereco text,
-  status text,
-  custo numeric,
-  orcamento numeric,
-  valor_terreno numeric,
-  valor_burocracia numeric,
-  valor_construcao numeric,
-  valor_venda numeric,
-  percentual numeric
-)
-language plpgsql
-as $function$
-begin
-  return query
-  with obra_totais as (
-    select
-      o.id,
-      o.nome::text as obra,
-      o.endereco::text as endereco,
-      o.status::text as status,
-      o.orcamento::numeric as orcamento,
-      o.valor_terreno::numeric as valor_terreno,
-      o.valor_venda::numeric as valor_venda,
-      coalesce((
-        select sum(lb.valor)
-        from public.obra_lancamentos_burocracia lb
-        where lb.obra_id = o.id
-      ), 0)::numeric as valor_burocracia,
-      (
-        coalesce((
-          select sum(mov.quantidade * coalesce(mov.preco_unitario, 0))
-          from public.movimentacoes mov
-          join public.almoxarifados a on a.id = mov.almoxarifado_id
-          where a.obra_id = o.id
-            and mov.tipo = 'ENTRADA'
-        ), 0)
-        + coalesce((
-          select sum(mdo.valor)
-          from public.obra_lancamentos_mao_de_obra mdo
-          where mdo.obra_id = o.id
-        ), 0)
-      )::numeric as valor_construcao
-    from public.obras o
-  )
-  select
-    ot.id,
-    ot.obra,
-    ot.endereco,
-    ot.status,
-    (coalesce(ot.valor_terreno, 0) + coalesce(ot.valor_burocracia, 0) + coalesce(ot.valor_construcao, 0))::numeric as custo,
-    ot.orcamento,
-    ot.valor_terreno,
-    ot.valor_burocracia,
-    ot.valor_construcao,
-    ot.valor_venda,
-    case when coalesce(ot.orcamento, 0) > 0
-      then round(
-        (
-          coalesce(ot.valor_terreno, 0)
-          + coalesce(ot.valor_burocracia, 0)
-          + coalesce(ot.valor_construcao, 0)
-        ) / ot.orcamento * 100
-      )::numeric
-      else 0::numeric
-    end as percentual
-  from obra_totais ot;
 end;
 $function$;
 
@@ -457,7 +384,7 @@ begin
         + coalesce((
             select sum(mdo.valor)
             from public.obra_lancamentos_mao_de_obra mdo
-            where mdo.obra_id = o.id::text
+            where mdo.obra_id = o.id
           ), 0)
       )
       from public.obras o

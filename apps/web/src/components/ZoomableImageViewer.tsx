@@ -9,7 +9,7 @@
  *
  * All transform state lives in refs — zero re-renders during gestures.
  */
-import { useCallback, useEffect, useRef } from 'react'
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 'react'
 
 /* ── Config ── */
 
@@ -39,6 +39,12 @@ interface Props {
   contentInsets?: { top?: number; bottom?: number; left?: number; right?: number }
 }
 
+export interface ZoomableImageViewerHandle {
+  zoomIn: () => void
+  zoomOut: () => void
+  resetZoom: () => void
+}
+
 interface Transform {
   zoom: number
   panX: number
@@ -51,14 +57,10 @@ function clamp(v: number, min: number, max: number) {
 
 /* ── Component ── */
 
-export function ZoomableImageViewer({
-  src,
-  alt,
-  onLoad,
-  onError,
-  fitMargin = FIT_MARGIN,
-  contentInsets,
-}: Props) {
+export const ZoomableImageViewer = forwardRef<ZoomableImageViewerHandle, Props>(function ZoomableImageViewer(
+  { src, alt, onLoad, onError, fitMargin = FIT_MARGIN, contentInsets },
+  ref,
+) {
   const inT = contentInsets?.top ?? 0
   const inB = contentInsets?.bottom ?? 0
   const inL = contentInsets?.left ?? 0
@@ -258,6 +260,36 @@ export function ZoomableImageViewer({
     })
   }, [onLoad, fitMargin, inT, inB, inL, inR])
 
+  /* ── Imperative handle for external zoom controls ── */
+  useImperativeHandle(
+    ref,
+    () => ({
+      zoomIn: () => {
+        const c = cRef.current
+        if (!c || !nw.current) return
+        const r = c.getBoundingClientRect()
+        zoomAt(tr.current.zoom * 1.3, r.left + r.width / 2, r.top + r.height / 2)
+      },
+      zoomOut: () => {
+        const c = cRef.current
+        if (!c || !nw.current) return
+        const r = c.getBoundingClientRect()
+        const next = Math.max(tr.current.zoom / 1.3, fitZ.current)
+        zoomAt(next, r.left + r.width / 2, r.top + r.height / 2)
+        if (next <= fitZ.current * 1.001) {
+          tr.current = { zoom: fitZ.current, panX: (inL - inR) / 2, panY: (inT - inB) / 2 }
+          paint(true)
+        }
+      },
+      resetZoom: () => {
+        if (!nw.current) return
+        tr.current = { zoom: fitZ.current, panX: (inL - inR) / 2, panY: (inT - inB) / 2 }
+        paint(true)
+      },
+    }),
+    [zoomAt, paint, inT, inB, inL, inR],
+  )
+
   /* ── Reset when src changes ── */
   useEffect(() => {
     const img = iRef.current
@@ -446,4 +478,4 @@ export function ZoomableImageViewer({
       />
     </div>
   )
-}
+})

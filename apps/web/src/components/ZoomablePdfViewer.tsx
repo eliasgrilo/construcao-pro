@@ -9,7 +9,7 @@ import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url'
  *
  * All transform state lives in refs — zero re-renders during gestures.
  */
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
 
@@ -39,6 +39,12 @@ interface Props {
   contentInsets?: { top?: number; bottom?: number; left?: number; right?: number }
 }
 
+export interface ZoomablePdfViewerHandle {
+  zoomIn: () => void
+  zoomOut: () => void
+  resetZoom: () => void
+}
+
 interface Transform {
   zoom: number
   panX: number
@@ -49,7 +55,10 @@ function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v))
 }
 
-export function ZoomablePdfViewer({ src, alt, fitMargin = FIT_MARGIN, contentInsets }: Props) {
+export const ZoomablePdfViewer = forwardRef<ZoomablePdfViewerHandle, Props>(function ZoomablePdfViewer(
+  { src, alt, fitMargin = FIT_MARGIN, contentInsets },
+  ref,
+) {
   const inT = contentInsets?.top ?? 0
   const inB = contentInsets?.bottom ?? 0
   const inL = contentInsets?.left ?? 0
@@ -203,6 +212,36 @@ export function ZoomablePdfViewer({ src, alt, fitMargin = FIT_MARGIN, contentIns
     paint(false)
     el.style.opacity = '1'
   }, [paint, fitMargin, inT, inB, inL, inR])
+
+  /* ── Imperative handle for external zoom controls ── */
+  useImperativeHandle(
+    ref,
+    () => ({
+      zoomIn: () => {
+        const c = cRef.current
+        if (!c || !baseW.current) return
+        const r = c.getBoundingClientRect()
+        zoomAt(tr.current.zoom * 1.3, r.left + r.width / 2, r.top + r.height / 2)
+      },
+      zoomOut: () => {
+        const c = cRef.current
+        if (!c || !baseW.current) return
+        const r = c.getBoundingClientRect()
+        const next = Math.max(tr.current.zoom / 1.3, fitZ.current)
+        zoomAt(next, r.left + r.width / 2, r.top + r.height / 2)
+        if (next <= fitZ.current * 1.001) {
+          tr.current = { zoom: fitZ.current, panX: (inL - inR) / 2, panY: (inT - inB) / 2 }
+          paint(true)
+        }
+      },
+      resetZoom: () => {
+        if (!baseW.current) return
+        tr.current = { zoom: fitZ.current, panX: (inL - inR) / 2, panY: (inT - inB) / 2 }
+        paint(true)
+      },
+    }),
+    [zoomAt, paint, inT, inB, inL, inR],
+  )
 
   /* ── Load PDF & render pages ── */
   useEffect(() => {
@@ -509,4 +548,4 @@ export function ZoomablePdfViewer({ src, alt, fitMargin = FIT_MARGIN, contentIns
       )}
     </div>
   )
-}
+})

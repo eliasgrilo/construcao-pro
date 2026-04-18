@@ -150,16 +150,26 @@ export function DocumentacaoPage() {
     // Open blank tab synchronously inside the user gesture — browsers block
     // window.open called after await (no longer a trusted event context).
     const win = window.open('', '_blank')
+    if (!win) {
+      toast({
+        variant: 'error',
+        title: 'Popup bloqueado',
+        description: 'Permita popups para este site nas configurações do navegador e tente novamente.',
+      })
+      return
+    }
+    win.document.write(
+      '<style>*{margin:0;padding:0;box-sizing:border-box}body{display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f5f5f7;font-family:system-ui,-apple-system,sans-serif}.w{text-align:center;display:flex;flex-direction:column;align-items:center;gap:16px}.s{width:36px;height:36px;border:3px solid #e5e5ea;border-top-color:#007AFF;border-radius:50%;animation:r .8s linear infinite}@keyframes r{to{transform:rotate(360deg)}}p{font-size:15px;color:#6e6e73;font-weight:500}</style><div class="w"><div class="s"></div><p>A abrir o arquivo\u2026</p></div>',
+    )
+    win.document.close()
     try {
       const url = await getUrlMut.mutateAsync({
         storagePath: doc.storage_path,
         tipoArquivo: doc.tipo_arquivo,
       })
-      if (win) {
-        win.location.href = url
-      }
+      win.location.href = url
     } catch (err) {
-      win?.close()
+      win.close()
       toast({
         variant: 'error',
         title: 'Erro ao abrir arquivo',

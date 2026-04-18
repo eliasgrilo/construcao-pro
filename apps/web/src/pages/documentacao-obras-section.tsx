@@ -18,7 +18,7 @@ interface DocumentacaoObrasSectionProps {
   docsLoading: boolean
   canManageDocumentos: boolean
   openUpload: (obraId: string | null, label: string) => void
-  openDoc: (doc: Documento) => void
+  openDoc: (doc: Documento) => Promise<void>
   downloadDoc: (doc: Documento) => Promise<void>
   deleteDoc: (doc: Documento) => Promise<void>
   onDragEnter: (e: React.DragEvent, id: string) => void

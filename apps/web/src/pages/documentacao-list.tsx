@@ -27,7 +27,7 @@ export function FileRow({
   canDelete = false,
 }: {
   doc: Documento
-  onOpen: () => void
+  onOpen: () => Promise<void>
   onDownload: () => void
   onDelete: () => Promise<void>
   last: boolean
@@ -37,6 +37,7 @@ export function FileRow({
   const color = getFileColor(doc.tipo_arquivo)
   const [menuOpen, setMenuOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [opening, setOpening] = useState(false)
   const btnRef = useRef<HTMLButtonElement>(null)
 
   const [isPointer, setIsPointer] = useState(() =>
@@ -51,6 +52,15 @@ export function FileRow({
     return () => mq.removeEventListener('change', fn)
   }, [])
 
+  const handleOpen = useCallback(async () => {
+    setOpening(true)
+    try {
+      await onOpen()
+    } finally {
+      setOpening(false)
+    }
+  }, [onOpen])
+
   const handleDelete = useCallback(async () => {
     setDeleting(true)
     try {
@@ -62,14 +72,14 @@ export function FileRow({
 
   const actions = useMemo<SheetAction[]>(() => {
     const base: SheetAction[] = [
-      { label: 'Visualizar', icon: Eye, iconColor: '#007AFF', onClick: onOpen },
+      { label: 'Visualizar', icon: Eye, iconColor: '#007AFF', onClick: handleOpen },
       { label: 'Baixar', icon: Download, iconColor: '#007AFF', onClick: onDownload },
     ]
     if (canDelete) {
       base.push({ label: 'Excluir', icon: Trash2, destructive: true, onClick: handleDelete })
     }
     return base
-  }, [onOpen, onDownload, handleDelete, canDelete])
+  }, [handleOpen, onDownload, handleDelete, canDelete])
 
   return (
     <>
@@ -78,22 +88,22 @@ export function FileRow({
           'group relative flex items-center gap-3.5 pl-4 pr-2 cursor-pointer select-none transition-colors w-full text-left',
           'hover:bg-black/[0.02] dark:hover:bg-white/[0.025]',
           'active:bg-black/[0.04] dark:active:bg-white/[0.04]',
-          deleting && 'opacity-35 pointer-events-none',
+          (deleting || opening) && 'opacity-35 pointer-events-none',
           !last && 'border-b border-border/8 dark:border-white/[0.04]',
         )}
         style={{ minHeight: 56 }}
-        onClick={onOpen}
+        onClick={handleOpen}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') onOpen()
+          if (e.key === 'Enter' || e.key === ' ') handleOpen()
         }}
       >
         <div
           className="flex h-10 w-10 items-center justify-center rounded-[12px] flex-shrink-0"
           style={{ backgroundColor: `${color}12` }}
         >
-          {deleting ? (
+          {deleting || opening ? (
             <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/25 border-t-muted-foreground/55 animate-spin" />
           ) : (
             <Icon className="h-[19px] w-[19px]" style={{ color }} strokeWidth={1.5} />
@@ -209,7 +219,7 @@ export function GroupedFileList({
 }: {
   docs: Documento[]
   categorias: DocumentoCategoria[]
-  onOpen: (doc: Documento) => void
+  onOpen: (doc: Documento) => Promise<void>
   onDownload: (doc: Documento) => void
   onDelete: (doc: Documento) => Promise<void>
   canDelete?: boolean

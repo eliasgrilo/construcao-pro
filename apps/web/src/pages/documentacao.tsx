@@ -147,13 +147,19 @@ export function DocumentacaoPage() {
   }
 
   const openDoc = async (doc: Documento) => {
+    // Open blank tab synchronously inside the user gesture — browsers block
+    // window.open called after await (no longer a trusted event context).
+    const win = window.open('', '_blank')
     try {
       const url = await getUrlMut.mutateAsync({
         storagePath: doc.storage_path,
         tipoArquivo: doc.tipo_arquivo,
       })
-      window.open(url, '_blank', 'noopener,noreferrer')
+      if (win) {
+        win.location.href = url
+      }
     } catch (err) {
+      win?.close()
       toast({
         variant: 'error',
         title: 'Erro ao abrir arquivo',

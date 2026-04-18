@@ -1,20 +1,22 @@
 /**
  * ZoomableImageViewer — pinch/wheel/double-tap zoom for web.
  *
- * Critical: image visibility is controlled via direct DOM manipulation,
- * never React state. The <img> starts at opacity:0 and only becomes
- * visible inside the onLoad handler AFTER fit-zoom dimensions are
- * applied synchronously — eliminating the 1-frame flash at natural
- * size that caused the "zoomed in on open" bug on mobile.
+ * Fit-to-container is handled natively by CSS (`object-fit: contain` +
+ * `max-width/max-height: 100%`). This eliminates the entire class of
+ * race conditions that caused the "zoomed in on open" bug — the browser
+ * lays out the image at fit size before the first paint, no JS math,
+ * no ResizeObserver dance, no cached-image races.
  *
- * All transform state lives in refs — zero re-renders during gestures.
+ * JS is responsible only for zoom levels >= 1 (user-initiated zoom in)
+ * applied as a pure `transform: scale(z) translate(...)` on top of the
+ * CSS-fitted base. All transform state lives in refs — zero re-renders
+ * during gestures.
  */
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 'react'
 
 /* ── Config ── */
 
 const MAX_ZOOM = 8
-const FIT_MARGIN = 0.98
 const DOUBLE_TAP_MS = 300
 const DOUBLE_TAP_ZOOM = 2.5
 const WHEEL_SENSITIVITY = 0.002
@@ -28,14 +30,9 @@ interface Props {
   alt: string
   onLoad?: () => void
   onError?: () => void
-  /** Fraction of container to fill (0–1). Default 0.98. */
+  /** Kept for API compatibility — no longer used (CSS handles fit). */
   fitMargin?: number
-  /**
-   * Insets that reduce the *effective* fit area without shrinking the
-   * interactive/pannable container.  The image is fitted to
-   * (containerWidth − left − right) × (containerHeight − top − bottom)
-   * but can still pan behind the inset zones when zoomed in.
-   */
+  /** Padding that reduces the CSS fit area without shrinking the pannable container. */
   contentInsets?: { top?: number; bottom?: number; left?: number; right?: number }
 }
 
@@ -58,10 +55,7 @@ function clamp(v: number, min: number, max: number) {
 /* ── Component ── */
 
 export const ZoomableImageViewer = forwardRef<ZoomableImageViewerHandle, Props>(
-  function ZoomableImageViewer(
-    { src, alt, onLoad, onError, fitMargin = FIT_MARGIN, contentInsets },
-    ref,
-  ) {
+  function ZoomableImageViewer({ src, alt, onLoad, onError, contentInsets }, ref) {
     const inT = contentInsets?.top ?? 0
     const inB = contentInsets?.bottom ?? 0
     const inL = contentInsets?.left ?? 0
@@ -69,15 +63,11 @@ export const ZoomableImageViewer = forwardRef<ZoomableImageViewerHandle, Props>(
     const cRef = useRef<HTMLDivElement>(null)
     const iRef = useRef<HTMLImageElement>(null)
 
-    /* All mutable — zero re-renders during interaction */
-    const nw = useRef(0)
-    const nh = useRef(0)
-    const fitZ = useRef(1)
+    /* All mutable — zero re-renders during interaction.
+     zoom: absolute scale where 1 = CSS-fitted size. Range [1, MAX_ZOOM]. */
     const tr = useRef<Transform>({ zoom: 1, panX: 0, panY: 0 })
+    const ready = useRef(false)
     const busy = useRef(false)
-    /* Set when handleLoad fires but container has no dimensions yet (cached image race).
-     ResizeObserver will apply the initial fit when dimensions become available. */
-    const pendingFit = useRef(false)
 
     const g = useRef({
       on: false,
@@ -94,28 +84,27 @@ export const ZoomableImageViewer = forwardRef<ZoomableImageViewerHandle, Props>(
     /* ── Write current transform to the DOM ── */
     const paint = useCallback((anim: boolean) => {
       const img = iRef.current
-      if (!img || !nw.current) return
+      if (!img) return
       const { zoom, panX, panY } = tr.current
-      // Use a single scale transform instead of setting width/height independently.
-      // This guarantees aspect ratio is always preserved — the image can never
-      // be "crushed" or distorted since scale is uniform on both axes.
-      const s = zoom / fitZ.current
-      img.style.transform = `translate(-50%,-50%) translate(${panX}px,${panY}px) scale(${s})`
+      img.style.transform = `translate(${panX}px,${panY}px) scale(${zoom})`
       const dur = `${SNAP_MS}ms`
-      img.style.transition = anim ? `transform ${dur} ${SNAP_EASE}` : 'none'
+      img.style.transition = anim
+        ? `transform ${dur} ${SNAP_EASE}, opacity 0.25s ease`
+        : 'opacity 0.25s ease'
       const c = cRef.current
-      if (c) c.style.cursor = zoom > fitZ.current * 1.02 ? 'grab' : 'default'
+      if (c) c.style.cursor = zoom > 1.02 ? 'grab' : 'default'
     }, [])
 
-    /* ── Constrain pan ── */
+    /* ── Constrain pan based on current rendered image size × zoom ── */
     const bound = useCallback((px: number, py: number, z: number) => {
       const c = cRef.current
-      if (!c) return { x: px, y: py }
+      const img = iRef.current
+      if (!c || !img) return { x: px, y: py }
       const cw = c.clientWidth
       const ch = c.clientHeight
-      // Display size = base (nw*fitZ) * scale (z/fitZ) = nw*z
-      const dw = nw.current * z
-      const dh = nh.current * z
+      // clientWidth/Height of the <img> = CSS-fitted size. Multiply by zoom for rendered size.
+      const dw = img.clientWidth * z
+      const dh = img.clientHeight * z
       const mx = dw <= cw ? 0 : (dw - cw) / 2
       const my = dh <= ch ? 0 : (dh - ch) / 2
       return { x: clamp(px, -mx, mx), y: clamp(py, -my, my) }
@@ -129,8 +118,7 @@ export const ZoomableImageViewer = forwardRef<ZoomableImageViewerHandle, Props>(
         const r = c.getBoundingClientRect()
         const dx = cx - r.left - r.width / 2
         const dy = cy - r.top - r.height / 2
-        // Min zoom is fitZ (never smaller than fit-to-container)
-        const z = clamp(newZ, fitZ.current * 0.85, MAX_ZOOM)
+        const z = clamp(newZ, 1, MAX_ZOOM)
         const ratio = 1 - z / tr.current.zoom
         const { x, y } = bound(
           tr.current.panX + (dx - tr.current.panX) * ratio,
@@ -147,10 +135,8 @@ export const ZoomableImageViewer = forwardRef<ZoomableImageViewerHandle, Props>(
     const snap = useCallback(() => {
       const cur = tr.current
       let changed = false
-      const restX = (inL - inR) / 2
-      const restY = (inT - inB) / 2
-      if (cur.zoom < fitZ.current) {
-        tr.current = { zoom: fitZ.current, panX: restX, panY: restY }
+      if (cur.zoom < 1) {
+        tr.current = { zoom: 1, panX: 0, panY: 0 }
         changed = true
       } else {
         const { x, y } = bound(cur.panX, cur.panY, cur.zoom)
@@ -166,22 +152,20 @@ export const ZoomableImageViewer = forwardRef<ZoomableImageViewerHandle, Props>(
           busy.current = false
         }, SNAP_MS)
       }
-    }, [paint, bound, inT, inB, inL, inR])
+    }, [paint, bound])
 
     /* ── Double-tap toggle ── */
     const dblTap = useCallback(
       (cx: number, cy: number) => {
-        const restX = (inL - inR) / 2
-        const restY = (inT - inB) / 2
-        if (tr.current.zoom > fitZ.current * 1.05) {
-          tr.current = { zoom: fitZ.current, panX: restX, panY: restY }
+        if (tr.current.zoom > 1.05) {
+          tr.current = { zoom: 1, panX: 0, panY: 0 }
         } else {
           const c = cRef.current
           if (!c) return
           const r = c.getBoundingClientRect()
           const dx = cx - r.left - r.width / 2
           const dy = cy - r.top - r.height / 2
-          const z = clamp(DOUBLE_TAP_ZOOM, fitZ.current, MAX_ZOOM)
+          const z = clamp(DOUBLE_TAP_ZOOM, 1, MAX_ZOOM)
           const ratio = 1 - z / tr.current.zoom
           const { x, y } = bound(
             tr.current.panX + (dx - tr.current.panX) * ratio,
@@ -197,69 +181,20 @@ export const ZoomableImageViewer = forwardRef<ZoomableImageViewerHandle, Props>(
         }, SNAP_MS)
         if (navigator.vibrate) navigator.vibrate(10)
       },
-      [paint, bound, inT, inB, inL, inR],
+      [paint, bound],
     )
 
-    /* ══════════════════════════════════════════════════════════
-     IMAGE ONLOAD — the critical path.
-     Applies fit-zoom dimensions synchronously via DOM before
-     making the image visible. No React state, no useEffect,
-     no 1-frame flash at natural size.
-     ══════════════════════════════════════════════════════════ */
+    /* ── Image onLoad — just reveal. CSS has already fitted it. ── */
     const handleLoad = useCallback(() => {
       const img = iRef.current
-      const c = cRef.current
-      if (!img || !c) return
-
-      nw.current = img.naturalWidth
-      nh.current = img.naturalHeight
-
-      /* Defer to next animation frame so the browser has resolved flex
-       layout before we read clientWidth/clientHeight. Without this,
-       if the image is cached the handler fires before layout is committed,
-       clientWidth === 0, fitZ stays at 1, and the image reveals at its
-       full natural size (the "zoomed in on open" bug). */
-      requestAnimationFrame(() => {
-        const imgEl = iRef.current
-        const cEl = cRef.current
-        if (!imgEl || !cEl || !nw.current) return
-
-        /* Effective area = container minus insets (overlay controls).
-         The image is fitted to this smaller rect so it's fully visible
-         between the top controls and bottom toolbar. */
-        const cw = cEl.clientWidth - inL - inR
-        const ch = cEl.clientHeight - inT - inB
-
-        /* Root cause of the "zoomed in on open" bug:
-         If the container has no dimensions yet (race between cached-image onLoad
-         and modal mount/layout commit), do NOT reveal the image — mark it as
-         pending and let ResizeObserver apply the fit once the container is laid out. */
-        if (cw <= 0 || ch <= 0) {
-          pendingFit.current = true
-          return
-        }
-
-        fitZ.current = Math.min(1, Math.min(cw / nw.current, ch / nh.current) * fitMargin)
-
-        /* Offset center so image sits in the middle of the *visible* area,
-         not the middle of the full container.  shift = (inT - inB) / 2
-         pushes the center down when top inset is larger (typical). */
-        const centerOffsetY = (inT - inB) / 2
-        const centerOffsetX = (inL - inR) / 2
-        tr.current = { zoom: fitZ.current, panX: centerOffsetX, panY: centerOffsetY }
-
-        /* Set base dimensions at fit-zoom level — these stay constant.
-         All subsequent zooming uses CSS scale() relative to this base,
-         which guarantees the aspect ratio can never be broken. */
-        imgEl.style.width = `${nw.current * fitZ.current}px`
-        imgEl.style.height = `${nh.current * fitZ.current}px`
-        imgEl.style.transform = `translate(-50%,-50%) translate(${centerOffsetX}px,${centerOffsetY}px) scale(1)`
-        imgEl.style.transition = 'opacity 0.25s ease'
-        imgEl.style.opacity = '1'
-
-        onLoad?.()
-      })
-    }, [onLoad, fitMargin, inT, inB, inL, inR])
+      if (!img) return
+      ready.current = true
+      tr.current = { zoom: 1, panX: 0, panY: 0 }
+      img.style.transform = 'translate(0px,0px) scale(1)'
+      img.style.transition = 'opacity 0.25s ease'
+      img.style.opacity = '1'
+      onLoad?.()
+    }, [onLoad])
 
     /* ── Imperative handle for external zoom controls ── */
     useImperativeHandle(
@@ -267,28 +202,28 @@ export const ZoomableImageViewer = forwardRef<ZoomableImageViewerHandle, Props>(
       () => ({
         zoomIn: () => {
           const c = cRef.current
-          if (!c || !nw.current) return
+          if (!c || !ready.current) return
           const r = c.getBoundingClientRect()
           zoomAt(tr.current.zoom * 1.3, r.left + r.width / 2, r.top + r.height / 2)
         },
         zoomOut: () => {
           const c = cRef.current
-          if (!c || !nw.current) return
+          if (!c || !ready.current) return
           const r = c.getBoundingClientRect()
-          const next = Math.max(tr.current.zoom / 1.3, fitZ.current)
+          const next = Math.max(tr.current.zoom / 1.3, 1)
           zoomAt(next, r.left + r.width / 2, r.top + r.height / 2)
-          if (next <= fitZ.current * 1.001) {
-            tr.current = { zoom: fitZ.current, panX: (inL - inR) / 2, panY: (inT - inB) / 2 }
+          if (next <= 1.001) {
+            tr.current = { zoom: 1, panX: 0, panY: 0 }
             paint(true)
           }
         },
         resetZoom: () => {
-          if (!nw.current) return
-          tr.current = { zoom: fitZ.current, panX: (inL - inR) / 2, panY: (inT - inB) / 2 }
+          if (!ready.current) return
+          tr.current = { zoom: 1, panX: 0, panY: 0 }
           paint(true)
         },
       }),
-      [zoomAt, paint, inT, inB, inL, inR],
+      [zoomAt, paint],
     )
 
     /* ── Reset when src changes ── */
@@ -297,62 +232,28 @@ export const ZoomableImageViewer = forwardRef<ZoomableImageViewerHandle, Props>(
       if (img) {
         img.style.opacity = '0'
         img.style.transition = 'none'
-        img.style.width = '0'
-        img.style.height = '0'
+        img.style.transform = 'translate(0px,0px) scale(1)'
       }
-      nw.current = 0
-      nh.current = 0
-      fitZ.current = 1
-      pendingFit.current = false
+      ready.current = false
       tr.current = { zoom: 1, panX: 0, panY: 0 }
       g.current.tap = 0
     }, [src])
 
-    /* ── ResizeObserver — handles orientation/resize AND the initial fit when
-     the cached-image race leaves pendingFit=true ── */
+    /* ── Snap pan bounds on resize/orientation change ── */
     useEffect(() => {
       const c = cRef.current
       if (!c) return
       const ro = new ResizeObserver(() => {
-        if (!nw.current) return
-        const img = iRef.current
-        const cw = c.clientWidth - inL - inR
-        const ch = c.clientHeight - inT - inB
-        if (cw <= 0 || ch <= 0) return
-
-        const newFitZ = Math.min(1, Math.min(cw / nw.current, ch / nh.current) * fitMargin)
-        fitZ.current = newFitZ
-        const centerOffsetY = (inT - inB) / 2
-        const centerOffsetX = (inL - inR) / 2
-
-        if (pendingFit.current) {
-          /* First time the container has real dimensions after a cached-image race.
-           Apply initial fit and reveal the image (same as handleLoad's happy path). */
-          pendingFit.current = false
-          tr.current = { zoom: fitZ.current, panX: centerOffsetX, panY: centerOffsetY }
-          if (img) {
-            img.style.width = `${nw.current * fitZ.current}px`
-            img.style.height = `${nh.current * fitZ.current}px`
-            img.style.transform = `translate(-50%,-50%) translate(${centerOffsetX}px,${centerOffsetY}px) scale(1)`
-            img.style.transition = 'opacity 0.25s ease'
-            img.style.opacity = '1'
-          }
-          onLoad?.()
-          return
+        if (!ready.current || g.current.on) return
+        const { x, y } = bound(tr.current.panX, tr.current.panY, tr.current.zoom)
+        if (x !== tr.current.panX || y !== tr.current.panY) {
+          tr.current = { ...tr.current, panX: x, panY: y }
+          paint(false)
         }
-
-        /* Normal resize/orientation change — only refit if not mid-gesture */
-        if (g.current.on) return
-        tr.current = { zoom: fitZ.current, panX: centerOffsetX, panY: centerOffsetY }
-        if (img) {
-          img.style.width = `${nw.current * fitZ.current}px`
-          img.style.height = `${nh.current * fitZ.current}px`
-        }
-        paint(false)
       })
       ro.observe(c)
       return () => ro.disconnect()
-    }, [paint, fitMargin, inT, inB, inL, inR, onLoad])
+    }, [bound, paint])
 
     /* ── Wheel (non-passive) ── */
     useEffect(() => {
@@ -360,7 +261,7 @@ export const ZoomableImageViewer = forwardRef<ZoomableImageViewerHandle, Props>(
       if (!c) return
       const fn = (e: WheelEvent) => {
         e.preventDefault()
-        if (busy.current || !nw.current) return
+        if (busy.current || !ready.current) return
         zoomAt(tr.current.zoom * (1 - e.deltaY * WHEEL_SENSITIVITY), e.clientX, e.clientY)
       }
       c.addEventListener('wheel', fn, { passive: false })
@@ -370,7 +271,7 @@ export const ZoomableImageViewer = forwardRef<ZoomableImageViewerHandle, Props>(
     /* ── Pointer events ── */
     const onDown = useCallback(
       (e: React.PointerEvent) => {
-        if (busy.current || !nw.current) return
+        if (busy.current || !ready.current) return
         const gs = g.current
         gs.ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY })
         ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
@@ -409,7 +310,7 @@ export const ZoomableImageViewer = forwardRef<ZoomableImageViewerHandle, Props>(
           const [a, b] = Array.from(gs.ptrs.values())
           const d = Math.hypot(b.x - a.x, b.y - a.y)
           zoomAt(gs.pz0 * (d / gs.pd0), (a.x + b.x) / 2, (a.y + b.y) / 2)
-        } else if (gs.ptrs.size === 1 && tr.current.zoom > fitZ.current * 1.02) {
+        } else if (gs.ptrs.size === 1 && tr.current.zoom > 1.02) {
           tr.current.panX = gs.tx0 + (e.clientX - gs.px0)
           tr.current.panY = gs.ty0 + (e.clientY - gs.py0)
           paint(false)
@@ -453,10 +354,18 @@ export const ZoomableImageViewer = forwardRef<ZoomableImageViewerHandle, Props>(
           cursor: 'default',
           userSelect: 'none',
           WebkitUserSelect: 'none',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingTop: inT,
+          paddingBottom: inB,
+          paddingLeft: inL,
+          paddingRight: inR,
+          boxSizing: 'border-box',
         }}
       >
-        {/* opacity:0 by default — only made visible synchronously in handleLoad
-          AFTER correct dimensions are set. This is the mobile zoom fix. */}
+        {/* CSS-native fit: object-fit:contain + max-width/height:100% means the
+          browser lays the image out at fit size on first paint — no JS race. */}
         <img
           ref={iRef}
           src={src}
@@ -467,10 +376,12 @@ export const ZoomableImageViewer = forwardRef<ZoomableImageViewerHandle, Props>(
           fetchPriority="high"
           decoding="async"
           style={{
-            position: 'absolute',
-            left: '50%',
-            top: '50%',
-            transform: 'translate(-50%,-50%) scale(1)',
+            maxWidth: '100%',
+            maxHeight: '100%',
+            width: 'auto',
+            height: 'auto',
+            objectFit: 'contain',
+            transform: 'translate(0px,0px) scale(1)',
             transformOrigin: 'center center',
             opacity: 0,
             pointerEvents: 'none',

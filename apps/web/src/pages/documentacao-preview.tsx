@@ -72,6 +72,9 @@ export function FilePreviewModal({
   const pdfViewerRef = useRef<ZoomablePdfViewerHandle>(null)
   const allowToolbarAutoHide = isMobileRef.current && !isPdf
   const previewTouchAction = isImage ? 'none' : 'auto'
+  /* Mobile: floating pill at bottom only, no top chrome → top inset small.
+     Desktop: toolbar is in-flow at the bottom (takes flex), so inset is slim. */
+  const topInset = isMobileRef.current ? 8 : 16
   const bottomInset = isMobileRef.current ? 84 : 8
 
   const resetToolbarTimer = useCallback(() => {
@@ -216,8 +219,8 @@ export function FilePreviewModal({
               ref={imageViewerRef}
               src={url}
               alt={doc.nome}
-              fitMargin={0.92}
-              contentInsets={{ top: 60, bottom: bottomInset }}
+              fitMargin={0.96}
+              contentInsets={{ top: topInset, bottom: bottomInset }}
             />
           </motion.div>
         )}
@@ -233,7 +236,7 @@ export function FilePreviewModal({
               ref={pdfViewerRef}
               src={url}
               alt={doc.nome}
-              contentInsets={{ top: 60, bottom: bottomInset }}
+              contentInsets={{ top: topInset, bottom: bottomInset }}
             />
           </motion.div>
         )}

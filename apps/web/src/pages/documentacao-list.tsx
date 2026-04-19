@@ -88,15 +88,19 @@ export function FileRow({
           'group relative flex items-center gap-3.5 pl-4 pr-2 cursor-pointer select-none transition-colors w-full text-left',
           'hover:bg-black/[0.02] dark:hover:bg-white/[0.025]',
           'active:bg-black/[0.04] dark:active:bg-white/[0.04]',
-          (deleting || opening) && 'opacity-35 pointer-events-none',
+          deleting && 'opacity-35 pointer-events-none',
           !last && 'border-b border-border/8 dark:border-white/[0.04]',
         )}
         style={{ minHeight: 56 }}
         onClick={handleOpen}
         role="button"
         tabIndex={0}
+        aria-busy={opening || deleting}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') handleOpen()
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            handleOpen()
+          }
         }}
       >
         <div
@@ -104,7 +108,10 @@ export function FileRow({
           style={{ backgroundColor: `${color}12` }}
         >
           {deleting || opening ? (
-            <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/25 border-t-muted-foreground/55 animate-spin" />
+            <div
+              className="h-4 w-4 rounded-full border-2 animate-spin"
+              style={{ borderColor: `${color}30`, borderTopColor: color }}
+            />
           ) : (
             <Icon className="h-[19px] w-[19px]" style={{ color }} strokeWidth={1.5} />
           )}
@@ -134,6 +141,9 @@ export function FileRow({
             e.stopPropagation()
             setMenuOpen(true)
           }}
+          onKeyDown={(e) => e.stopPropagation()}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
           className={cn(
             'flex h-9 w-9 items-center justify-center rounded-full flex-shrink-0 transition-all',
             menuOpen

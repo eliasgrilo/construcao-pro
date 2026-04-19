@@ -237,19 +237,64 @@ export function useDeleteDocumento() {
       // 2. Delete from storage (best-effort — proceed even if file already absent)
       await supabase.storage.from('documentos').remove([storagePath])
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.documentos.lista() }),
+    onSuccess: (_, { storagePath }) => {
+      clearDocumentoUrlCache(storagePath)
+      qc.invalidateQueries({ queryKey: queryKeys.documentos.lista() })
+    },
   })
 }
 
-/** Get a signed URL for a document (valid for 1 hour) */
+// Module-level cache: reuse signed URLs within their validity window (60 min - 5 min buffer)
+const CACHE_TTL_MS = 55 * 60 * 1000
+const signedUrlCache = new Map<string, { url: string; expiresAt: number }>()
+
+/** Returns a cached inline URL if still valid, otherwise null. */
+export function peekDocumentoUrl(storagePath: string): string | null {
+  const entry = signedUrlCache.get(storagePath)
+  if (!entry || Date.now() > entry.expiresAt) {
+    signedUrlCache.delete(storagePath)
+    return null
+  }
+  return entry.url
+}
+
+/** Removes a cached URL (call after delete so stale URLs are not reused). */
+export function clearDocumentoUrlCache(storagePath: string): void {
+  signedUrlCache.delete(storagePath)
+}
+
+/**
+ * Get a signed URL for a document (valid for 1 hour).
+ * Pass `download` (filename) to get a Content-Disposition: attachment URL for browser download.
+ * Inline URLs are cached per storage path; download URLs are never cached.
+ */
 export function useDocumentoUrl() {
   return useMutation({
-    mutationFn: async ({ storagePath }: { storagePath: string; tipoArquivo?: string }) => {
+    mutationFn: async ({
+      storagePath,
+      download,
+    }: {
+      storagePath: string
+      tipoArquivo?: string
+      download?: string
+    }) => {
+      // Fast path: return cached inline URL (skip if requesting attachment)
+      if (!download) {
+        const cached = peekDocumentoUrl(storagePath)
+        if (cached) return cached
+      }
+
       const { data, error } = await supabase.storage
         .from('documentos')
-        .createSignedUrl(storagePath, 3600)
+        .createSignedUrl(storagePath, 3600, download ? { download } : undefined)
       if (error) throw error
       if (!data?.signedUrl) throw new Error('URL assinada não disponível')
+
+      // Cache only inline URLs
+      if (!download) {
+        signedUrlCache.set(storagePath, { url: data.signedUrl, expiresAt: Date.now() + CACHE_TTL_MS })
+      }
+
       return data.signedUrl
     },
   })

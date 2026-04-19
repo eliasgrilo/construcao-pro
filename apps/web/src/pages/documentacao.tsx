@@ -2,6 +2,7 @@ import { useToast } from '@/components/ui/toast'
 import { usePermissions } from '@/hooks/use-permissions'
 import {
   type Documento,
+  peekDocumentoUrl,
   useDeleteDocumento,
   useDocumentoCategorias,
   useDocumentoUrl,
@@ -34,8 +35,8 @@ export function DocumentacaoPage() {
   const { data: obras = [] } = useObras()
   const uploadMut = useUploadDocumento()
   const deleteMut = useDeleteDocumento()
-  const getUrlMut = useDocumentoUrl()
-  const downloadUrlMut = useDocumentoUrl()
+  const urlMut = useDocumentoUrl()
+  const inFlightRef = useRef(new Set<string>())
   /* ── state ── */
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -148,18 +149,26 @@ export function DocumentacaoPage() {
   }
 
   const openDoc = async (doc: Documento) => {
-    // Open a blank tab synchronously within the click event so popup blockers allow it,
-    // then navigate it to the signed URL once fetched.
-    const win = window.open('', '_blank')
+    // Guard against double-open (e.g. fast double-click)
+    if (inFlightRef.current.has(doc.id)) return
+
+    // Fast path: cached URL opens synchronously — no blank-tab flash, no popup blocker risk
+    const cached = peekDocumentoUrl(doc.storage_path)
+    if (cached) {
+      window.open(cached, '_blank', 'noopener,noreferrer')
+      return
+    }
+
+    inFlightRef.current.add(doc.id)
+    // Open blank tab synchronously inside the click handler so popup blockers allow it,
+    // then navigate to the signed URL once fetched.
+    const win = window.open('', '_blank', 'noopener,noreferrer')
     try {
-      const url = await getUrlMut.mutateAsync({
-        storagePath: doc.storage_path,
-        tipoArquivo: doc.tipo_arquivo,
-      })
-      if (win) {
+      const url = await urlMut.mutateAsync({ storagePath: doc.storage_path })
+      if (win && !win.closed) {
         win.location.href = url
       } else {
-        window.open(url, '_blank')
+        window.open(url, '_blank', 'noopener,noreferrer')
       }
     } catch (err) {
       win?.close()
@@ -168,24 +177,21 @@ export function DocumentacaoPage() {
         title: 'Erro ao abrir arquivo',
         description: err instanceof Error ? err.message : 'Não foi possível obter o arquivo.',
       })
+    } finally {
+      inFlightRef.current.delete(doc.id)
     }
   }
 
   const downloadDoc = async (doc: Documento) => {
+    // Use Content-Disposition: attachment via the `download` option — no fetch/blob needed.
+    // This avoids CORS issues with Supabase→S3 redirects and works for all file types.
+    const safeName = doc.nome.replace(/[/\\?%*:|"<>]/g, '_')
     try {
-      const url = await downloadUrlMut.mutateAsync({
-        storagePath: doc.storage_path,
-        tipoArquivo: doc.tipo_arquivo,
-      })
-      const response = await fetch(url)
-      if (!response.ok) throw new Error('Falha ao baixar arquivo')
-      const blob = await response.blob()
-      const blobUrl = URL.createObjectURL(blob)
-      const a = Object.assign(document.createElement('a'), { href: blobUrl, download: doc.nome })
+      const url = await urlMut.mutateAsync({ storagePath: doc.storage_path, download: safeName })
+      const a = Object.assign(document.createElement('a'), { href: url, download: safeName })
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
-      URL.revokeObjectURL(blobUrl)
     } catch (err) {
       toast({
         variant: 'error',

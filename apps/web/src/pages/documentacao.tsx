@@ -181,22 +181,27 @@ export function DocumentacaoPage() {
 
   const downloadDoc = async (doc: Documento) => {
     const safeName = doc.nome.replace(/[/\\?%*:|"<>]/g, '_')
+    // Open a blank tab synchronously — BEFORE any await — so iOS Safari keeps the
+    // user-gesture context alive.  a.click() after an await is silently ignored on iOS.
+    const win = window.open('', '_blank')
     try {
       const url = await urlMut.mutateAsync({ storagePath: doc.storage_path, download: safeName })
-      // Fetch as blob so download works on mobile — iOS Safari ignores the `download`
-      // attribute and Content-Disposition header on cross-origin URLs.
-      const res = await fetch(url)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const blob = await res.blob()
-      const blobUrl = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = blobUrl
-      a.download = safeName
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(blobUrl)
+      if (win) {
+        // Navigate the pre-opened tab to the attachment URL.
+        // Supabase sets Content-Disposition: attachment so desktop browsers download;
+        // iOS opens QuickLook / Files (native expected behaviour on mobile).
+        win.location.href = url
+      } else {
+        // Popup was blocked (desktop) — fall back to anchor-click
+        const a = document.createElement('a')
+        a.href = url
+        a.download = safeName
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+      }
     } catch (err) {
+      win?.close()
       toast({
         variant: 'error',
         title: 'Erro ao baixar',

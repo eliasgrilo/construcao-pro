@@ -17,6 +17,7 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { DocumentacaoCategoryModal } from './documentacao-dialogs'
 import { DropZoneOverlay, GroupedFileList } from './documentacao-list'
 import { DocumentacaoObrasSection } from './documentacao-obras-section'
+import { FilePreviewModal } from './documentacao-preview'
 import { DocumentacaoUploadModal } from './documentacao-upload-modal'
 import { cardCn } from './documentacao-utils'
 
@@ -36,7 +37,6 @@ export function DocumentacaoPage() {
   const uploadMut = useUploadDocumento()
   const deleteMut = useDeleteDocumento()
   const urlMut = useDocumentoUrl()
-  const inFlightRef = useRef(new Set<string>())
   /* ── state ── */
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -54,6 +54,11 @@ export function DocumentacaoPage() {
   const [uploadDescricao, setUploadDescricao] = useState('')
 
   const [categoryModalOpen, setCategoryModalOpen] = useState(false)
+
+  // Preview modal
+  const [previewDoc, setPreviewDoc] = useState<Documento | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
 
   // Drag per-card
   const [dragOver, setDragOver] = useState<string | null>(null) // "empresa" | obraId | null
@@ -149,36 +154,29 @@ export function DocumentacaoPage() {
   }
 
   const openDoc = async (doc: Documento) => {
-    // Guard against double-open (e.g. fast double-click)
-    if (inFlightRef.current.has(doc.id)) return
+    setPreviewDoc(doc)
+    setPreviewUrl(null)
+    setPreviewLoading(true)
 
-    // Fast path: cached URL opens synchronously — no blank-tab flash, no popup blocker risk
     const cached = peekDocumentoUrl(doc.storage_path)
     if (cached) {
-      window.open(cached, '_blank', 'noopener,noreferrer')
+      setPreviewUrl(cached)
+      setPreviewLoading(false)
       return
     }
 
-    inFlightRef.current.add(doc.id)
-    // Open blank tab synchronously inside the click handler so popup blockers allow it,
-    // then navigate to the signed URL once fetched.
-    const win = window.open('', '_blank', 'noopener,noreferrer')
     try {
       const url = await urlMut.mutateAsync({ storagePath: doc.storage_path })
-      if (win && !win.closed) {
-        win.location.href = url
-      } else {
-        window.open(url, '_blank', 'noopener,noreferrer')
-      }
+      setPreviewUrl(url)
     } catch (err) {
-      win?.close()
+      setPreviewDoc(null)
       toast({
         variant: 'error',
         title: 'Erro ao abrir arquivo',
         description: err instanceof Error ? err.message : 'Não foi possível obter o arquivo.',
       })
     } finally {
-      inFlightRef.current.delete(doc.id)
+      setPreviewLoading(false)
     }
   }
 
@@ -214,6 +212,14 @@ export function DocumentacaoPage() {
       throw err
     }
   }
+
+  /* ── preview navigation ── */
+  const previewIdx = previewDoc ? documentos.findIndex((d) => d.id === previewDoc.id) : -1
+  const hasPrev = previewIdx > 0
+  const hasNext = previewIdx >= 0 && previewIdx < documentos.length - 1
+  const navigatePrev = () => { if (hasPrev) openDoc(documentos[previewIdx - 1]) }
+  const navigateNext = () => { if (hasNext) openDoc(documentos[previewIdx + 1]) }
+  const closePreview = () => { setPreviewDoc(null); setPreviewUrl(null) }
 
   /* ── drag handlers ── */
   const onDragEnter = (e: React.DragEvent, id: string) => {
@@ -506,6 +512,25 @@ export function DocumentacaoPage() {
         categorias={categorias}
         catCounts={catCounts}
       />
+
+      {previewDoc && (
+        <FilePreviewModal
+          doc={previewDoc}
+          url={previewUrl}
+          loading={previewLoading}
+          onClose={closePreview}
+          onDownload={() => downloadDoc(previewDoc)}
+          onDelete={async () => {
+            await deleteDoc(previewDoc)
+            closePreview()
+          }}
+          onPrev={hasPrev ? navigatePrev : undefined}
+          onNext={hasNext ? navigateNext : undefined}
+          hasPrev={hasPrev}
+          hasNext={hasNext}
+          canDelete={canManageDocumentos}
+        />
+      )}
 
     </div>
   )

@@ -17,7 +17,6 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { DocumentacaoCategoryModal } from './documentacao-dialogs'
 import { DropZoneOverlay, GroupedFileList } from './documentacao-list'
 import { DocumentacaoObrasSection } from './documentacao-obras-section'
-import { FilePreviewModal } from './documentacao-preview'
 import { DocumentacaoUploadModal } from './documentacao-upload-modal'
 import { cardCn } from './documentacao-utils'
 
@@ -55,18 +54,12 @@ export function DocumentacaoPage() {
 
   const [categoryModalOpen, setCategoryModalOpen] = useState(false)
 
-  // Preview modal
-  const [previewDoc, setPreviewDoc] = useState<Documento | null>(null)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [previewLoading, setPreviewLoading] = useState(false)
-
   // Drag per-card
   const [dragOver, setDragOver] = useState<string | null>(null) // "empresa" | obraId | null
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const modalOpenRef = useRef(false)
   modalOpenRef.current = uploadModalOpen
-  const pendingDocIdRef = useRef<string | null>(null)
 
   /* ── computed ── */
   const empresaDocs = useMemo(() => documentos.filter((d) => !d.obra_id), [documentos])
@@ -155,27 +148,20 @@ export function DocumentacaoPage() {
   }
 
   const openDoc = async (doc: Documento) => {
-    pendingDocIdRef.current = doc.id
-    setPreviewDoc(doc)
-    setPreviewUrl(null)
-    setPreviewLoading(true)
-
+    // Fast path: URL already cached — open directly (stays in user-gesture context)
     const cached = peekDocumentoUrl(doc.storage_path)
     if (cached) {
-      setPreviewUrl(cached)
-      setPreviewLoading(false)
+      window.open(cached, '_blank', 'noopener,noreferrer')
       return
     }
-
+    // Async path: open blank tab synchronously (avoids popup blocker), then navigate
+    const win = window.open('', '_blank')
     try {
       const url = await urlMut.mutateAsync({ storagePath: doc.storage_path })
-      if (pendingDocIdRef.current !== doc.id) return
-      setPreviewUrl(url)
-      setPreviewLoading(false)
+      if (win) win.location.href = url
+      else window.open(url, '_blank', 'noopener,noreferrer')
     } catch (err) {
-      if (pendingDocIdRef.current !== doc.id) return
-      setPreviewDoc(null)
-      setPreviewLoading(false)
+      win?.close()
       toast({
         variant: 'error',
         title: 'Erro ao abrir arquivo',
@@ -196,18 +182,15 @@ export function DocumentacaoPage() {
   const downloadDoc = async (doc: Documento) => {
     const safeName = doc.nome.replace(/[/\\?%*:|"<>]/g, '_')
     try {
-      // Get inline signed URL (uses cache) then fetch as blob so the `download`
-      // attribute is honoured — browsers silently ignore it on cross-origin anchors.
-      const url = await urlMut.mutateAsync({ storagePath: doc.storage_path })
-      const res = await fetch(url)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const blob = await res.blob()
-      const blobUrl = URL.createObjectURL(blob)
-      const a = Object.assign(document.createElement('a'), { href: blobUrl, download: safeName })
+      // Request a Content-Disposition: attachment URL — Supabase sets the header
+      // server-side, so the browser downloads even on cross-origin requests where
+      // the `download` attribute would normally be ignored.
+      const url = await urlMut.mutateAsync({ storagePath: doc.storage_path, download: safeName })
+      const a = document.createElement('a')
+      a.href = url
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 30_000)
     } catch (err) {
       toast({
         variant: 'error',
@@ -230,14 +213,6 @@ export function DocumentacaoPage() {
       throw err
     }
   }
-
-  /* ── preview navigation ── */
-  const previewIdx = previewDoc ? documentos.findIndex((d) => d.id === previewDoc.id) : -1
-  const hasPrev = previewIdx > 0
-  const hasNext = previewIdx >= 0 && previewIdx < documentos.length - 1
-  const navigatePrev = () => { if (hasPrev) openDoc(documentos[previewIdx - 1]) }
-  const navigateNext = () => { if (hasNext) openDoc(documentos[previewIdx + 1]) }
-  const closePreview = () => { setPreviewDoc(null); setPreviewUrl(null) }
 
   /* ── drag handlers ── */
   const onDragEnter = (e: React.DragEvent, id: string) => {
@@ -532,25 +507,6 @@ export function DocumentacaoPage() {
         categorias={categorias}
         catCounts={catCounts}
       />
-
-      {previewDoc && (
-        <FilePreviewModal
-          doc={previewDoc}
-          url={previewUrl}
-          loading={previewLoading}
-          onClose={closePreview}
-          onDownload={() => downloadDoc(previewDoc)}
-          onDelete={async () => {
-            await deleteDoc(previewDoc)
-            closePreview()
-          }}
-          onPrev={hasPrev ? navigatePrev : undefined}
-          onNext={hasNext ? navigateNext : undefined}
-          hasPrev={hasPrev}
-          hasNext={hasNext}
-          canDelete={canManageDocumentos}
-        />
-      )}
 
     </div>
   )

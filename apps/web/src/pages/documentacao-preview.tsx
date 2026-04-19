@@ -333,6 +333,57 @@ export function FilePreviewModal({
             </div>
           </motion.div>
         )}
+
+        {!loading && !url && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28 }}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '24px',
+              padding: '0 32px',
+              textAlign: 'center',
+            }}
+          >
+            <div
+              className="flex h-28 w-28 items-center justify-center rounded-[32px] shadow-2xl shadow-black/60"
+              style={{ backgroundColor: `${color}22`, border: `1.5px solid ${color}30` }}
+            >
+              <Icon className="h-12 w-12" style={{ color }} strokeWidth={1.25} />
+            </div>
+            <div>
+              <p className="text-[18px] font-semibold text-white tracking-[-0.2px]">{doc.nome}</p>
+              <p className="text-[13px] text-white/35 mt-1.5">{fmtSize(doc.tamanho)}</p>
+              <p className="text-[12px] mt-2" style={{ color: '#FF453A' }}>
+                Não foi possível carregar o arquivo
+              </p>
+            </div>
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.93 }}
+              onClick={onClose}
+              style={{
+                borderRadius: '14px',
+                padding: '10px 28px',
+                fontSize: '15px',
+                fontWeight: 600,
+                color: 'white',
+                backgroundColor: '#007AFF',
+                border: 'none',
+                cursor: 'pointer',
+                letterSpacing: '-0.1px',
+              }}
+            >
+              Fechar
+            </motion.button>
+          </motion.div>
+        )}
       </div>
 
       <AnimatePresence>
@@ -576,8 +627,10 @@ export function FilePreviewModal({
           position: 'absolute',
           zIndex: 40,
           top: 'max(16px, env(safe-area-inset-top))',
-          left: '56px',
-          right: '16px',
+          left: 0,
+          right: 0,
+          paddingLeft: '60px',
+          paddingRight: '60px',
           textAlign: 'center',
           pointerEvents: 'none',
         }}

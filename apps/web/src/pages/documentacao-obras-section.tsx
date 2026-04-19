@@ -17,6 +17,7 @@ interface DocumentacaoObrasSectionProps {
   categorias: DocumentoCategoria[]
   docsLoading: boolean
   canManageDocumentos: boolean
+  prefetchDoc?: (doc: Documento) => void
   openUpload: (obraId: string | null, label: string) => void
   openDoc: (doc: Documento) => Promise<void>
   downloadDoc: (doc: Documento) => Promise<void>
@@ -36,6 +37,7 @@ export function DocumentacaoObrasSection({
   categorias,
   docsLoading,
   canManageDocumentos,
+  prefetchDoc,
   openUpload,
   openDoc,
   downloadDoc,
@@ -186,6 +188,7 @@ export function DocumentacaoObrasSection({
                         onOpen={openDoc}
                         onDownload={downloadDoc}
                         onDelete={deleteDoc}
+                        onPrefetch={prefetchDoc}
                         canDelete={canManageDocumentos}
                       />
                     )}

@@ -66,6 +66,7 @@ export function DocumentacaoPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const modalOpenRef = useRef(false)
   modalOpenRef.current = uploadModalOpen
+  const pendingDocIdRef = useRef<string | null>(null)
 
   /* ── computed ── */
   const empresaDocs = useMemo(() => documentos.filter((d) => !d.obra_id), [documentos])
@@ -154,6 +155,7 @@ export function DocumentacaoPage() {
   }
 
   const openDoc = async (doc: Documento) => {
+    pendingDocIdRef.current = doc.id
     setPreviewDoc(doc)
     setPreviewUrl(null)
     setPreviewLoading(true)
@@ -167,29 +169,45 @@ export function DocumentacaoPage() {
 
     try {
       const url = await urlMut.mutateAsync({ storagePath: doc.storage_path })
+      if (pendingDocIdRef.current !== doc.id) return
       setPreviewUrl(url)
+      setPreviewLoading(false)
     } catch (err) {
+      if (pendingDocIdRef.current !== doc.id) return
       setPreviewDoc(null)
+      setPreviewLoading(false)
       toast({
         variant: 'error',
         title: 'Erro ao abrir arquivo',
         description: err instanceof Error ? err.message : 'Não foi possível obter o arquivo.',
       })
-    } finally {
-      setPreviewLoading(false)
     }
   }
 
+  const prefetchDoc = useCallback(
+    (doc: Documento) => {
+      if (!peekDocumentoUrl(doc.storage_path)) {
+        urlMut.mutateAsync({ storagePath: doc.storage_path }).catch(() => {})
+      }
+    },
+    [urlMut],
+  )
+
   const downloadDoc = async (doc: Documento) => {
-    // Use Content-Disposition: attachment via the `download` option — no fetch/blob needed.
-    // This avoids CORS issues with Supabase→S3 redirects and works for all file types.
     const safeName = doc.nome.replace(/[/\\?%*:|"<>]/g, '_')
     try {
-      const url = await urlMut.mutateAsync({ storagePath: doc.storage_path, download: safeName })
-      const a = Object.assign(document.createElement('a'), { href: url, download: safeName })
+      // Get inline signed URL (uses cache) then fetch as blob so the `download`
+      // attribute is honoured — browsers silently ignore it on cross-origin anchors.
+      const url = await urlMut.mutateAsync({ storagePath: doc.storage_path })
+      const res = await fetch(url)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const blob = await res.blob()
+      const blobUrl = URL.createObjectURL(blob)
+      const a = Object.assign(document.createElement('a'), { href: blobUrl, download: safeName })
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 30_000)
     } catch (err) {
       toast({
         variant: 'error',
@@ -456,6 +474,7 @@ export function DocumentacaoPage() {
                     onOpen={openDoc}
                     onDownload={downloadDoc}
                     onDelete={deleteDoc}
+                    onPrefetch={prefetchDoc}
                     canDelete={canManageDocumentos}
                   />
                 )}
@@ -480,6 +499,7 @@ export function DocumentacaoPage() {
         openDoc={openDoc}
         downloadDoc={downloadDoc}
         deleteDoc={deleteDoc}
+        prefetchDoc={prefetchDoc}
         onDragEnter={onDragEnter}
         onDragLeave={onDragLeave}
         onDragOver={onDragOver}

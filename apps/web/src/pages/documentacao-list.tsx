@@ -23,6 +23,7 @@ export function FileRow({
   onOpen,
   onDownload,
   onDelete,
+  onPrefetch,
   last,
   canDelete = false,
 }: {
@@ -30,6 +31,7 @@ export function FileRow({
   onOpen: () => Promise<void>
   onDownload: () => void
   onDelete: () => Promise<void>
+  onPrefetch?: () => void
   last: boolean
   canDelete?: boolean
 }) {
@@ -92,6 +94,7 @@ export function FileRow({
           !last && 'border-b border-border/8 dark:border-white/[0.04]',
         )}
         style={{ minHeight: 56 }}
+        onMouseEnter={() => onPrefetch?.()}
         onClick={handleOpen}
         role="button"
         tabIndex={0}
@@ -225,6 +228,7 @@ export function GroupedFileList({
   onOpen,
   onDownload,
   onDelete,
+  onPrefetch,
   canDelete = false,
 }: {
   docs: Documento[]
@@ -232,6 +236,7 @@ export function GroupedFileList({
   onOpen: (doc: Documento) => Promise<void>
   onDownload: (doc: Documento) => void
   onDelete: (doc: Documento) => Promise<void>
+  onPrefetch?: (doc: Documento) => void
   canDelete?: boolean
 }) {
   const groups = useMemo(() => {
@@ -286,6 +291,7 @@ export function GroupedFileList({
               onOpen={() => onOpen(doc)}
               onDownload={() => onDownload(doc)}
               onDelete={() => onDelete(doc)}
+              onPrefetch={() => onPrefetch?.(doc)}
               last={i === groupDocs.length - 1}
               canDelete={canDelete}
             />

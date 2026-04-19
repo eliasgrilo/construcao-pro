@@ -36,6 +36,7 @@ export function DocumentacaoPage() {
   const uploadMut = useUploadDocumento()
   const deleteMut = useDeleteDocumento()
   const getUrlMut = useDocumentoUrl()
+  const downloadUrlMut = useDocumentoUrl()
   /* ── state ── */
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -185,14 +186,19 @@ export function DocumentacaoPage() {
 
   const downloadDoc = async (doc: Documento) => {
     try {
-      const url = await getUrlMut.mutateAsync({
+      const url = await downloadUrlMut.mutateAsync({
         storagePath: doc.storage_path,
         tipoArquivo: doc.tipo_arquivo,
       })
-      const a = Object.assign(document.createElement('a'), { href: url, download: doc.nome })
+      const response = await fetch(url)
+      if (!response.ok) throw new Error('Falha ao baixar arquivo')
+      const blob = await response.blob()
+      const blobUrl = URL.createObjectURL(blob)
+      const a = Object.assign(document.createElement('a'), { href: blobUrl, download: doc.nome })
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
+      URL.revokeObjectURL(blobUrl)
     } catch (err) {
       toast({
         variant: 'error',

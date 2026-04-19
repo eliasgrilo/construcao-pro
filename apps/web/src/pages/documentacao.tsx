@@ -182,15 +182,20 @@ export function DocumentacaoPage() {
   const downloadDoc = async (doc: Documento) => {
     const safeName = doc.nome.replace(/[/\\?%*:|"<>]/g, '_')
     try {
-      // Request a Content-Disposition: attachment URL — Supabase sets the header
-      // server-side, so the browser downloads even on cross-origin requests where
-      // the `download` attribute would normally be ignored.
       const url = await urlMut.mutateAsync({ storagePath: doc.storage_path, download: safeName })
+      // Fetch as blob so download works on mobile — iOS Safari ignores the `download`
+      // attribute and Content-Disposition header on cross-origin URLs.
+      const res = await fetch(url)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const blob = await res.blob()
+      const blobUrl = URL.createObjectURL(blob)
       const a = document.createElement('a')
-      a.href = url
+      a.href = blobUrl
+      a.download = safeName
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
+      URL.revokeObjectURL(blobUrl)
     } catch (err) {
       toast({
         variant: 'error',

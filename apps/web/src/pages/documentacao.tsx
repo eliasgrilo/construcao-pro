@@ -18,6 +18,7 @@ import { DocumentacaoCategoryModal } from './documentacao-dialogs'
 import { DropZoneOverlay, GroupedFileList } from './documentacao-list'
 import { DocumentacaoObrasSection } from './documentacao-obras-section'
 import { DocumentacaoUploadModal } from './documentacao-upload-modal'
+import { FilePreviewModal } from './documentacao-preview'
 import { cardCn } from './documentacao-utils'
 
 type UploadItem = { id: string; file: globalThis.File; name: string }
@@ -53,6 +54,14 @@ export function DocumentacaoPage() {
   const [uploadDescricao, setUploadDescricao] = useState('')
 
   const [categoryModalOpen, setCategoryModalOpen] = useState(false)
+
+  // Preview modal state
+  const [previewList, setPreviewList] = useState<Documento[] | null>(null)
+  const [previewIndex, setPreviewIndex] = useState(0)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
+
+  const previewDoc = previewList?.[previewIndex] ?? null
 
   // Drag per-card
   const [dragOver, setDragOver] = useState<string | null>(null) // "empresa" | obraId | null
@@ -147,28 +156,44 @@ export function DocumentacaoPage() {
     }
   }
 
-  const openDoc = async (doc: Documento) => {
-    // Fast path: URL already cached — open directly (stays in user-gesture context)
-    const cached = peekDocumentoUrl(doc.storage_path)
-    if (cached) {
-      window.open(cached, '_blank', 'noopener,noreferrer')
-      return
-    }
-    // Async path: open blank tab synchronously (avoids popup blocker), then navigate
-    const win = window.open('', '_blank')
-    try {
-      const url = await urlMut.mutateAsync({ storagePath: doc.storage_path })
-      if (win) win.location.href = url
-      else window.open(url, '_blank', 'noopener,noreferrer')
-    } catch (err) {
-      win?.close()
-      toast({
-        variant: 'error',
-        title: 'Erro ao abrir arquivo',
-        description: err instanceof Error ? err.message : 'Não foi possível obter o arquivo.',
-      })
-    }
-  }
+  const loadPreviewUrl = useCallback(
+    async (doc: Documento) => {
+      const cached = peekDocumentoUrl(doc.storage_path)
+      if (cached) {
+        setPreviewUrl(cached)
+        setPreviewLoading(false)
+        return
+      }
+      try {
+        const url = await urlMut.mutateAsync({ storagePath: doc.storage_path })
+        setPreviewUrl(url)
+      } catch (err) {
+        toast({
+          variant: 'error',
+          title: 'Erro ao carregar arquivo',
+          description: err instanceof Error ? err.message : 'Não foi possível obter o arquivo.',
+        })
+      } finally {
+        setPreviewLoading(false)
+      }
+    },
+    [urlMut, toast],
+  )
+
+  const openDoc = useCallback(
+    async (doc: Documento) => {
+      const list = doc.obra_id ? (obraDocs[doc.obra_id] ?? [doc]) : empresaDocs
+      const idx = list.findIndex((d) => d.id === doc.id)
+      const safeIdx = idx >= 0 ? idx : 0
+      const safeList = idx >= 0 ? list : [doc]
+      setPreviewList(safeList)
+      setPreviewIndex(safeIdx)
+      setPreviewUrl(null)
+      setPreviewLoading(true)
+      await loadPreviewUrl(doc)
+    },
+    [obraDocs, empresaDocs, loadPreviewUrl],
+  )
 
   const prefetchDoc = useCallback(
     (doc: Documento) => {
@@ -218,6 +243,41 @@ export function DocumentacaoPage() {
       throw err
     }
   }
+
+  const closePreview = useCallback(() => {
+    setPreviewList(null)
+    setPreviewUrl(null)
+    setPreviewLoading(false)
+  }, [])
+
+  const navigatePreview = useCallback(
+    async (newIdx: number) => {
+      if (!previewList) return
+      const doc = previewList[newIdx]
+      if (!doc) return
+      setPreviewIndex(newIdx)
+      setPreviewUrl(null)
+      setPreviewLoading(true)
+      await loadPreviewUrl(doc)
+    },
+    [previewList, loadPreviewUrl],
+  )
+
+  const deleteDocInPreview = useCallback(async () => {
+    if (!previewDoc || !previewList) return
+    await deleteDoc(previewDoc)
+    if (previewList.length <= 1) {
+      closePreview()
+      return
+    }
+    const newList = previewList.filter((_, i) => i !== previewIndex)
+    const newIdx = Math.min(previewIndex, newList.length - 1)
+    setPreviewList(newList)
+    setPreviewIndex(newIdx)
+    setPreviewUrl(null)
+    setPreviewLoading(true)
+    await loadPreviewUrl(newList[newIdx])
+  }, [previewDoc, previewList, previewIndex, deleteDoc, closePreview, loadPreviewUrl])
 
   /* ── drag handlers ── */
   const onDragEnter = (e: React.DragEvent, id: string) => {
@@ -513,7 +573,23 @@ export function DocumentacaoPage() {
         catCounts={catCounts}
       />
 
-
+      <AnimatePresence>
+        {previewDoc && (
+          <FilePreviewModal
+            doc={previewDoc}
+            url={previewUrl}
+            loading={previewLoading}
+            onClose={closePreview}
+            onDownload={() => downloadDoc(previewDoc)}
+            onDelete={deleteDocInPreview}
+            canDelete={canManageDocumentos}
+            hasPrev={previewIndex > 0}
+            hasNext={!!previewList && previewIndex < previewList.length - 1}
+            onPrev={() => navigatePreview(previewIndex - 1)}
+            onNext={() => navigatePreview(previewIndex + 1)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

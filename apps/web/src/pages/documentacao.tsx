@@ -19,7 +19,6 @@ import { DropZoneOverlay, GroupedFileList } from './documentacao-list'
 import { DocumentacaoObrasSection } from './documentacao-obras-section'
 import { DocumentacaoUploadModal } from './documentacao-upload-modal'
 import { cardCn } from './documentacao-utils'
-import { FilePreviewModal } from './documentacao-preview'
 
 type UploadItem = { id: string; file: globalThis.File; name: string }
 
@@ -54,11 +53,6 @@ export function DocumentacaoPage() {
   const [uploadDescricao, setUploadDescricao] = useState('')
 
   const [categoryModalOpen, setCategoryModalOpen] = useState(false)
-
-  // File preview modal
-  const [previewDoc, setPreviewDoc] = useState<Documento | null>(null)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [previewLoading, setPreviewLoading] = useState(false)
 
   // Drag per-card
   const [dragOver, setDragOver] = useState<string | null>(null) // "empresa" | obraId | null
@@ -153,29 +147,60 @@ export function DocumentacaoPage() {
     }
   }
 
-  const openDoc = async (doc: Documento) => {
-    setPreviewDoc(doc)
-    const cached = peekDocumentoUrl(doc.storage_path)
-    if (cached) {
-      setPreviewUrl(cached)
-      return
-    }
-    setPreviewUrl(null)
-    setPreviewLoading(true)
-    try {
-      const url = await urlMut.mutateAsync({ storagePath: doc.storage_path })
-      setPreviewUrl(url)
-    } catch (err) {
-      setPreviewDoc(null)
-      toast({
-        variant: 'error',
-        title: 'Erro ao abrir arquivo',
-        description: err instanceof Error ? err.message : 'Não foi possível obter o arquivo.',
-      })
-    } finally {
-      setPreviewLoading(false)
-    }
-  }
+  const openDoc = useCallback(
+    async (doc: Documento) => {
+      const cached = peekDocumentoUrl(doc.storage_path)
+      if (cached) {
+        window.open(cached, '_blank', 'noopener,noreferrer')
+        return
+      }
+      // Open window synchronously (before any await) to stay inside user-gesture context
+      const win = window.open('', '_blank', 'noopener,noreferrer')
+      if (!win) {
+        toast({
+          variant: 'error',
+          title: 'Pop-up bloqueado',
+          description: 'Permita pop-ups para este site e tente novamente.',
+        })
+        return
+      }
+      try {
+        win.document.write(
+          `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">` +
+            `<meta name="viewport" content="width=device-width,initial-scale=1">` +
+            `<title>Carregando…</title><style>` +
+            `*{margin:0;padding:0;box-sizing:border-box}` +
+            `body{display:flex;align-items:center;justify-content:center;` +
+            `min-height:100dvh;background:#f5f5f7;` +
+            `font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif}` +
+            `.w{text-align:center;color:#86868b}` +
+            `.s{width:28px;height:28px;border:2.5px solid #e5e5ea;` +
+            `border-top-color:#007AFF;border-radius:50%;` +
+            `animation:r .7s linear infinite;margin:0 auto 14px}` +
+            `@keyframes r{to{transform:rotate(360deg)}}` +
+            `.l{font-size:15px;letter-spacing:-.2px}` +
+            `</style></head><body>` +
+            `<div class="w"><div class="s"></div><div class="l">Carregando…</div></div>` +
+            `</body></html>`,
+        )
+        win.document.close()
+      } catch {
+        // Restricted in some environments — safe to ignore
+      }
+      try {
+        const url = await urlMut.mutateAsync({ storagePath: doc.storage_path })
+        win.location.href = url
+      } catch (err) {
+        win.close()
+        toast({
+          variant: 'error',
+          title: 'Erro ao abrir arquivo',
+          description: err instanceof Error ? err.message : 'Não foi possível obter o arquivo.',
+        })
+      }
+    },
+    [urlMut, toast],
+  )
 
   const prefetchDoc = useCallback(
     (doc: Documento) => {
@@ -519,28 +544,6 @@ export function DocumentacaoPage() {
         categorias={categorias}
         catCounts={catCounts}
       />
-
-      {previewDoc && (
-        <FilePreviewModal
-          doc={previewDoc}
-          url={previewUrl}
-          loading={previewLoading}
-          onClose={() => { setPreviewDoc(null); setPreviewUrl(null) }}
-          onDownload={() => downloadDoc(previewDoc)}
-          onDelete={async () => { await deleteDoc(previewDoc); setPreviewDoc(null); setPreviewUrl(null) }}
-          canDelete={canManageDocumentos}
-          hasPrev={documentos.findIndex((d) => d.id === previewDoc.id) > 0}
-          hasNext={documentos.findIndex((d) => d.id === previewDoc.id) < documentos.length - 1}
-          onPrev={() => {
-            const idx = documentos.findIndex((d) => d.id === previewDoc.id)
-            if (idx > 0) openDoc(documentos[idx - 1])
-          }}
-          onNext={() => {
-            const idx = documentos.findIndex((d) => d.id === previewDoc.id)
-            if (idx < documentos.length - 1) openDoc(documentos[idx + 1])
-          }}
-        />
-      )}
 
     </div>
   )

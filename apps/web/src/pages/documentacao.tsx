@@ -19,6 +19,7 @@ import { DropZoneOverlay, GroupedFileList } from './documentacao-list'
 import { DocumentacaoObrasSection } from './documentacao-obras-section'
 import { DocumentacaoUploadModal } from './documentacao-upload-modal'
 import { cardCn } from './documentacao-utils'
+import { FilePreviewModal } from './documentacao-preview'
 
 type UploadItem = { id: string; file: globalThis.File; name: string }
 
@@ -53,6 +54,11 @@ export function DocumentacaoPage() {
   const [uploadDescricao, setUploadDescricao] = useState('')
 
   const [categoryModalOpen, setCategoryModalOpen] = useState(false)
+
+  // File preview modal
+  const [previewDoc, setPreviewDoc] = useState<Documento | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
 
   // Drag per-card
   const [dragOver, setDragOver] = useState<string | null>(null) // "empresa" | obraId | null
@@ -148,25 +154,26 @@ export function DocumentacaoPage() {
   }
 
   const openDoc = async (doc: Documento) => {
-    // Fast path: URL already cached — open directly (stays in user-gesture context)
+    setPreviewDoc(doc)
     const cached = peekDocumentoUrl(doc.storage_path)
     if (cached) {
-      window.open(cached, '_blank', 'noopener,noreferrer')
+      setPreviewUrl(cached)
       return
     }
-    // Async path: open blank tab synchronously (avoids popup blocker), then navigate
-    const win = window.open('', '_blank')
+    setPreviewUrl(null)
+    setPreviewLoading(true)
     try {
       const url = await urlMut.mutateAsync({ storagePath: doc.storage_path })
-      if (win) win.location.href = url
-      else window.open(url, '_blank', 'noopener,noreferrer')
+      setPreviewUrl(url)
     } catch (err) {
-      win?.close()
+      setPreviewDoc(null)
       toast({
         variant: 'error',
         title: 'Erro ao abrir arquivo',
         description: err instanceof Error ? err.message : 'Não foi possível obter o arquivo.',
       })
+    } finally {
+      setPreviewLoading(false)
     }
   }
 
@@ -512,6 +519,28 @@ export function DocumentacaoPage() {
         categorias={categorias}
         catCounts={catCounts}
       />
+
+      {previewDoc && (
+        <FilePreviewModal
+          doc={previewDoc}
+          url={previewUrl}
+          loading={previewLoading}
+          onClose={() => { setPreviewDoc(null); setPreviewUrl(null) }}
+          onDownload={() => downloadDoc(previewDoc)}
+          onDelete={async () => { await deleteDoc(previewDoc); setPreviewDoc(null); setPreviewUrl(null) }}
+          canDelete={canManageDocumentos}
+          hasPrev={documentos.findIndex((d) => d.id === previewDoc.id) > 0}
+          hasNext={documentos.findIndex((d) => d.id === previewDoc.id) < documentos.length - 1}
+          onPrev={() => {
+            const idx = documentos.findIndex((d) => d.id === previewDoc.id)
+            if (idx > 0) openDoc(documentos[idx - 1])
+          }}
+          onNext={() => {
+            const idx = documentos.findIndex((d) => d.id === previewDoc.id)
+            if (idx < documentos.length - 1) openDoc(documentos[idx + 1])
+          }}
+        />
+      )}
 
     </div>
   )

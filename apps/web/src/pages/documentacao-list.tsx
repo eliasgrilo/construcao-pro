@@ -54,6 +54,11 @@ export function FileRow({
     return () => mq.removeEventListener('change', fn)
   }, [])
 
+  // Prefetch URL on mount so clicking opens the file directly with no blank loading window
+  useEffect(() => {
+    onPrefetch?.()
+  }, [onPrefetch])
+
   const handleOpen = useCallback(async () => {
     setOpening(true)
     try {

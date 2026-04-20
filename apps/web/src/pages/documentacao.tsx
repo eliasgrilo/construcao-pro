@@ -181,24 +181,21 @@ export function DocumentacaoPage() {
 
   const downloadDoc = async (doc: Documento) => {
     const safeName = doc.nome.replace(/[/\\?%*:|"<>]/g, '_')
-    // Open a blank tab synchronously — BEFORE any await — so iOS Safari keeps the
-    // user-gesture context alive.  a.click() after an await is silently ignored on iOS.
+    // Open blank tab synchronously (before any await) so iOS Safari keeps the
+    // user-gesture context and doesn't block the window.open call.
     const win = window.open('', '_blank')
     try {
       const url = await urlMut.mutateAsync({ storagePath: doc.storage_path, download: safeName })
       if (win) {
-        // Navigate the pre-opened tab to the attachment URL.
-        // Supabase sets Content-Disposition: attachment so desktop browsers download;
-        // iOS opens QuickLook / Files (native expected behaviour on mobile).
+        // Desktop/tablet: navigate the pre-opened tab. Supabase returns
+        // Content-Disposition: attachment so the browser downloads without
+        // the tab staying open.
         win.location.href = url
       } else {
-        // Popup was blocked (desktop) — fall back to anchor-click
-        const a = document.createElement('a')
-        a.href = url
-        a.download = safeName
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
+        // Popup was blocked (common on mobile). Set location.href on the
+        // current tab — browsers treat a Content-Disposition: attachment
+        // response as a download and do NOT navigate away from the app.
+        window.location.href = url
       }
     } catch (err) {
       win?.close()

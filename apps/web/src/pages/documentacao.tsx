@@ -181,24 +181,22 @@ export function DocumentacaoPage() {
 
   const downloadDoc = async (doc: Documento) => {
     const safeName = doc.nome.replace(/[/\\?%*:|"<>]/g, '_')
-    // Open blank tab synchronously (before any await) so iOS Safari keeps the
-    // user-gesture context and doesn't block the window.open call.
-    const win = window.open('', '_blank')
     try {
       const url = await urlMut.mutateAsync({ storagePath: doc.storage_path, download: safeName })
-      if (win) {
-        // Desktop/tablet: navigate the pre-opened tab. Supabase returns
-        // Content-Disposition: attachment so the browser downloads without
-        // the tab staying open.
-        win.location.href = url
-      } else {
-        // Popup was blocked (common on mobile). Set location.href on the
-        // current tab — browsers treat a Content-Disposition: attachment
-        // response as a download and do NOT navigate away from the app.
-        window.location.href = url
-      }
+      // Fetch as blob so anchor.download works on cross-origin URLs across all
+      // mobile browsers (fixes blank-HTML-page bug caused by window.open).
+      const response = await fetch(url)
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const blob = await response.blob()
+      const objectUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = objectUrl
+      a.download = safeName
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 100)
     } catch (err) {
-      win?.close()
       toast({
         variant: 'error',
         title: 'Erro ao baixar',

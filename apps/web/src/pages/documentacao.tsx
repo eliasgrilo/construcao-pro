@@ -36,6 +36,11 @@ export function DocumentacaoPage() {
   const uploadMut = useUploadDocumento()
   const deleteMut = useDeleteDocumento()
   const urlMut = useDocumentoUrl()
+  // Stable ref for mutation objects so callbacks don't change identity every render
+  const urlMutRef = useRef(urlMut)
+  urlMutRef.current = urlMut
+  const deleteMutRef = useRef(deleteMut)
+  deleteMutRef.current = deleteMut
   /* ── state ── */
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -188,7 +193,7 @@ export function DocumentacaoPage() {
         // Restricted in some environments — safe to ignore
       }
       try {
-        const url = await urlMut.mutateAsync({ storagePath: doc.storage_path })
+        const url = await urlMutRef.current.mutateAsync({ storagePath: doc.storage_path })
         win.location.href = url
       } catch (err) {
         win.close()
@@ -199,22 +204,22 @@ export function DocumentacaoPage() {
         })
       }
     },
-    [urlMut, toast],
+    [toast],
   )
 
   const prefetchDoc = useCallback(
     (doc: Documento) => {
       if (!peekDocumentoUrl(doc.storage_path)) {
-        urlMut.mutateAsync({ storagePath: doc.storage_path }).catch(() => {})
+        urlMutRef.current.mutateAsync({ storagePath: doc.storage_path }).catch(() => {})
       }
     },
-    [urlMut],
+    [],
   )
 
-  const downloadDoc = async (doc: Documento) => {
+  const downloadDoc = useCallback(async (doc: Documento) => {
     const safeName = doc.nome.replace(/[/\\?%*:|"<>]/g, '_')
     try {
-      const url = await urlMut.mutateAsync({ storagePath: doc.storage_path, download: safeName })
+      const url = await urlMutRef.current.mutateAsync({ storagePath: doc.storage_path, download: safeName })
       // Fetch as blob so anchor.download works on cross-origin URLs across all
       // mobile browsers (fixes blank-HTML-page bug caused by window.open).
       const response = await fetch(url)
@@ -235,12 +240,12 @@ export function DocumentacaoPage() {
         description: err instanceof Error ? err.message : 'Não foi possível obter o arquivo.',
       })
     }
-  }
+  }, [toast])
 
   // Returns Promise so FileRow can show per-row loading spinner
-  const deleteDoc = async (doc: Documento): Promise<void> => {
+  const deleteDoc = useCallback(async (doc: Documento): Promise<void> => {
     try {
-      await deleteMut.mutateAsync({ id: doc.id, storagePath: doc.storage_path })
+      await deleteMutRef.current.mutateAsync({ id: doc.id, storagePath: doc.storage_path })
     } catch (err) {
       toast({
         variant: 'error',
@@ -249,7 +254,7 @@ export function DocumentacaoPage() {
       })
       throw err
     }
-  }
+  }, [toast])
 
   /* ── drag handlers ── */
   const onDragEnter = (e: React.DragEvent, id: string) => {

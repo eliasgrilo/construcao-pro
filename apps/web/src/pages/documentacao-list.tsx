@@ -2,7 +2,7 @@ import type { Documento, DocumentoCategoria } from '@/hooks/use-supabase'
 import { cn, formatDateShort } from '@/lib/utils'
 import { motion } from 'framer-motion'
 import { Download, Eye, MoreHorizontal, Trash2, Upload } from 'lucide-react'
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActionSheet,
   ContextMenu,
@@ -18,7 +18,7 @@ import {
    Mobile:  ··· sempre visível, tap → iOS ActionSheet
    ═══════════════════════════════════════════════════════════ */
 
-export function FileRow({
+export const FileRow = memo(function FileRow({
   doc,
   onOpen,
   onDownload,
@@ -54,10 +54,13 @@ export function FileRow({
     return () => mq.removeEventListener('change', fn)
   }, [])
 
-  // Prefetch URL on mount so clicking opens the file directly with no blank loading window
+  // Prefetch URL on mount — use ref to avoid re-firing when parent re-renders
+  // (inline `() => onPrefetch?.(doc)` creates a new function every render)
+  const onPrefetchRef = useRef(onPrefetch)
+  onPrefetchRef.current = onPrefetch
   useEffect(() => {
-    onPrefetch?.()
-  }, [onPrefetch])
+    onPrefetchRef.current?.()
+  }, [])
 
   const handleOpen = useCallback(async () => {
     setOpening(true)
@@ -188,7 +191,7 @@ export function FileRow({
       )}
     </>
   )
-}
+})
 
 /* ═══════════════════════════════════════════════════════════
    DropZoneOverlay — shown when dragging files over a card
@@ -290,13 +293,13 @@ export function GroupedFileList({
           )}
 
           {groupDocs.map((doc, i) => (
-            <FileRow
+            <MemoizedFileRowAdapter
               key={doc.id}
               doc={doc}
-              onOpen={() => onOpen(doc)}
-              onDownload={() => onDownload(doc)}
-              onDelete={() => onDelete(doc)}
-              onPrefetch={() => onPrefetch?.(doc)}
+              onOpen={onOpen}
+              onDownload={onDownload}
+              onDelete={onDelete}
+              onPrefetch={onPrefetch}
               last={i === groupDocs.length - 1}
               canDelete={canDelete}
             />
@@ -306,3 +309,54 @@ export function GroupedFileList({
     </>
   )
 }
+
+/* ═══════════════════════════════════════════════════════════
+   MemoizedFileRowAdapter — bridges doc-level callbacks to FileRow
+   Memoized to prevent re-renders when parent data refetches
+   ═══════════════════════════════════════════════════════════ */
+
+const MemoizedFileRowAdapter = memo(function MemoizedFileRowAdapter({
+  doc,
+  onOpen,
+  onDownload,
+  onDelete,
+  onPrefetch,
+  last,
+  canDelete,
+}: {
+  doc: Documento
+  onOpen: (doc: Documento) => Promise<void>
+  onDownload: (doc: Documento) => void
+  onDelete: (doc: Documento) => Promise<void>
+  onPrefetch?: (doc: Documento) => void
+  last: boolean
+  canDelete: boolean
+}) {
+  // Stable refs — parent callbacks are useCallback-wrapped,
+  // but we still use refs so inner callbacks never change identity
+  const onOpenRef = useRef(onOpen)
+  onOpenRef.current = onOpen
+  const onDownloadRef = useRef(onDownload)
+  onDownloadRef.current = onDownload
+  const onDeleteRef = useRef(onDelete)
+  onDeleteRef.current = onDelete
+  const onPrefetchRef = useRef(onPrefetch)
+  onPrefetchRef.current = onPrefetch
+
+  const handleOpen = useCallback(() => onOpenRef.current(doc), [doc])
+  const handleDownload = useCallback(() => onDownloadRef.current(doc), [doc])
+  const handleDelete = useCallback(() => onDeleteRef.current(doc), [doc])
+  const handlePrefetch = useCallback(() => onPrefetchRef.current?.(doc), [doc])
+
+  return (
+    <FileRow
+      doc={doc}
+      onOpen={handleOpen}
+      onDownload={handleDownload}
+      onDelete={handleDelete}
+      onPrefetch={handlePrefetch}
+      last={last}
+      canDelete={canDelete}
+    />
+  )
+})

@@ -70,30 +70,72 @@ const AnalisesPage = lazy(() =>
 )
 const SignupPage = lazy(() => import('@/pages/signup').then((m) => ({ default: m.SignupPage })))
 
-// Minimal spinner shown while a page chunk loads after auth resolves
-function PageLoader() {
+// Skeleton shimmer that mirrors the full app layout.
+// Visible during initial auth check — eliminates the white/black flash
+// and sets correct visual expectations before data loads.
+function AppLoader() {
   return (
-    <div className="flex min-h-[50vh] items-center justify-center">
-      <div aria-live="polite" aria-busy="true" aria-label="Carregando página">
-        <div
-          className="h-6 w-6 animate-spin rounded-full border-[3px] border-primary border-t-transparent"
-          aria-hidden="true"
-        />
+    <div className="flex h-screen bg-background" aria-hidden="true">
+      {/* Desktop sidebar skeleton */}
+      <div className="hidden md:flex w-[260px] flex-shrink-0 flex-col border-r bg-card/40">
+        <div className="flex h-16 items-center gap-3 px-5 border-b">
+          <div className="h-9 w-9 rounded-xl skeleton flex-shrink-0" />
+          <div className="h-4 w-28 rounded-lg skeleton" />
+        </div>
+        <div className="flex-1 p-3 space-y-1.5 overflow-hidden">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <div
+              // biome-ignore lint/suspicious/noArrayIndexKey: static skeleton, no reorder
+              key={i}
+              className="h-11 rounded-xl skeleton"
+              style={{ opacity: 1 - i * 0.07 }}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Content area skeleton */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Mobile topbar skeleton */}
+        <div className="flex md:hidden h-12 items-center gap-3 px-4 border-b">
+          <div className="h-8 w-8 rounded-xl skeleton" />
+          <div className="h-4 w-32 rounded-lg skeleton" />
+        </div>
+        <div className="flex-1 p-4 md:p-6 space-y-4 overflow-hidden">
+          {/* Page heading */}
+          <div className="space-y-2 pt-2">
+            <div className="h-8 w-48 rounded-xl skeleton" />
+            <div className="h-4 w-72 rounded-lg skeleton opacity-70" />
+          </div>
+          {/* Stats grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 pt-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: static skeleton, no reorder
+              <div key={i} className="h-28 rounded-2xl skeleton" style={{ opacity: 1 - i * 0.15 }} />
+            ))}
+          </div>
+          {/* Content rows */}
+          <div className="space-y-3 pt-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: static skeleton, no reorder
+              <div key={i} className="h-20 rounded-2xl skeleton" style={{ opacity: 1 - i * 0.2 }} />
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   )
 }
 
-// Full-screen spinner shown during initial auth check
-function AppLoader() {
+// Minimal inline spinner — shown only while a lazy page chunk downloads
+// (after auth is already resolved and layout is painted).
+function PageLoader() {
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div aria-live="polite" aria-busy="true" aria-label="Carregando">
-        <div
-          className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"
-          aria-hidden="true"
-        />
-      </div>
+    <div className="flex min-h-[50vh] items-center justify-center" aria-live="polite" aria-busy="true">
+      <div
+        className="h-6 w-6 animate-spin rounded-full border-[3px] border-primary border-t-transparent"
+        aria-label="Carregando página"
+      />
     </div>
   )
 }
@@ -102,6 +144,15 @@ function AppLoader() {
 // so calling it here on every route mount would fire redundant network requests.
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore()
+
+  // Eagerly preload the dashboard chunk as soon as auth resolves.
+  // Most users land on "/" — this eliminates one network waterfall hop
+  // between auth-resolving and the page actually rendering.
+  useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      import('@/pages/dashboard').catch(() => {/* non-critical */})
+    }
+  }, [isAuthenticated, isLoading])
 
   if (isLoading) return <AppLoader />
   if (!isAuthenticated) {
@@ -434,9 +485,12 @@ router.subscribe('onLoad', ({ toLocation }) => {
 // AuthGuard intentionally does NOT call loadProfile() — doing so would fire
 // an extra network request on every route navigation.
 export function App() {
-  const { loadProfile, logout } = useAuthStore()
+  const { loadProfile, logout, isAuthenticated } = useAuthStore()
   const { toast } = useToast()
-  useRealtimeSync()
+  // useRealtimeSync starts a persistent WebSocket channel.
+  // Only run after auth confirms — avoids wasting a connection for
+  // unauthenticated sessions (login page, expired tokens).
+  useRealtimeSync(isAuthenticated)
   useThemeCloudSync()
   useVisualViewport()
 

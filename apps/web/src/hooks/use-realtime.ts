@@ -28,7 +28,7 @@ function debounce<T extends (...args: unknown[]) => void>(fn: T, ms: number): De
   return debounced
 }
 
-export function useRealtimeSync() {
+export function useRealtimeSync(enabled = true) {
   const qc = useQueryClient()
   const setStatus = useRealtimeStore((s) => s.setStatus)
   const statusRef = useRef(useRealtimeStore.getState().status)
@@ -48,6 +48,9 @@ export function useRealtimeSync() {
   // round-trips on every focus event.
 
   useEffect(() => {
+    // Skip WebSocket for unauthenticated sessions (login page, expired tokens).
+    // Saves one persistent connection per unauth'd page load.
+    if (!enabled) return
     // Debounced invalidators — prevent UI thrashing from rapid DB changes
     const invalidateFinContas = debounce(
       () => qc.invalidateQueries({ queryKey: ['financeiro', 'contas'] }),
@@ -247,5 +250,5 @@ export function useRealtimeSync() {
       }
       supabase.removeChannel(channel)
     }
-  }, [qc, setStatus])
+  }, [qc, setStatus, enabled])
 }

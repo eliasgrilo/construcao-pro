@@ -101,7 +101,7 @@ export function AppLayout({ children }: AppLayoutProps) {
        *   overflow-x-clip removed from <main>: it was clipping position:sticky
        *   children (page headers, tab bars) in iOS Safari during transitions.
        */}
-      <main className="app-main min-h-screen transition-[margin-left] duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)]">
+      <main className="app-main min-h-screen">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={pathname}

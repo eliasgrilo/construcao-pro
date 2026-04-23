@@ -7,6 +7,11 @@ import { MateriaisTab } from './analises/materiais-tab'
 import { OrcamentoTab } from './analises/orcamento-tab'
 import { TendenciaTab } from './analises/tendencia-tab'
 
+// Mobile topbar height (px) — must match AppLayout
+const MOBILE_TOPBAR_H = 48
+// Sticky section nav height (px)
+const STICKY_NAV_H = 49
+
 // ─── Section registry ─────────────────────────────────────────────────────────
 
 const SECTIONS = [
@@ -48,7 +53,15 @@ function SectionDivider({
 export function AnalisesPage() {
   const layoutId = useId()
   const [activeSection, setActiveSection] = useState<SectionKey>('orcamento')
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  // Track which sections have entered the viewport at least once.
+  // This prevents firing all Supabase queries simultaneously on mount —
+  // each tab's query only enables when its section scrolls into view.
+  const [hasBeenVisible, setHasBeenVisible] = useState<Record<SectionKey, boolean>>({
+    orcamento: true, // first section is always visible on mount
+    tendencia: false,
+    fornecedores: false,
+    materiais: false,
+  })
   const sectionRefs = useRef<Record<SectionKey, HTMLElement | null>>({
     orcamento: null,
     tendencia: null,
@@ -56,9 +69,11 @@ export function AnalisesPage() {
     materiais: null,
   })
 
-  // ── IntersectionObserver drives the sticky nav highlight ──
+  // ── IntersectionObserver: window-level scroll (root: null) ──
+  // Using root:null (viewport) because the page scrolls via the window,
+  // not a custom overflow container. With root:container on a non-scrolling
+  // div, all sections would appear visible simultaneously on mount.
   useEffect(() => {
-    const container = scrollContainerRef.current
     const observers: IntersectionObserver[] = []
 
     for (const { key } of SECTIONS) {
@@ -67,10 +82,14 @@ export function AnalisesPage() {
 
       const obs = new IntersectionObserver(
         ([entry]) => {
-          if (entry.isIntersecting) setActiveSection(key)
+          if (entry.isIntersecting) {
+            setActiveSection(key)
+            // Mark section as seen — enables its data query, never reverts
+            setHasBeenVisible((prev) => (prev[key] ? prev : { ...prev, [key]: true }))
+          }
         },
         {
-          root: container,
+          root: null, // window viewport
           rootMargin: '-15% 0px -65% 0px',
           threshold: 0,
         },
@@ -86,19 +105,18 @@ export function AnalisesPage() {
 
   function scrollToSection(key: SectionKey) {
     const el = sectionRefs.current[key]
-    const container = scrollContainerRef.current
-    if (!el || !container) return
+    if (!el) return
     // iOS Safari breaks with scrollIntoView on position:fixed containers.
-    // Manual scrollTop arithmetic is the only reliable cross-platform approach.
-    const containerRect = container.getBoundingClientRect()
-    const elRect = el.getBoundingClientRect()
-    const targetScrollTop = container.scrollTop + (elRect.top - containerRect.top)
-    container.scrollTo({ top: targetScrollTop, behavior: 'smooth' })
+    // Manual window.scrollTo with offset for fixed topbar + sticky nav.
+    const isMobile = window.innerWidth < 768
+    const offset = (isMobile ? MOBILE_TOPBAR_H : 0) + STICKY_NAV_H
+    const elTop = el.getBoundingClientRect().top + window.scrollY - offset
+    window.scrollTo({ top: Math.max(0, elTop), behavior: 'smooth' })
     setActiveSection(key)
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-background">
+    <div className="min-h-screen bg-background">
       {/* ── Hero header ──────────────────────────────────────────────────── */}
       <div className="px-4 md:px-6 py-5 border-b border-border/8">
         <motion.div
@@ -134,7 +152,8 @@ export function AnalisesPage() {
       </div>
 
       {/* ── Sticky section navigator ──────────────────────────────────────── */}
-      <div className="sticky top-0 z-10 px-4 md:px-6 py-2.5 border-b border-border/8 bg-background/90 backdrop-blur-xl">
+      {/* top: accounts for fixed mobile topbar (48px) — desktop has no topbar */}
+      <div className="sticky top-0 md:top-0 z-10 px-4 md:px-6 py-2.5 border-b border-border/8 bg-background/90 backdrop-blur-xl">
         <nav
           aria-label="Navegação de seções"
           className="flex items-center gap-0.5 overflow-x-auto scrollbar-none"
@@ -166,9 +185,9 @@ export function AnalisesPage() {
         </nav>
       </div>
 
-      {/* ── Single-page scrollable content ───────────────────────────────── */}
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
-        {/* Orçamento */}
+      {/* ── Single-page scrollable content (window scroll, not overflow container) ── */}
+      <div>
+        {/* Orçamento — always enabled (above the fold) */}
         <section
           ref={(el) => {
             sectionRefs.current.orcamento = el
@@ -180,7 +199,7 @@ export function AnalisesPage() {
           <OrcamentoTab />
         </section>
 
-        {/* Tendência */}
+        {/* Tendência — lazy: query enables only after section enters viewport */}
         <section
           ref={(el) => {
             sectionRefs.current.tendencia = el
@@ -189,10 +208,10 @@ export function AnalisesPage() {
           aria-label="Tendência de custos"
         >
           <SectionDivider icon={TrendingUp} label="Tendência de Custos" />
-          <TendenciaTab isActive={true} />
+          <TendenciaTab isActive={hasBeenVisible.tendencia} />
         </section>
 
-        {/* Fornecedores */}
+        {/* Fornecedores — lazy */}
         <section
           ref={(el) => {
             sectionRefs.current.fornecedores = el
@@ -201,10 +220,10 @@ export function AnalisesPage() {
           aria-label="Análise de fornecedores"
         >
           <SectionDivider icon={Users} label="Fornecedores" />
-          <FornecedoresTab isActive={true} />
+          <FornecedoresTab isActive={hasBeenVisible.fornecedores} />
         </section>
 
-        {/* Materiais */}
+        {/* Materiais — lazy */}
         <section
           ref={(el) => {
             sectionRefs.current.materiais = el
@@ -213,7 +232,7 @@ export function AnalisesPage() {
           aria-label="Análise de materiais"
         >
           <SectionDivider icon={Package} label="Materiais" />
-          <MateriaisTab isActive={true} />
+          <MateriaisTab isActive={hasBeenVisible.materiais} />
         </section>
 
         {/* Bottom breathing room */}

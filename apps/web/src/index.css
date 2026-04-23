@@ -110,7 +110,10 @@
 }
 
 html {
-  scroll-behavior: smooth;
+  /* scroll-behavior:smooth intentionally omitted — CSS-level smooth scroll
+     conflicts with Framer Motion JS-driven animations on iOS Safari,
+     causing double-easing jank. Smooth scroll is applied per-element
+     only where needed via window.scrollTo({behavior:'smooth'}). */
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
 }
@@ -129,8 +132,8 @@ body {
   touch-action: manipulation;
   /* Safe area insets for devices with notch/home bar */
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  /* Momentum scrolling on iOS */
-  -webkit-overflow-scrolling: touch;
+  /* -webkit-overflow-scrolling:touch removed — deprecated in iOS 13+,
+     causes bugs with position:fixed overlays in modern Safari */
 }
 
 #root,
@@ -166,6 +169,12 @@ body {
     padding-top: 0;
     padding-bottom: 0;
     margin-left: var(--app-sb-w, 260px);
+    /*
+      Transition only at desktop \u2014 margin-left animates with the sidebar collapse.
+      Static CSS (not Tailwind utility) ensures this transition is compiled once,
+      not recalculated on every React render cycle.
+    */
+    transition: margin-left 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
   }
 }
 

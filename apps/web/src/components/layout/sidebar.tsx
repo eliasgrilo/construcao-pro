@@ -79,18 +79,20 @@ function SidebarInner({ isMobile }: { isMobile: boolean }) {
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white text-[12px] font-bold flex-shrink-0">
           CP
         </div>
-        <AnimatePresence mode="wait">
-          {!collapsed && (
-            <motion.span
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: 'auto' }}
-              exit={{ opacity: 0, width: 0 }}
-              className="text-[15px] font-semibold whitespace-nowrap overflow-hidden tracking-tight"
-            >
-              ConstruçãoPro
-            </motion.span>
+        {/*
+          CSS transition replaces AnimatePresence here — sidebar text never
+          participates in page-level transitions, only in collapse/expand.
+          max-w transition avoids layout shift; opacity handles fade.
+        */}
+        <span
+          className={cn(
+            'text-[15px] font-semibold whitespace-nowrap tracking-tight overflow-hidden',
+            'transition-[opacity,max-width] duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)]',
+            collapsed ? 'opacity-0 max-w-0 pointer-events-none' : 'opacity-100 max-w-[200px]',
           )}
-        </AnimatePresence>
+        >
+          Construção<span className="font-black">Pro</span>
+        </span>
       </div>
 
       {/* Nav */}
@@ -124,18 +126,16 @@ function SidebarInner({ isMobile }: { isMobile: boolean }) {
               title={collapsed ? item.label : undefined}
             >
               <item.icon className="h-5 w-5 flex-shrink-0" />
-              <AnimatePresence mode="wait">
-                {!collapsed && (
-                  <motion.span
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="whitespace-nowrap overflow-hidden"
-                  >
-                    {item.label}
-                  </motion.span>
+              {/* CSS transition — avoids AnimatePresence context overhead in loop */}
+              <span
+                className={cn(
+                  'whitespace-nowrap overflow-hidden text-left',
+                  'transition-[opacity,max-width] duration-150 ease-[cubic-bezier(0.25,0.1,0.25,1)]',
+                  collapsed ? 'opacity-0 max-w-0 pointer-events-none' : 'opacity-100 max-w-[160px]',
                 )}
-              </AnimatePresence>
+              >
+                {item.label}
+              </span>
             </button>
           )
         })}
@@ -192,29 +192,25 @@ function SidebarInner({ isMobile }: { isMobile: boolean }) {
               />
             )}
           </div>
-          <AnimatePresence mode="wait">
-            {!collapsed && (
-              <motion.span
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className={cn(
-                  'text-[12px] font-medium whitespace-nowrap',
-                  realtimeStatus === 'CONNECTED'
-                    ? 'text-[#34C759]'
-                    : realtimeStatus === 'RECONNECTING'
-                      ? 'text-[#FF9500]'
-                      : 'text-[#FF3B30]',
-                )}
-              >
-                {realtimeStatus === 'CONNECTED'
-                  ? 'Ao vivo'
-                  : realtimeStatus === 'RECONNECTING'
-                    ? 'Reconectando…'
-                    : 'Sem conexão'}
-              </motion.span>
+          {/* CSS transition for realtime label — no AnimatePresence needed */}
+          <span
+            className={cn(
+              'text-[12px] font-medium whitespace-nowrap overflow-hidden',
+              'transition-[opacity,max-width] duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)]',
+              collapsed ? 'opacity-0 max-w-0 pointer-events-none' : 'opacity-100 max-w-[140px]',
+              realtimeStatus === 'CONNECTED'
+                ? 'text-[#34C759]'
+                : realtimeStatus === 'RECONNECTING'
+                  ? 'text-[#FF9500]'
+                  : 'text-[#FF3B30]',
             )}
-          </AnimatePresence>
+          >
+            {realtimeStatus === 'CONNECTED'
+              ? 'Ao vivo'
+              : realtimeStatus === 'RECONNECTING'
+                ? 'Reconectando…'
+                : 'Sem conexão'}
+          </span>
         </div>
         <button
           type="button"

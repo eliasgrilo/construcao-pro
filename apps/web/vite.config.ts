@@ -47,6 +47,10 @@ export default defineConfig({
           if (id.includes('node_modules/lucide-react')) {
             return 'lucide'
           }
+          // Recharts — 388KB parsed; page-agnostic charting library
+          if (id.includes('node_modules/recharts') || id.includes('node_modules/victory-vendor')) {
+            return 'recharts'
+          }
           // Zod — schema validation, only needed on form pages
           if (id.includes('node_modules/zod')) {
             return 'zod'

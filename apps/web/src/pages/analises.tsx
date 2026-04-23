@@ -61,9 +61,9 @@ export function AnalisesPage() {
     const container = scrollContainerRef.current
     const observers: IntersectionObserver[] = []
 
-    SECTIONS.forEach(({ key }) => {
+    for (const { key } of SECTIONS) {
       const el = sectionRefs.current[key]
-      if (!el) return
+      if (!el) continue
 
       const obs = new IntersectionObserver(
         ([entry]) => {
@@ -77,20 +77,28 @@ export function AnalisesPage() {
       )
       obs.observe(el)
       observers.push(obs)
-    })
+    }
 
-    return () => observers.forEach((o) => o.disconnect())
+    return () => {
+      for (const o of observers) o.disconnect()
+    }
   }, [])
 
   function scrollToSection(key: SectionKey) {
     const el = sectionRefs.current[key]
-    if (!el) return
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const container = scrollContainerRef.current
+    if (!el || !container) return
+    // iOS Safari breaks with scrollIntoView on position:fixed containers.
+    // Manual scrollTop arithmetic is the only reliable cross-platform approach.
+    const containerRect = container.getBoundingClientRect()
+    const elRect = el.getBoundingClientRect()
+    const targetScrollTop = container.scrollTop + (elRect.top - containerRect.top)
+    container.scrollTo({ top: targetScrollTop, behavior: 'smooth' })
     setActiveSection(key)
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-background">
+    <div className="flex-1 flex flex-col bg-background">
       {/* ── Hero header ──────────────────────────────────────────────────── */}
       <div className="px-4 md:px-6 py-5 border-b border-border/8">
         <motion.div

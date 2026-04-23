@@ -116,7 +116,10 @@ export function RadialProgress({
       height={size}
       viewBox={`0 0 ${size} ${size}`}
       className={cn('shrink-0', className)}
+      role="img"
+      aria-label={`${pct}% concluído`}
     >
+      <title>{`${pct}% concluído`}</title>
       <circle
         cx={size / 2}
         cy={size / 2}
@@ -167,7 +170,10 @@ export function TrendBadge({
 
   return (
     <span
-      className={cn('inline-flex items-center px-2 py-0.5 rounded-lg text-[12px] font-semibold tabular-nums', className)}
+      className={cn(
+        'inline-flex items-center px-2 py-0.5 rounded-lg text-[12px] font-semibold tabular-nums',
+        className,
+      )}
       style={{ color, backgroundColor: bg }}
     >
       {showSign && value > 0 ? '+' : ''}
@@ -229,11 +235,21 @@ export function MetricCard({
   delay = 0,
 }: MetricCardProps) {
   return (
-    <motion.div variants={itemVariants} custom={delay} className={cn('rounded-2xl bg-card border border-border/50 p-4 flex flex-col gap-2 shadow-[0_1px_3px_rgba(0,0,0,0.04)]', className)}>
+    <motion.div
+      variants={itemVariants}
+      custom={delay}
+      className={cn(
+        'rounded-2xl bg-card border border-border/50 p-4 flex flex-col gap-2 shadow-[0_1px_3px_rgba(0,0,0,0.04)]',
+        className,
+      )}
+    >
       <div className="flex items-start justify-between gap-2">
         <p className="text-[12px] font-medium text-muted-foreground leading-none">{label}</p>
         {icon && (
-          <div className="w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${accent}18`, color: accent }}>
+          <div
+            className="w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ backgroundColor: `${accent}18`, color: accent }}
+          >
             {icon}
           </div>
         )}
@@ -242,7 +258,10 @@ export function MetricCard({
       <div className="flex items-end justify-between gap-2">
         <div className="min-w-0">
           {formatter === 'currency' ? (
-            <AnimatedCurrency value={value} className="text-[22px] font-bold tabular-nums leading-none" />
+            <AnimatedCurrency
+              value={value}
+              className="text-[22px] font-bold tabular-nums leading-none"
+            />
           ) : formatter === 'percent' ? (
             <AnimatedNumber
               value={value}
@@ -255,13 +274,9 @@ export function MetricCard({
               className="text-[22px] font-bold tabular-nums leading-none"
             />
           )}
-          {description && (
-            <p className="text-[11px] text-muted-foreground mt-1">{description}</p>
-          )}
+          {description && <p className="text-[11px] text-muted-foreground mt-1">{description}</p>}
         </div>
-        {delta != null && (
-          <TrendBadge value={delta} invertColors={deltaInverted} />
-        )}
+        {delta != null && <TrendBadge value={delta} invertColors={deltaInverted} />}
       </div>
     </motion.div>
   )
@@ -281,9 +296,7 @@ export function SectionHeader({ title, description, action, className }: Section
     <div className={cn('flex items-start justify-between gap-4', className)}>
       <div>
         <h2 className="text-[15px] font-semibold tracking-[-0.01em]">{title}</h2>
-        {description && (
-          <p className="text-[13px] text-muted-foreground mt-0.5">{description}</p>
-        )}
+        {description && <p className="text-[13px] text-muted-foreground mt-0.5">{description}</p>}
       </div>
       {action}
     </div>
@@ -301,7 +314,14 @@ interface SparkBarProps {
   max?: number
 }
 
-export function SparkBar({ value, color = '#007AFF', className, delay = 0, height = 5, max = 100 }: SparkBarProps) {
+export function SparkBar({
+  value,
+  color = '#007AFF',
+  className,
+  delay = 0,
+  height = 5,
+  max = 100,
+}: SparkBarProps) {
   const pct = Math.min(Math.max((value / max) * 100, 0), 100)
   return (
     <div className={cn('rounded-full bg-muted/25 overflow-hidden', className)} style={{ height }}>
@@ -364,7 +384,11 @@ export function LoadingGrid({ cols = 4, rows = 1, cardHeight = 88 }: LoadingGrid
   return (
     <div className="flex flex-col gap-4">
       {Array.from({ length: rows }).map((_, ri) => (
-        <div key={`${id}-r${ri}`} className={`grid gap-3`} style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+        <div
+          key={`${id}-r${ri}`}
+          className="grid gap-3"
+          style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+        >
           {Array.from({ length: cols }).map((_, ci) => (
             <div
               key={`${id}-c${ci}`}

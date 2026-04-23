@@ -45,13 +45,11 @@ export function OrcamentoTab() {
 
   const chartData = useMemo(() => {
     if (!custoPorObra) return []
-    return custoPorObra
-      .slice(0, 8)
-      .map((o) => ({
-        name: o.obra.split(' ').slice(0, 2).join(' '),
-        custo: o.custo || 0,
-        orcamento: o.orcamento || 0,
-      }))
+    return custoPorObra.slice(0, 8).map((o) => ({
+      name: o.obra.split(' ').slice(0, 2).join(' '),
+      custo: o.custo || 0,
+      orcamento: o.orcamento || 0,
+    }))
   }, [custoPorObra])
 
   if (error) {
@@ -252,13 +250,24 @@ export function OrcamentoTab() {
                       </p>
                       <div className="grid grid-cols-3 gap-2 mb-2.5">
                         {[
-                          { label: 'Orçamento', val: formatCurrency(row.orcamento || 0), color: undefined },
+                          {
+                            label: 'Orçamento',
+                            val: formatCurrency(row.orcamento || 0),
+                            color: undefined,
+                          },
                           { label: 'Gasto', val: formatCurrency(row.custo || 0), color: undefined },
-                          { label: 'Saldo', val: (isOver ? '−' : '+') + formatCurrency(Math.abs(saldo)), color: isOver ? '#FF3B30' : '#34C759' },
+                          {
+                            label: 'Saldo',
+                            val: (isOver ? '−' : '+') + formatCurrency(Math.abs(saldo)),
+                            color: isOver ? '#FF3B30' : '#34C759',
+                          },
                         ].map(({ label, val, color }) => (
                           <div key={label}>
                             <p className="text-[10px] text-muted-foreground">{label}</p>
-                            <p className="text-[12px] font-semibold tabular-nums" style={color ? { color } : undefined}>
+                            <p
+                              className="text-[12px] font-semibold tabular-nums"
+                              style={color ? { color } : undefined}
+                            >
                               {val}
                             </p>
                           </div>
@@ -294,7 +303,11 @@ export function OrcamentoTab() {
                     </div>
                     <div className="flex items-center gap-6 shrink-0">
                       {[
-                        { label: 'Orçamento', val: formatCurrency(row.orcamento || 0), color: undefined },
+                        {
+                          label: 'Orçamento',
+                          val: formatCurrency(row.orcamento || 0),
+                          color: undefined,
+                        },
                         { label: 'Gasto', val: formatCurrency(row.custo || 0), color: undefined },
                         {
                           label: 'Saldo',

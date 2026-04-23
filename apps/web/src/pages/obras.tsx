@@ -4,7 +4,7 @@ import { QueryError } from '@/components/ui/query-error'
 import { usePermissions } from '@/hooks/use-permissions'
 import { useDashboardCustoPorObra, useObras } from '@/hooks/use-supabase'
 import type { ObraFilterStatus } from '@/lib/obra-route-search'
-import { cn } from '@/lib/utils'
+import { cn, normalizeSearch } from '@/lib/utils'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowLeft, Plus } from 'lucide-react'
@@ -70,11 +70,12 @@ export function ObrasPage() {
     MANUTENCAO: obrasData?.filter((o: ObraData) => o.status === 'MANUTENCAO').length ?? 0,
   }
 
+  const normalizedSearch = normalizeSearch(search.trim())
   const obras = (obrasData || []).filter((o: ObraData) => {
     const matchesSearch =
-      !search ||
-      o.nome?.toLowerCase().includes(search.toLowerCase()) ||
-      o.endereco?.toLowerCase().includes(search.toLowerCase())
+      !normalizedSearch ||
+      normalizeSearch(o.nome ?? '').includes(normalizedSearch) ||
+      normalizeSearch(o.endereco ?? '').includes(normalizedSearch)
     const matchesStatus = filterStatus === 'ALL' || o.status === filterStatus
     return matchesSearch && matchesStatus
   })

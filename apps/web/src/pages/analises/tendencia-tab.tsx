@@ -123,13 +123,7 @@ export function TendenciaTab({ isActive }: { isActive: boolean }) {
           label="Vs mês anterior"
           value={Math.abs(stats?.deltaPct ?? 0)}
           formatter="percent"
-          accent={
-            stats?.deltaPct == null
-              ? '#8E8E93'
-              : stats.deltaPct > 0
-                ? '#FF3B30'
-                : '#34C759'
-          }
+          accent={stats?.deltaPct == null ? '#8E8E93' : stats.deltaPct > 0 ? '#FF3B30' : '#34C759'}
           delta={stats?.deltaPct ?? undefined}
           deltaInverted
           delay={0.1}
@@ -182,11 +176,7 @@ export function TendenciaTab({ isActive }: { isActive: boolean }) {
                     <Cell
                       key={entry.name}
                       fill={
-                        isLast
-                          ? 'url(#gradTendencia)'
-                          : isMax
-                            ? '#FF3B30'
-                            : 'rgba(0,122,255,0.3)'
+                        isLast ? 'url(#gradTendencia)' : isMax ? '#FF3B30' : 'rgba(0,122,255,0.3)'
                       }
                     />
                   )

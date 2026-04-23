@@ -171,22 +171,22 @@ export function DocumentacaoPage() {
       }
       try {
         win.document.write(
-          `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">` +
-            `<meta name="viewport" content="width=device-width,initial-scale=1">` +
-            `<title>Carregando…</title><style>` +
-            `*{margin:0;padding:0;box-sizing:border-box}` +
-            `body{display:flex;align-items:center;justify-content:center;` +
-            `min-height:100dvh;background:#f5f5f7;` +
-            `font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif}` +
-            `.w{text-align:center;color:#86868b}` +
-            `.s{width:28px;height:28px;border:2.5px solid #e5e5ea;` +
-            `border-top-color:#007AFF;border-radius:50%;` +
-            `animation:r .7s linear infinite;margin:0 auto 14px}` +
-            `@keyframes r{to{transform:rotate(360deg)}}` +
-            `.l{font-size:15px;letter-spacing:-.2px}` +
-            `</style></head><body>` +
-            `<div class="w"><div class="s"></div><div class="l">Carregando…</div></div>` +
-            `</body></html>`,
+          '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">' +
+            '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+            '<title>Carregando\u2026</title><style>' +
+            '*{margin:0;padding:0;box-sizing:border-box}' +
+            'body{display:flex;align-items:center;justify-content:center;' +
+            'min-height:100dvh;background:#f5f5f7;' +
+            'font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif}' +
+            '.w{text-align:center;color:#86868b}' +
+            '.s{width:28px;height:28px;border:2.5px solid #e5e5ea;' +
+            'border-top-color:#007AFF;border-radius:50%;' +
+            'animation:r .7s linear infinite;margin:0 auto 14px}' +
+            '@keyframes r{to{transform:rotate(360deg)}}' +
+            '.l{font-size:15px;letter-spacing:-.2px}' +
+            '</style></head><body>' +
+            '<div class="w"><div class="s"></div><div class="l">Carregando\u2026</div></div>' +
+            '</body></html>',
         )
         win.document.close()
       } catch {
@@ -207,54 +207,60 @@ export function DocumentacaoPage() {
     [toast],
   )
 
-  const prefetchDoc = useCallback(
-    (doc: Documento) => {
-      if (!peekDocumentoUrl(doc.storage_path)) {
-        urlMutRef.current.mutateAsync({ storagePath: doc.storage_path }).catch(() => {})
+  const prefetchDoc = useCallback((doc: Documento) => {
+    if (!peekDocumentoUrl(doc.storage_path)) {
+      urlMutRef.current.mutateAsync({ storagePath: doc.storage_path }).catch(() => {})
+    }
+  }, [])
+
+  const downloadDoc = useCallback(
+    async (doc: Documento) => {
+      const safeName = doc.nome.replace(/[/\\?%*:|"<>]/g, '_')
+      try {
+        const url = await urlMutRef.current.mutateAsync({
+          storagePath: doc.storage_path,
+          download: safeName,
+        })
+        // Fetch as blob so anchor.download works on cross-origin URLs across all
+        // mobile browsers (fixes blank-HTML-page bug caused by window.open).
+        const response = await fetch(url)
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+        const blob = await response.blob()
+        const objectUrl = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = objectUrl
+        a.download = safeName
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 100)
+      } catch (err) {
+        toast({
+          variant: 'error',
+          title: 'Erro ao baixar',
+          description: err instanceof Error ? err.message : 'Não foi possível obter o arquivo.',
+        })
       }
     },
-    [],
+    [toast],
   )
 
-  const downloadDoc = useCallback(async (doc: Documento) => {
-    const safeName = doc.nome.replace(/[/\\?%*:|"<>]/g, '_')
-    try {
-      const url = await urlMutRef.current.mutateAsync({ storagePath: doc.storage_path, download: safeName })
-      // Fetch as blob so anchor.download works on cross-origin URLs across all
-      // mobile browsers (fixes blank-HTML-page bug caused by window.open).
-      const response = await fetch(url)
-      if (!response.ok) throw new Error(`HTTP ${response.status}`)
-      const blob = await response.blob()
-      const objectUrl = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = objectUrl
-      a.download = safeName
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      setTimeout(() => URL.revokeObjectURL(objectUrl), 100)
-    } catch (err) {
-      toast({
-        variant: 'error',
-        title: 'Erro ao baixar',
-        description: err instanceof Error ? err.message : 'Não foi possível obter o arquivo.',
-      })
-    }
-  }, [toast])
-
   // Returns Promise so FileRow can show per-row loading spinner
-  const deleteDoc = useCallback(async (doc: Documento): Promise<void> => {
-    try {
-      await deleteMutRef.current.mutateAsync({ id: doc.id, storagePath: doc.storage_path })
-    } catch (err) {
-      toast({
-        variant: 'error',
-        title: 'Erro ao excluir arquivo',
-        description: err instanceof Error ? err.message : 'Tente novamente.',
-      })
-      throw err
-    }
-  }, [toast])
+  const deleteDoc = useCallback(
+    async (doc: Documento): Promise<void> => {
+      try {
+        await deleteMutRef.current.mutateAsync({ id: doc.id, storagePath: doc.storage_path })
+      } catch (err) {
+        toast({
+          variant: 'error',
+          title: 'Erro ao excluir arquivo',
+          description: err instanceof Error ? err.message : 'Tente novamente.',
+        })
+        throw err
+      }
+    },
+    [toast],
+  )
 
   /* ── drag handlers ── */
   const onDragEnter = (e: React.DragEvent, id: string) => {
@@ -549,7 +555,6 @@ export function DocumentacaoPage() {
         categorias={categorias}
         catCounts={catCounts}
       />
-
     </div>
   )
 }

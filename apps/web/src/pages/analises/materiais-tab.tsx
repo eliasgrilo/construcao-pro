@@ -1,6 +1,6 @@
 import { EmptyState } from '@/components/ui/empty-state'
 import { useMateriais, useMaterialEntradas } from '@/hooks/use-supabase'
-import { cn, formatCurrency, formatDate, formatNumber } from '@/lib/utils'
+import { cn, formatCurrency, formatDate, formatNumber, normalizeSearch } from '@/lib/utils'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Package, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -35,8 +35,9 @@ export function MateriaisTab({ isActive }: { isActive: boolean }) {
 
   const filtered = useMemo(() => {
     if (!materiais) return []
-    if (!search.trim()) return materiais
-    return materiais.filter((m) => m.nome.toLowerCase().includes(search.toLowerCase()))
+    const q = normalizeSearch(search.trim())
+    if (!q) return materiais
+    return materiais.filter((m) => normalizeSearch(m.nome).includes(q))
   }, [materiais, search])
 
   const selectedMaterial = materiais?.find((m) => m.id === selectedId)
@@ -220,10 +221,7 @@ export function MateriaisTab({ isActive }: { isActive: boolean }) {
                     className="mb-5"
                   />
                   <ResponsiveContainer width="100%" height={180}>
-                    <AreaChart
-                      data={priceTrend}
-                      margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
-                    >
+                    <AreaChart data={priceTrend} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
                       <AreaGradient id="matPrice" color="#007AFF" />
                       <CartesianGrid
                         strokeDasharray="3 3"

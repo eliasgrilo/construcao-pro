@@ -292,7 +292,10 @@ export function useDocumentoUrl() {
 
       // Cache only inline URLs
       if (!download) {
-        signedUrlCache.set(storagePath, { url: data.signedUrl, expiresAt: Date.now() + CACHE_TTL_MS })
+        signedUrlCache.set(storagePath, {
+          url: data.signedUrl,
+          expiresAt: Date.now() + CACHE_TTL_MS,
+        })
       }
 
       return data.signedUrl

@@ -76,33 +76,40 @@ export function AppLayout({ children }: AppLayoutProps) {
        *   Mobile  (< md): pt = topbar + safe-area, ml = 0
        *   Desktop (≥ md): pt = 0, ml = var(--app-sb-w)
        */}
-      <main className="app-main min-h-screen overflow-x-clip transition-[margin-left] duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)]">
-        {/**
-         * APPLE PAGE TRANSITION — identical to iOS tab-switching behavior:
-         *
-         *   Enter:  opacity 0 → 1 over 220ms, cubic-bezier(0.25, 0.1, 0.25, 1)
-         *           (Apple's system easing — Maps, Settings, App Store all use this)
-         *
-         *   Exit:   opacity → 0 in 0ms (instant).
-         *           The old page disappears immediately; the new page fades in
-         *           on top of the blank background. This is exactly how iOS
-         *           switches between tab-bar sections — no cross-dissolve,
-         *           no white flash, no scale jitter.
-         *
-         *   mode="sync": both run simultaneously so there's no gap between
-         *   old-exit and new-enter — the new page starts fading in the same
-         *   frame the old one is removed.
-         *
-         *   initial={false}: suppresses animation on first render (page load).
-         */}
-        <AnimatePresence mode="sync" initial={false}>
+      {/**
+       * APPLE PAGE TRANSITION — identical to iOS tab-switching behavior:
+       *
+       *   Enter:  opacity 0 → 1 over 220ms, cubic-bezier(0.25, 0.1, 0.25, 1)
+       *           (Apple's system easing — Maps, Settings, App Store all use this)
+       *
+       *   Exit:   opacity → 0 in 0ms (instant).
+       *           The old page disappears immediately; the new page fades in
+       *           on top of the blank background — exactly how iOS switches
+       *           tab-bar sections (no cross-dissolve, no white flash, no jitter).
+       *
+       *   mode="wait": unmount the exiting page before mounting the entering one.
+       *   Since exit duration is 0ms the gap is imperceptible, but it halves the
+       *   concurrent render budget vs mode="sync" (never two full pages at once).
+       *
+       *   initial={false}: suppresses animation on first render (page load).
+       *
+       *   willChange omitted: Framer Motion promotes/demotes the compositing
+       *   layer automatically during the animation. A static willChange:'opacity'
+       *   would keep a GPU layer allocated permanently for every page — memory
+       *   drain on mobile.
+       *
+       *   overflow-x-clip removed from <main>: it was clipping position:sticky
+       *   children (page headers, tab bars) in iOS Safari during transitions.
+       */}
+      <main className="app-main min-h-screen transition-[margin-left] duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)]">
+        <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={pathname}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: 0 } }}
             transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
-            style={{ minHeight: '100%', willChange: 'opacity' }}
+            style={{ minHeight: '100%' }}
           >
             {children}
           </motion.div>

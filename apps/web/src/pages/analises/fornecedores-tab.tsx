@@ -108,7 +108,9 @@ export function FornecedoresTab({ isActive }: { isActive: boolean }) {
           value={above}
           formatter="number"
           accent="#FF3B30"
-          description={sorted.length > 0 ? `${Math.round((above / sorted.length) * 100)}% do total` : undefined}
+          description={
+            sorted.length > 0 ? `${Math.round((above / sorted.length) * 100)}% do total` : undefined
+          }
           delay={0.05}
         />
         <MetricCard
@@ -116,7 +118,9 @@ export function FornecedoresTab({ isActive }: { isActive: boolean }) {
           value={below}
           formatter="number"
           accent="#34C759"
-          description={sorted.length > 0 ? `${Math.round((below / sorted.length) * 100)}% do total` : undefined}
+          description={
+            sorted.length > 0 ? `${Math.round((below / sorted.length) * 100)}% do total` : undefined
+          }
           delay={0.1}
         />
       </motion.div>
@@ -183,11 +187,7 @@ export function FornecedoresTab({ isActive }: { isActive: boolean }) {
                           {item.categoriaNome ? ` · ${item.categoriaNome}` : ''}
                         </p>
                       </div>
-                      <TrendBadge
-                        value={item.diffPercent}
-                        invertColors
-                        className="flex-shrink-0"
-                      />
+                      <TrendBadge value={item.diffPercent} invertColors className="flex-shrink-0" />
                     </div>
                     <SparkBar
                       value={barPct}
@@ -217,7 +217,8 @@ export function FornecedoresTab({ isActive }: { isActive: boolean }) {
 
                   {/* Desktop */}
                   <div className="hidden md:flex items-center gap-4">
-                    <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-[13px] font-bold tabular-nums"
+                    <div
+                      className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-[13px] font-bold tabular-nums"
                       style={{ backgroundColor: `${diffColor}18`, color: diffColor }}
                     >
                       {idx + 1}
@@ -231,7 +232,9 @@ export function FornecedoresTab({ isActive }: { isActive: boolean }) {
                           </span>
                         )}
                       </div>
-                      <p className="text-[12px] text-muted-foreground truncate">{item.materialNome}</p>
+                      <p className="text-[12px] text-muted-foreground truncate">
+                        {item.materialNome}
+                      </p>
                       <SparkBar
                         value={barPct}
                         color={diffColor}
@@ -242,8 +245,16 @@ export function FornecedoresTab({ isActive }: { isActive: boolean }) {
                     </div>
                     <div className="flex items-center gap-5 shrink-0">
                       {[
-                        { label: 'Preço médio', val: formatCurrency(item.avgPrice), color: undefined },
-                        { label: 'Média mercado', val: formatCurrency(item.marketAvg), color: undefined },
+                        {
+                          label: 'Preço médio',
+                          val: formatCurrency(item.avgPrice),
+                          color: undefined,
+                        },
+                        {
+                          label: 'Média mercado',
+                          val: formatCurrency(item.marketAvg),
+                          color: undefined,
+                        },
                         { label: 'Compras', val: String(item.entryCount), color: undefined },
                       ].map(({ label, val, color }) => (
                         <div key={label} className="text-right min-w-[72px]">

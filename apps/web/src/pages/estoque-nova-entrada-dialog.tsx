@@ -14,7 +14,7 @@ import {
 import { useFormFieldNavigation } from '@/hooks/useFormFieldNavigation'
 import { cn, formatCurrency, todayISO } from '@/lib/utils'
 import { AnimatePresence, motion, useAnimation } from 'framer-motion'
-import { CheckCircle2, Package, X } from 'lucide-react'
+import { CheckCircle2, CreditCard, FileText, Package, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { iosSheetDialogCn } from './dialog-styles'
 import type { AlmoxByObraGroup } from './estoque-dialog-types'
@@ -63,6 +63,13 @@ export function NovaEntradaDialog({
   const [obs, setObs] = useState('')
   const [contaId, setContaId] = useState('')
   const [subconta, setSubconta] = useState<'CAIXA' | 'APLICADO'>('CAIXA')
+  const [nParcelas, setNParcelas] = useState(1)
+  const [taxaCartaoStr, setTaxaCartaoStr] = useState('')
+  const [diaVencBoleto, setDiaVencBoleto] = useState('')
+
+  const isCredito = pagamento === 'credito'
+  const isBoleto = pagamento === 'boleto'
+  const showParcelasSection = isCredito || isBoleto
 
   const selectedMaterial = useMemo(
     () => materiaisList.find((m) => m.id === materialId),
@@ -112,6 +119,9 @@ export function NovaEntradaDialog({
     setObs('')
     setContaId('')
     setSubconta('CAIXA')
+    setNParcelas(1)
+    setTaxaCartaoStr('')
+    setDiaVencBoleto('')
   }, [])
 
   const handleClose = useCallback(() => {
@@ -124,6 +134,13 @@ export function NovaEntradaDialog({
     if (!canSubmit) return
 
     const precoUnitario = entPrecoNumber || selectedMaterial?.preco_unitario || 0
+
+    const parts: string[] = []
+    if (nParcelas > 1) parts.push(`${nParcelas}× parcelas`)
+    if (isCredito && taxaCartaoStr) parts.push(`Taxa: ${taxaCartaoStr}%/parcela`)
+    if (isBoleto && diaVencBoleto) parts.push(`Venc. dia ${diaVencBoleto}`)
+    const extrasStr = parts.join(' · ')
+    const finalObs = [extrasStr, obs.trim()].filter(Boolean).join('\n') || undefined
 
     const onSuccess = () => {
       toast({ title: 'Entrada registrada com sucesso!', variant: 'success' })
@@ -146,7 +163,7 @@ export function NovaEntradaDialog({
           p_motivo: `Compra: ${selectedMaterial?.nome ?? 'Material'}${obs ? ` — ${obs}` : ''}`,
           p_data: todayISO(),
           p_unidade: unidade || undefined,
-          p_observacao: obs.trim() || undefined,
+          p_observacao: finalObs,
           p_fornecedor_id: fornecedorId || undefined,
           p_forma_pagamento: pagamento,
         },
@@ -162,7 +179,7 @@ export function NovaEntradaDialog({
         p_quantidade: entQtyNumber,
         p_preco_unitario: precoUnitario,
         p_unidade: unidade || undefined,
-        p_observacao: obs.trim() || undefined,
+        p_observacao: finalObs,
         p_fornecedor_id: fornecedorId || undefined,
         p_forma_pagamento: pagamento || undefined,
       },
@@ -173,13 +190,18 @@ export function NovaEntradaDialog({
     entPrecoNumber,
     selectedMaterial,
     needsFinanceiro,
+    nParcelas,
+    isCredito,
+    taxaCartaoStr,
+    isBoleto,
+    diaVencBoleto,
+    obs,
     createEntradaFinanceiro,
     materialId,
     almoxId,
     entQtyNumber,
     contaId,
     subconta,
-    obs,
     unidade,
     fornecedorId,
     pagamento,
@@ -469,6 +491,187 @@ export function NovaEntradaDialog({
               })}
             </div>
           </div>
+
+          {/* ── Campos condicionais: Cartão (taxa) · Boleto (dia vencimento) ── */}
+          <AnimatePresence>
+            {isCredito && (
+              <motion.div
+                key="cartao-fields"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                className="overflow-hidden"
+              >
+                <div className="rounded-[14px] overflow-hidden bg-white dark:bg-[#2C2C2E]">
+                  <div className="flex items-center min-h-[52px] px-4 gap-3">
+                    <CreditCard className="h-4 w-4 flex-shrink-0" style={{ color: '#5856D6' }} />
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="text-[16px] font-medium text-foreground">
+                        Taxa por parcela
+                      </span>
+                      {nParcelas > 1 && (
+                        <span className="text-[11px]" style={{ color: '#5856D680' }}>
+                          incide em {nParcelas}× parcelas
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 min-w-0">
+                      <input
+                        value={taxaCartaoStr}
+                        onChange={(e) => {
+                          const v = e.target.value.replace(/[^0-9,.]/g, '').replace('.', ',')
+                          setTaxaCartaoStr(v)
+                        }}
+                        onFocus={(e) => e.target.select()}
+                        placeholder="0,00"
+                        inputMode="decimal"
+                        className="w-[72px] text-[16px] text-right bg-transparent outline-none tabular-nums font-semibold placeholder:text-black/20 dark:placeholder:text-white/20 focus-visible:ring-2 focus-visible:ring-[#5856D6]/60 rounded-sm"
+                      />
+                      <span className="text-[14px] font-semibold text-foreground/50 flex-shrink-0">
+                        %
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+            {isBoleto && (
+              <motion.div
+                key="boleto-fields"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                className="overflow-hidden"
+              >
+                <div className="rounded-[14px] overflow-hidden bg-white dark:bg-[#2C2C2E]">
+                  <div className="flex items-center min-h-[52px] px-4 gap-3">
+                    <FileText className="h-4 w-4 flex-shrink-0 text-foreground/40" />
+                    <span className="text-[16px] font-medium flex-1 text-foreground">
+                      Dia de vencimento
+                    </span>
+                    <div className="flex items-center gap-1 min-w-0">
+                      <input
+                        value={diaVencBoleto}
+                        onChange={(e) => {
+                          const n = e.target.value.replace(/\D/g, '').slice(0, 2)
+                          const num = Number(n)
+                          if (n === '' || (num >= 1 && num <= 31)) setDiaVencBoleto(n)
+                        }}
+                        onFocus={(e) => e.target.select()}
+                        placeholder="10"
+                        inputMode="numeric"
+                        className="w-[48px] text-[16px] text-right bg-transparent outline-none tabular-nums font-semibold placeholder:text-black/20 dark:placeholder:text-white/20 focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 rounded-sm"
+                      />
+                      <span className="text-[13px] text-foreground/40 flex-shrink-0">/ mês</span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* ── Parcelas stepper — só para crédito e boleto ── */}
+          <AnimatePresence>
+            {showParcelasSection && (
+              <motion.div
+                key="parcelas-section"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+                className="overflow-hidden"
+              >
+                <div className="rounded-[14px] overflow-hidden bg-white dark:bg-[#2C2C2E]">
+                  <div className="flex items-center min-h-[52px] px-4 gap-3">
+                    <span className="text-[16px] font-medium flex-shrink-0 text-foreground">
+                      Parcelas
+                    </span>
+                    <div className="flex-1 flex items-center justify-end gap-3">
+                      <motion.button
+                        type="button"
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => setNParcelas((n) => Math.max(1, n - 1))}
+                        disabled={nParcelas <= 1}
+                        className="flex h-8 w-8 items-center justify-center rounded-full text-[20px] font-light transition-colors disabled:opacity-30"
+                        style={{ backgroundColor: `${clr.green}18`, color: clr.green }}
+                      >
+                        −
+                      </motion.button>
+                      <span className="text-[17px] font-semibold tabular-nums w-6 text-center">
+                        {nParcelas}
+                      </span>
+                      <motion.button
+                        type="button"
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => setNParcelas((n) => Math.min(60, n + 1))}
+                        className="flex h-8 w-8 items-center justify-center rounded-full text-[20px] font-light transition-colors"
+                        style={{ backgroundColor: `${clr.green}18`, color: clr.green }}
+                      >
+                        +
+                      </motion.button>
+                    </div>
+                  </div>
+
+                  <AnimatePresence>
+                    {nParcelas > 1 && entradaTotal > 0 && (
+                      <motion.div
+                        key="parcelas-preview"
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                        className="overflow-hidden border-t border-black/[0.07] dark:border-white/[0.07]"
+                      >
+                        <div className="px-4 py-2 relative">
+                          <div
+                            className="absolute top-4 bottom-4 w-px"
+                            style={{ left: '26px', backgroundColor: `${clr.green}22` }}
+                          />
+                          {Array.from({ length: Math.min(nParcelas, 12) }, (_, i) => {
+                            const valor = entradaTotal / nParcelas
+                            const date = new Date()
+                            date.setMonth(date.getMonth() + i)
+                            return (
+                              <div key={i} className="flex items-center gap-3 py-[9px]">
+                                <span
+                                  className="flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold text-white flex-shrink-0 relative z-10"
+                                  style={{ backgroundColor: clr.green }}
+                                >
+                                  {i + 1}
+                                </span>
+                                <span className="flex-1 text-[13px] text-muted-foreground/60 tabular-nums">
+                                  {date.toLocaleDateString('pt-BR', {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    year: 'numeric',
+                                  })}
+                                </span>
+                                <span
+                                  className="text-[13px] font-semibold tabular-nums"
+                                  style={{ color: clr.green }}
+                                >
+                                  {formatCurrency(valor)}
+                                </span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                        {nParcelas > 12 && (
+                          <div className="flex items-center justify-center py-2 border-t border-black/[0.04] dark:border-white/[0.04]">
+                            <span className="text-[12px] text-muted-foreground/40">
+                              +{nParcelas - 12} parcelas adicionais…
+                            </span>
+                          </div>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* ── Grupo 4: Financeiro (conta + subconta) — only when price > 0 ── */}
           <AnimatePresence>

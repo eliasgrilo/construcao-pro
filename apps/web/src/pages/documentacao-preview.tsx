@@ -57,8 +57,8 @@ export function FilePreviewModal({
   const isPdf = doc.tipo_arquivo.includes('pdf')
   const isVideo = doc.tipo_arquivo.startsWith('video/')
   const isAudio = doc.tipo_arquivo.startsWith('audio/')
-  const Icon = getFileIcon(doc.tipo_arquivo)
-  const color = getFileColor(doc.tipo_arquivo)
+  const Icon = getFileIcon(doc.tipo_arquivo, doc.nome)
+  const color = getFileColor(doc.tipo_arquivo, doc.nome)
   useBodyScrollLock(true)
   useOverlayPresence(true)
 

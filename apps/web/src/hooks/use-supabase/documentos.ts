@@ -148,13 +148,35 @@ export function useDocumentos() {
   })
 }
 
-const ALLOWED_DOCUMENT_MIME_TYPES = new Set([
-  'application/pdf',
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-])
-const MAX_DOCUMENT_SIZE_BYTES = 10 * 1024 * 1024 // 10 MB
+// Maps file extensions that browsers commonly report as empty string to a valid MIME type.
+// This ensures Supabase Storage receives a meaningful Content-Type header for CAD / BIM files.
+const EXT_CONTENT_TYPE: Record<string, string> = {
+  dwg: 'application/acad',
+  dxf: 'application/dxf',
+  rvt: 'application/octet-stream',
+  rfa: 'application/octet-stream',
+  ifc: 'application/x-step',
+  skp: 'application/octet-stream',
+  nwd: 'application/octet-stream',
+  nwc: 'application/octet-stream',
+  '3ds': 'application/octet-stream',
+  obj: 'text/plain',
+  stl: 'model/stl',
+  step: 'application/x-step',
+  stp: 'application/x-step',
+  iges: 'model/iges',
+  igs: 'model/iges',
+  kml: 'application/vnd.google-earth.kml+xml',
+  kmz: 'application/vnd.google-earth.kmz',
+}
+const MAX_DOCUMENT_SIZE_BYTES = 50 * 1024 * 1024 // 50 MB
+
+/** Returns the best Content-Type for a file: browser-reported MIME → extension map → octet-stream. */
+function resolveContentType(file: File): string {
+  if (file.type) return file.type
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
+  return EXT_CONTENT_TYPE[ext] ?? 'application/octet-stream'
+}
 
 export function useUploadDocumento() {
   const qc = useQueryClient()
@@ -172,23 +194,19 @@ export function useUploadDocumento() {
       categoria_id?: string | null
       obra_id?: string | null
     }) => {
-      if (!ALLOWED_DOCUMENT_MIME_TYPES.has(file.type)) {
-        throw new Error(
-          `Tipo de arquivo não permitido: ${file.type || 'desconhecido'}. São aceitos: PDF, JPEG, PNG e WebP.`,
-        )
-      }
       if (file.size > MAX_DOCUMENT_SIZE_BYTES) {
         throw new Error(
-          `Arquivo muito grande (${(file.size / 1024 / 1024).toFixed(1)} MB). O limite é 10 MB.`,
+          `Arquivo muito grande (${(file.size / 1024 / 1024).toFixed(1)} MB). O limite é 50 MB.`,
         )
       }
 
       // 1. Upload file to Supabase Storage
       const ext = file.name.split('.').pop() || 'bin'
       const storagePath = `${generateId('documento')}.${ext}`
+      const contentType = resolveContentType(file)
       const { error: uploadError } = await supabase.storage
         .from('documentos')
-        .upload(storagePath, file, { contentType: file.type })
+        .upload(storagePath, file, { contentType })
       if (uploadError) throw uploadError
 
       // 2. Insert document record — clean up orphaned file if DB insert fails
@@ -200,7 +218,7 @@ export function useUploadDocumento() {
           storage_path: storagePath,
           categoria_id: categoria_id || null,
           obra_id: obra_id || null,
-          tipo_arquivo: file.type || 'application/octet-stream',
+          tipo_arquivo: resolveContentType(file),
           tamanho: file.size,
         })
         .select('*, documento_categorias(*), obras(id, nome)')

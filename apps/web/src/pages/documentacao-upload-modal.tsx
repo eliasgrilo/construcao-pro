@@ -166,8 +166,8 @@ export function DocumentacaoUploadModal({
                 ) : (
                   <>
                     {uploadItems.map((item, i) => {
-                      const Icon = getFileIcon(item.file.type)
-                      const color = getFileColor(item.file.type)
+                      const Icon = getFileIcon(item.file.type, item.file.name)
+                      const color = getFileColor(item.file.type, item.file.name)
                       return (
                         <div
                           key={item.id}

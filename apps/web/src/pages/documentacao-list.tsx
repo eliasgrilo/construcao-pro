@@ -35,8 +35,8 @@ export const FileRow = memo(function FileRow({
   last: boolean
   canDelete?: boolean
 }) {
-  const Icon = getFileIcon(doc.tipo_arquivo)
-  const color = getFileColor(doc.tipo_arquivo)
+  const Icon = getFileIcon(doc.tipo_arquivo, doc.nome)
+  const color = getFileColor(doc.tipo_arquivo, doc.nome)
   const [menuOpen, setMenuOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [opening, setOpening] = useState(false)

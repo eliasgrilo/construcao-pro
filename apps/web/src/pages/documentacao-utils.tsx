@@ -5,6 +5,7 @@ import {
   File,
   FileArchive,
   FileAudio,
+  FileCode,
   FileImage,
   FileSpreadsheet,
   FileText,
@@ -49,24 +50,117 @@ export const STATUS_COLORS: Record<string, string> = {
    Helpers
    ═══════════════════════════════════════════════════════════ */
 
-export function getFileIcon(mime: string) {
+/** Derives a display label for a MIME type or file name extension. */
+export function getFileTypeLabel(mime: string, fileName?: string): string {
+  const ext = fileName?.split('.').pop()?.toUpperCase() ?? ''
+  if (mime.startsWith('image/')) return ext || 'Imagem'
+  if (mime.startsWith('video/')) return ext || 'Vídeo'
+  if (mime.startsWith('audio/')) return ext || 'Áudio'
+  if (mime.includes('pdf')) return 'PDF'
+  if (mime.includes('acad') || mime.includes('dxf') || ext === 'DWG' || ext === 'DXF')
+    return ext || 'CAD'
+  if (mime.includes('x-step') || ext === 'IFC' || ext === 'STP' || ext === 'STEP')
+    return ext || 'BIM'
+  if (mime.includes('spreadsheet') || mime.includes('excel') || mime.includes('csv'))
+    return ext || 'Planilha'
+  if (mime.includes('wordprocessing') || mime.includes('msword')) return ext || 'Word'
+  if (mime.includes('presentation') || mime.includes('powerpoint')) return ext || 'PPTX'
+  if (mime.includes('zip') || mime.includes('rar') || mime.includes('tar') || mime.includes('7z'))
+    return ext || 'Arquivo'
+  if (mime.includes('text/') || mime.includes('xml') || mime.includes('json')) return ext || 'Texto'
+  if (mime.includes('model/') || ext === 'STL' || ext === 'OBJ') return ext || 'Modelo 3D'
+  return ext || 'Arquivo'
+}
+
+export function getFileIcon(mime: string, fileName?: string) {
+  const ext = fileName?.split('.').pop()?.toLowerCase() ?? ''
   if (mime.startsWith('image/')) return FileImage
   if (mime.startsWith('video/')) return FileVideo
   if (mime.startsWith('audio/')) return FileAudio
   if (mime.includes('pdf')) return FileText
-  if (mime.includes('spreadsheet') || mime.includes('excel') || mime.includes('csv'))
+  // CAD / BIM / 3D
+  if (
+    mime.includes('acad') ||
+    mime.includes('dxf') ||
+    mime.includes('x-step') ||
+    mime.includes('model/') ||
+    [
+      'dwg',
+      'dxf',
+      'rvt',
+      'rfa',
+      'ifc',
+      'skp',
+      'nwd',
+      'nwc',
+      '3ds',
+      'obj',
+      'stl',
+      'step',
+      'stp',
+      'iges',
+      'igs',
+    ].includes(ext)
+  )
+    return FileCode
+  if (
+    mime.includes('spreadsheet') ||
+    mime.includes('excel') ||
+    mime.includes('csv') ||
+    ext === 'csv'
+  )
     return FileSpreadsheet
-  if (mime.includes('zip') || mime.includes('rar') || mime.includes('tar')) return FileArchive
+  if (mime.includes('wordprocessing') || mime.includes('msword')) return FileText
+  if (mime.includes('presentation') || mime.includes('powerpoint')) return FileText
+  if (mime.includes('zip') || mime.includes('rar') || mime.includes('tar') || mime.includes('7z'))
+    return FileArchive
+  if (mime.startsWith('text/') || mime.includes('xml') || mime.includes('json')) return FileText
   return File
 }
 
-export function getFileColor(mime: string) {
+export function getFileColor(mime: string, fileName?: string) {
+  const ext = fileName?.split('.').pop()?.toLowerCase() ?? ''
   if (mime.startsWith('image/')) return '#FF9500'
   if (mime.startsWith('video/')) return '#AF52DE'
   if (mime.startsWith('audio/')) return '#FF2D55'
   if (mime.includes('pdf')) return '#FF3B30'
-  if (mime.includes('spreadsheet') || mime.includes('excel')) return '#34C759'
-  if (mime.includes('zip') || mime.includes('rar')) return '#8E8E93'
+  // CAD / BIM / 3D — orange-brown, industry standard association
+  if (
+    mime.includes('acad') ||
+    mime.includes('dxf') ||
+    mime.includes('x-step') ||
+    mime.includes('model/') ||
+    [
+      'dwg',
+      'dxf',
+      'rvt',
+      'rfa',
+      'ifc',
+      'skp',
+      'nwd',
+      'nwc',
+      '3ds',
+      'obj',
+      'stl',
+      'step',
+      'stp',
+      'iges',
+      'igs',
+    ].includes(ext)
+  )
+    return '#FF6B35'
+  if (
+    mime.includes('spreadsheet') ||
+    mime.includes('excel') ||
+    mime.includes('csv') ||
+    ext === 'csv'
+  )
+    return '#34C759'
+  if (mime.includes('wordprocessing') || mime.includes('msword')) return '#2979FF'
+  if (mime.includes('presentation') || mime.includes('powerpoint')) return '#FF6B35'
+  if (mime.includes('zip') || mime.includes('rar') || mime.includes('tar') || mime.includes('7z'))
+    return '#8E8E93'
+  if (mime.startsWith('text/') || mime.includes('json') || mime.includes('xml')) return '#30B0C7'
   return '#007AFF'
 }
 

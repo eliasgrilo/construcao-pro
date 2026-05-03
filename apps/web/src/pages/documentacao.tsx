@@ -279,23 +279,13 @@ export function DocumentacaoPage() {
     e.preventDefault()
     e.stopPropagation()
   }
-  const ACCEPTED_MIME = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg']
-  const isAccepted = (f: globalThis.File) =>
-    ACCEPTED_MIME.includes(f.type) || /\.(pdf|png|jpe?g)$/i.test(f.name)
 
   const onDrop = (e: React.DragEvent, targetId: string | null, label: string) => {
     e.preventDefault()
     e.stopPropagation()
     setDragOver(null)
-    const f = Array.from(e.dataTransfer.files).filter(isAccepted)
-    if (!f.length) {
-      toast({
-        variant: 'error',
-        title: 'Formato não suportado',
-        description: 'Apenas PDF, PNG e JPG são aceitos.',
-      })
-      return
-    }
+    const f = Array.from(e.dataTransfer.files)
+    if (!f.length) return
     setUploadTarget(targetId)
     setUploadTargetLabel(label)
     setUploadItems(buildUploadItems(f))
@@ -340,7 +330,7 @@ export function DocumentacaoPage() {
         ref={fileInputRef}
         type="file"
         multiple
-        accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+        accept="*"
         className="hidden"
         onChange={handleFileSelect}
       />

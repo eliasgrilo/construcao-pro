@@ -12,7 +12,7 @@ import { type ObraManutencao, useCancelObraVenda, type useUpdateObra } from '@/h
 import { cn, formatCurrency } from '@/lib/utils'
 import type { Database } from '@/types/database'
 import { useSearch } from '@tanstack/react-router'
-import { motion } from 'framer-motion'
+import { type Variants, motion } from 'framer-motion'
 import {
   AlertTriangle,
   ArrowLeft,
@@ -23,7 +23,7 @@ import {
   Pencil,
 } from 'lucide-react'
 import type { Dispatch, RefObject, SetStateAction } from 'react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { StatusSwitcher, statusMap } from './obra-detail-status-switcher'
 import type { Tab } from './obra-detail-types'
 
@@ -275,16 +275,8 @@ export function ObraDetailHeaderLayout({
         )}
       </motion.div>
 
-      {/* Location */}
-      {obra?.endereco && (
-        <motion.div
-          variants={sV}
-          className="flex items-center gap-1.5 mt-2 text-[13px] text-muted-foreground/80"
-        >
-          <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
-          <span style={{ letterSpacing: '0.005em' }}>{obra.endereco}</span>
-        </motion.div>
-      )}
+      {/* Location — inline editable */}
+      <EnderecoInlineEditor obra={obra} obraId={obraId} updateOrcamento={updateOrcamento} toast={toast} sV={sV} />
 
       {/* ── GASTO TOTAL hero ── */}
       <motion.div variants={sV} className="mt-8">
@@ -618,6 +610,109 @@ export function ObraDetailHeaderLayout({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </motion.div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Inline address editor — self-contained state, zero prop changes to parent
+// ─────────────────────────────────────────────────────────────────────────────
+interface EnderecoInlineEditorProps {
+  obra: ObraRow | null | undefined
+  obraId: string
+  updateOrcamento: UpdateObraMutationLike
+  toast: ToastFn
+  sV: Variants
+}
+
+function EnderecoInlineEditor({
+  obra,
+  obraId,
+  updateOrcamento,
+  toast,
+  sV,
+}: EnderecoInlineEditorProps) {
+  const [editing, setEditing] = useState(false)
+  const [value, setValue] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  function startEdit() {
+    setValue(obra?.endereco ?? '')
+    setEditing(true)
+    setTimeout(() => inputRef.current?.select(), 30)
+  }
+
+  function commitSave() {
+    const trimmed = value.trim()
+    setEditing(false)
+    if (trimmed === (obra?.endereco ?? '')) return // no change
+    if (!trimmed && !obra?.endereco) return // was empty, still empty
+    updateOrcamento.mutate(
+      { id: obraId, endereco: trimmed || '' },
+      {
+        onSuccess: () =>
+          toast({ title: trimmed ? 'Endereço atualizado' : 'Endereço removido' }),
+        onError: () => toast({ title: 'Erro ao atualizar endereço', variant: 'error' }),
+      },
+    )
+  }
+
+  if (editing) {
+    return (
+      <motion.div
+        variants={sV}
+        className="flex items-center gap-1.5 mt-2"
+      >
+        <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground/60" />
+        <input
+          ref={inputRef}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') e.currentTarget.blur()
+            else if (e.key === 'Escape') setEditing(false)
+          }}
+          onBlur={commitSave}
+          placeholder="Ex: Rua das Flores, 123 — São Paulo"
+          className="flex-1 bg-transparent border-b-2 border-primary outline-none text-foreground placeholder:text-muted-foreground/40 pb-0.5 min-w-0"
+          style={{ fontSize: '16px', letterSpacing: '0.005em' }}
+        />
+      </motion.div>
+    )
+  }
+
+  if (obra?.endereco) {
+    return (
+      <motion.div variants={sV}>
+        <button
+          type="button"
+          title="Clique para editar o endereço"
+          onClick={startEdit}
+          className="group flex items-center gap-1.5 mt-2 text-[13px] text-muted-foreground/80 hover:text-foreground transition-colors text-left"
+        >
+          <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
+          <span style={{ letterSpacing: '0.005em' }}>{obra.endereco}</span>
+          <Pencil
+            className="h-3 w-3 text-muted-foreground/30 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-0.5"
+            aria-hidden
+          />
+        </button>
+      </motion.div>
+    )
+  }
+
+  // No address yet — show a subtle affordance
+  return (
+    <motion.div variants={sV}>
+      <button
+        type="button"
+        title="Adicionar endereço"
+        onClick={startEdit}
+        className="flex items-center gap-1.5 mt-2 text-[13px] text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors"
+      >
+        <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
+        <span style={{ letterSpacing: '0.005em' }}>Adicionar endereço</span>
+      </button>
     </motion.div>
   )
 }

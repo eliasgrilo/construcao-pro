@@ -279,6 +279,31 @@ export function peekDocumentoUrl(storagePath: string): string | null {
 /** Removes a cached URL (call after delete so stale URLs are not reused). */
 export function clearDocumentoUrlCache(storagePath: string): void {
   signedUrlCache.delete(storagePath)
+  // Also evict from SW Cache API so deleted files are not served offline.
+  evictDocumentoFromSwCache(storagePath)
+}
+
+/**
+ * Sends a message to the SW to remove a document from the offline cache.
+ * No-op in dev or when SW is unavailable.
+ */
+function evictDocumentoFromSwCache(storagePath: string): void {
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return
+  navigator.serviceWorker.ready
+    .then((reg) => reg.active?.postMessage({ type: 'EVICT_DOCUMENTO', storagePath }))
+    .catch(() => undefined)
+}
+
+/**
+ * Sends the signed URL to the SW so it can fetch and cache the file
+ * under the stable storagePath key. This makes previously viewed documents
+ * available offline even after the signed URL expires.
+ */
+function notifySwToCache(signedUrl: string, storagePath: string): void {
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return
+  navigator.serviceWorker.ready
+    .then((reg) => reg.active?.postMessage({ type: 'CACHE_DOCUMENTO', signedUrl, storagePath }))
+    .catch(() => undefined)
 }
 
 /**
@@ -314,6 +339,9 @@ export function useDocumentoUrl() {
           url: data.signedUrl,
           expiresAt: Date.now() + CACHE_TTL_MS,
         })
+        // Async: tell the SW to fetch and cache the file for offline access.
+        // Fire-and-forget — never blocks the UI.
+        notifySwToCache(data.signedUrl, storagePath)
       }
 
       return data.signedUrl

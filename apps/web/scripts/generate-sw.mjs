@@ -60,6 +60,7 @@ async function buildVersion(precache) {
 
 function buildServiceWorkerSource({ precache, version }) {
   return `const CACHE_NAME = 'construcao-pro-${version}';
+const DOCUMENTOS_CACHE = 'construcao-pro-docs';
 const PRECACHE_URLS = ${JSON.stringify(precache, null, 2)};
 const STATIC_DESTINATIONS = new Set(['style', 'script', 'worker', 'font', 'image']);
 
@@ -94,14 +95,81 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
+      .then((keys) => Promise.all(
+        keys
+          .filter((key) => key !== CACHE_NAME && key !== DOCUMENTOS_CACHE)
+          .map((key) => caches.delete(key))
+      ))
       .then(() => self.clients.claim()),
   );
 });
 
+// ── Messages ─────────────────────────────────────────────────────────────────
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') {
     self.skipWaiting();
+    return;
+  }
+
+  // App → SW: cache a signed document URL under a stable key (storage path).
+  // This allows offline playback of previously viewed documents even after
+  // the signed URL expires (Supabase Storage signed URLs last 1 hour).
+  if (event.data?.type === 'CACHE_DOCUMENTO') {
+    const { signedUrl, storagePath } = event.data;
+    if (!signedUrl || !storagePath) return;
+    event.waitUntil(
+      (async () => {
+        try {
+          const cache = await caches.open(DOCUMENTOS_CACHE);
+          // Use stable key (storagePath) so we can retrieve offline
+          // regardless of signed URL expiry. The signed URL is used only
+          // for the initial fetch while online.
+          const existing = await cache.match(storagePath);
+          if (existing) return; // already cached — skip re-fetch
+          const response = await fetch(signedUrl);
+          if (response.ok) {
+            // Store under stable storage path key (not the signed URL)
+            await cache.put(storagePath, response);
+          }
+        } catch {
+          // Network failure — will be fetched again next time online.
+        }
+      })(),
+    );
+    return;
+  }
+
+  // App → SW: pre-cache a batch of documents in background.
+  if (event.data?.type === 'PREFETCH_DOCUMENTOS') {
+    const items = event.data.items; // Array<{ signedUrl: string; storagePath: string }>
+    if (!Array.isArray(items)) return;
+    event.waitUntil(
+      (async () => {
+        const cache = await caches.open(DOCUMENTOS_CACHE);
+        await Promise.allSettled(
+          items.map(async ({ signedUrl, storagePath }) => {
+            try {
+              const existing = await cache.match(storagePath);
+              if (existing) return;
+              const response = await fetch(signedUrl);
+              if (response.ok) await cache.put(storagePath, response);
+            } catch {
+              // Ignored — best-effort prefetch.
+            }
+          }),
+        );
+      })(),
+    );
+    return;
+  }
+
+  // App → SW: remove a deleted document from the offline cache.
+  if (event.data?.type === 'EVICT_DOCUMENTO') {
+    const { storagePath } = event.data;
+    if (!storagePath) return;
+    event.waitUntil(
+      caches.open(DOCUMENTOS_CACHE).then((cache) => cache.delete(storagePath)),
+    );
   }
 });
 
@@ -111,6 +179,16 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
 
   const url = new URL(request.url);
+
+  // Document files: serve from DOCUMENTOS_CACHE when offline.
+  // Supabase Storage signed URLs look like:
+  //   https://<project>.supabase.co/storage/v1/object/sign/documentos/<path>
+  // We match on the stable storage path extracted from the URL.
+  if (url.hostname.endsWith('.supabase.co') && url.pathname.includes('/storage/v1/object/sign/documentos/')) {
+    event.respondWith(handleDocumentoFetch(request, url));
+    return;
+  }
+
   if (url.origin !== self.location.origin) return;
 
   if (request.mode === 'navigate') {
@@ -180,8 +258,35 @@ function handleStale(request) {
     revalidate: revalidate.catch(() => undefined),
   };
 }
+
+// Document file: network-first, fall back to DOCUMENTOS_CACHE by storage path.
+// The stable cache key is the storage path segment after "/sign/documentos/",
+// stripping the query string (token, expiry params).
+async function handleDocumentoFetch(request, url) {
+  // Extract stable storage path: everything after "/sign/documentos/"
+  const match = url.pathname.match(/\\/storage\\/v1\\/object\\/sign\\/documentos\\/(.+)$/);
+  const storagePath = match ? match[1] : null;
+
+  try {
+    const response = await fetch(request);
+    if (response.ok && storagePath) {
+      // Update cache with fresh response — fire and forget.
+      caches.open(DOCUMENTOS_CACHE).then((cache) => cache.put(storagePath, response.clone()));
+    }
+    return response;
+  } catch {
+    // Offline — try stable-key cache.
+    if (storagePath) {
+      const cache = await caches.open(DOCUMENTOS_CACHE);
+      const cached = await cache.match(storagePath);
+      if (cached) return cached;
+    }
+    return Response.error();
+  }
+}
 `
 }
+
 
 const precache = await buildPrecacheList()
 const version = await buildVersion(precache)

@@ -1,7 +1,8 @@
 import { ErrorBoundary } from '@/components/error-boundary'
 import { Toaster } from '@/components/ui/toast'
+import { idbPersister } from '@/lib/persister'
 import { queryClient } from '@/lib/query-client'
-import { QueryClientProvider } from '@tanstack/react-query'
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { App } from './App'
@@ -57,10 +58,18 @@ const rootElement = document.getElementById('root') as HTMLElement
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{
+          persister: idbPersister,
+          // Cache sobrevive 24h no IDB — alinhado com o gcTime do queryClient.
+          // Na reabertura offline, os dados são restaurados instantaneamente.
+          maxAge: 1000 * 60 * 60 * 24,
+        }}
+      >
         <App />
         <Toaster />
-      </QueryClientProvider>
+      </PersistQueryClientProvider>
     </ErrorBoundary>
   </React.StrictMode>,
 )

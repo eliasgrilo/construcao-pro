@@ -15,7 +15,7 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 30, // 30s — keep data fresh, prevent stale/disappeared data
-      gcTime: 1000 * 60 * 15, // 15 min — reduce memory footprint between sessions
+      gcTime: 1000 * 60 * 60 * 24, // 24h — IDB persister restores data offline between sessions
       // offlineFirst: serve data from cache even when network is unavailable.
       // Critical for PWA — without this, queries throw when SW serves assets
       // from cache but the Supabase fetch itself fails (no internet).

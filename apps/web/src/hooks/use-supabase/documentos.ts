@@ -179,6 +179,31 @@ function resolveContentType(file: File): string {
   return EXT_CONTENT_TYPE[ext] ?? 'application/octet-stream'
 }
 
+/**
+ * Escreve o arquivo enviado diretamente no Cache API sob a chave estável
+ * (storagePath). Executado logo após o upload bem-sucedido, enquanto o
+ * arquivo ainda está em memória — sem nenhuma requisição extra de rede.
+ * Isso garante disponibilidade offline imediata de todo arquivo enviado.
+ */
+async function cacheDocumentoFromFile(
+  file: File,
+  storagePath: string,
+  contentType: string,
+): Promise<void> {
+  if (typeof caches === 'undefined') return
+  try {
+    const cache = await caches.open('construcao-pro-docs')
+    const existing = await cache.match(storagePath)
+    if (existing) return
+    const response = new Response(file, {
+      headers: { 'Content-Type': contentType, 'Content-Length': String(file.size) },
+    })
+    await cache.put(storagePath, response)
+  } catch {
+    // Cache API indisponível ou sem espaço — não bloqueia o fluxo.
+  }
+}
+
 export function useUploadDocumento() {
   const qc = useQueryClient()
   return useMutation({
@@ -209,6 +234,10 @@ export function useUploadDocumento() {
         .from('documentos')
         .upload(storagePath, file, { contentType })
       if (uploadError) throw uploadError
+
+      // 3. Cache the file locally — fire-and-forget, never blocks the upload flow.
+      // The file is already in memory; writing to Cache API costs zero extra requests.
+      cacheDocumentoFromFile(file, storagePath, contentType).catch(() => undefined)
 
       // 2. Insert document record — clean up orphaned file if DB insert fails
       const { data, error } = await supabase

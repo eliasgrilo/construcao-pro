@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { generateId } from '@/lib/utils'
 import type { Database } from '@/types/database'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useRef } from 'react'
 
 // ═══════════════════════════════════════════════════════════
 // Documentos — Gestão documental (categorias + upload/storage)
@@ -347,4 +348,67 @@ export function useDocumentoUrl() {
       return data.signedUrl
     },
   })
+}
+
+/**
+ * Pré-cacheia todos os documentos da lista para acesso offline,
+ * independente de o usuário ter aberto cada arquivo.
+ *
+ * Estratégia:
+ * - Usa `createSignedUrls` (batch) — 1 req para N arquivos.
+ * - Envia `PREFETCH_DOCUMENTOS` ao SW com todos os paths + URLs.
+ * - O SW ignora arquivos já cacheados (idempotente).
+ * - Só executa quando online; re-executa quando a lista muda.
+ * - Não bloqueia a UI (useEffect + fire-and-forget).
+ */
+export function usePrefetchDocumentosOffline(storagePaths: string[]): void {
+  // Use ref to track which paths have already been dispatched this session
+  // so we don't re-send paths that are already cached.
+  const dispatchedRef = useRef<Set<string>>(new Set())
+
+  useEffect(() => {
+    if (
+      storagePaths.length === 0 ||
+      typeof navigator === 'undefined' ||
+      !('serviceWorker' in navigator)
+    ) {
+      return
+    }
+
+    // Filter out paths already dispatched in this session.
+    const newPaths = storagePaths.filter((p) => !dispatchedRef.current.has(p))
+    if (newPaths.length === 0) return
+
+    // Mark as dispatched immediately to prevent duplicate calls
+    // even if the effect re-runs before the async work completes.
+    for (const p of newPaths) dispatchedRef.current.add(p)
+
+    const prefetch = async () => {
+      // Only prefetch when online — offline, the cache is the source of truth.
+      if (!navigator.onLine) return
+
+      const sw = await navigator.serviceWorker.ready.catch(() => null)
+      if (!sw?.active) return
+
+      // Batch-generate signed URLs (1 Supabase request for all paths).
+      const { data, error } = await supabase.storage
+        .from('documentos')
+        .createSignedUrls(newPaths, 3600)
+
+      if (error || !data) return
+
+      const items = data
+        .filter((entry) => !entry.error && entry.signedUrl)
+        .map((entry) => ({
+          signedUrl: entry.signedUrl as string,
+          storagePath: entry.path,
+        }))
+
+      if (items.length === 0) return
+
+      sw.active.postMessage({ type: 'PREFETCH_DOCUMENTOS', items })
+    }
+
+    prefetch().catch(() => undefined)
+  }, [storagePaths])
 }

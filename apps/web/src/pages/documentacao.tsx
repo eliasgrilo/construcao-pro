@@ -8,6 +8,7 @@ import {
   useDocumentoUrl,
   useDocumentos,
   useObras,
+  usePrefetchDocumentosOffline,
   useUploadDocumento,
 } from '@/hooks/use-supabase'
 import { cn, generateId } from '@/lib/utils'
@@ -65,6 +66,10 @@ export function DocumentacaoPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const modalOpenRef = useRef(false)
   modalOpenRef.current = uploadModalOpen
+
+  /* ── offline prefetch — cacheia TODOS os arquivos assim que a lista carrega ── */
+  const allStoragePaths = useMemo(() => documentos.map((d) => d.storage_path), [documentos])
+  usePrefetchDocumentosOffline(allStoragePaths)
 
   /* ── computed ── */
   const empresaDocs = useMemo(() => documentos.filter((d) => !d.obra_id), [documentos])
